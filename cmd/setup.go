@@ -46,19 +46,24 @@ var setupCmd = &cobra.Command{
 			if runtime.GOOS == "linux" {
 				os.Exit(1)
 			}
-			pamFile = "/etc/pam.d/common-session" 
+			pamFile = "/etc/pam.d/common-session"
 		} else {
 			fmt.Printf("found %s\n", pamFile)
 		}
 
 		fmt.Printf("Enabling PAM for local sessions (%s)... ", pamFile)
-		if err := system.EnablePamTlog(pamFile); err != nil {
+		changed, err := system.EnablePamTlog(pamFile)
+		if err != nil {
 			fmt.Printf("FAIL\n%v\n", err)
             if runtime.GOOS == "linux" {
 			    os.Exit(1)
             }
 		} else {
-		    fmt.Println("OK")
+			if changed {
+				fmt.Println("OK")
+			} else {
+				fmt.Println("Already enabled")
+			}
         }
 
 		fmt.Println("Setup complete. tlog is ready.")

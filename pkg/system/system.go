@@ -101,10 +101,10 @@ func EnsureTlogConfig() error {
 	return nil
 }
 
-func EnablePamTlog(pamFile string) error {
+func EnablePamTlog(pamFile string) (bool, error) {
 	f, err := os.Open(pamFile)
 	if err != nil {
-		return fmt.Errorf("failed to open PAM file %s: %w", pamFile, err)
+		return false, fmt.Errorf("failed to open PAM file %s: %w", pamFile, err)
 	}
 	defer f.Close()
 
@@ -121,27 +121,27 @@ func EnablePamTlog(pamFile string) error {
 	}
 
 	if found {
-		return nil
+		return false, nil
 	}
 
 	if err := backupFile(pamFile); err != nil {
-		return fmt.Errorf("failed to backup PAM file %s: %w", pamFile, err)
+		return false, fmt.Errorf("failed to backup PAM file %s: %w", pamFile, err)
 	}
 
 	lines = append(lines, config.PamTlogLine)
 	output := strings.Join(lines, "\n") + "\n"
 	
 	if err := os.WriteFile(pamFile, []byte(output), 0644); err != nil {
-		return fmt.Errorf("failed to update PAM file %s: %w", pamFile, err)
+		return false, fmt.Errorf("failed to update PAM file %s: %w", pamFile, err)
 	}
 
-	return nil
+	return true, nil
 }
 
-func DisablePamTlog(pamFile string) error {
+func DisablePamTlog(pamFile string) (bool, error) {
     input, err := os.ReadFile(pamFile)
     if err != nil {
-        return err
+        return false, err
     }
 
     lines := strings.Split(string(input), "\n")
@@ -157,13 +157,16 @@ func DisablePamTlog(pamFile string) error {
     }
 
     if !changed {
-        return nil
+        return false, nil
     }
 
     if err := backupFile(pamFile); err != nil {
-        return fmt.Errorf("failed to backup PAM file %s: %w", pamFile, err)
+        return false, fmt.Errorf("failed to backup PAM file %s: %w", pamFile, err)
     }
 
     output := strings.Join(newLines, "\n")
-    return os.WriteFile(pamFile, []byte(output), 0644)
+    if err := os.WriteFile(pamFile, []byte(output), 0644); err != nil {
+        return false, err
+    }
+    return true, nil
 }

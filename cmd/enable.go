@@ -36,20 +36,30 @@ var enableCmd = &cobra.Command{
 				fmt.Printf("FAIL: %v\n", err)
 			} else {
 				fmt.Printf("(%s) ", pamFile)
-				if err := system.EnablePamTlog(pamFile); err != nil {
+				changed, err := system.EnablePamTlog(pamFile)
+				if err != nil {
 					fmt.Printf("FAIL: %v\n", err)
 				} else {
-					fmt.Println("OK")
+					if changed {
+						fmt.Println("OK")
+					} else {
+						fmt.Println("Already enabled")
+					}
 				}
 			}
 		}
 
 		if enableSSH {
 			fmt.Print("Enabling PAM for SSH sessions (sshd)... ")
-			if err := system.EnablePamTlog(config.PamSSHD); err != nil {
+			changed, err := system.EnablePamTlog(config.PamSSHD)
+			if err != nil {
 				fmt.Printf("FAIL: %v\n", err)
 			} else {
-				fmt.Println("OK")
+				if changed {
+					fmt.Println("OK")
+				} else {
+					fmt.Println("Already enabled")
+				}
 			}
 		}
 	},
