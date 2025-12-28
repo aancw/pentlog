@@ -21,6 +21,10 @@ const (
 )
 
 func GetUserPentlogDir() (string, error) {
+	if sudoUser := os.Getenv("SUDO_USER"); sudoUser != "" && os.Geteuid() == 0 {
+		return filepath.Join("/home", sudoUser, PentlogDirName), nil
+	}
+
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
