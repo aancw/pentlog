@@ -42,7 +42,11 @@ sudo ./pentlog enable --local --ssh
   --operator "kali" \
   --phase "recon"
 
-# CRITICAL: Copy-paste the export commands provided to your terminal/tmux.
+# OPTION A: Spawn a new shell with context (Easiest)
+./pentlog shell
+
+# OPTION B: Apply to current shell
+eval $(./pentlog env)
 ```
 
 ### 3. Check Status

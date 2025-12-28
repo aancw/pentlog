@@ -23,8 +23,6 @@ var extractCmd = &cobra.Command{
 		}
 
 		fmt.Println(report)
-
-		// TODO save to file
 	},
 }
 

@@ -43,12 +43,10 @@ var startCmd = &cobra.Command{
 		fmt.Printf("Operator:   %s\n", ctx.Operator)
 		fmt.Printf("Phase:      %s\n", ctx.Phase)
 		fmt.Println("---------------------------------------------------")
-		fmt.Println("To ensure metadata is recorded in current session logs, run:")
-		fmt.Printf("export PENTLOG_CLIENT='%s'\n", ctx.Client)
-		fmt.Printf("export PENTLOG_ENGAGEMENT='%s'\n", ctx.Engagement)
-		fmt.Printf("export PENTLOG_SCOPE='%s'\n", ctx.Scope)
-		fmt.Printf("export PENTLOG_OPERATOR='%s'\n", ctx.Operator)
-		fmt.Printf("export PENTLOG_PHASE='%s'\n", ctx.Phase)
+		fmt.Println("To enter this context immediately, run:")
+		fmt.Println("  ./pentlog shell")
+		fmt.Println("\nOr for scripting:")
+		fmt.Println("  eval $(./pentlog env)")
 	},
 }
 
