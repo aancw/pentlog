@@ -110,17 +110,28 @@ func EnablePamTlog(pamFile string) (bool, error) {
 
 	scanner := bufio.NewScanner(f)
 	lines := []string{}
-	found := false
+	
+	safeCheck := "pam_exec.so quiet /usr/bin/test -t 0"
+	tlogLine := "pam_tlog.so"
+
+	hasSafeBlock := false
+	needsFix := false
 
 	for scanner.Scan() {
-		line := scanner.Text()
-		lines = append(lines, line)
-		if strings.Contains(line, "pam_tlog.so") && !strings.HasPrefix(strings.TrimSpace(line), "#") {
-			found = true
+		lines = append(lines, scanner.Text())
+	}
+	
+	for i, line := range lines {
+		if strings.Contains(line, tlogLine) && !strings.HasPrefix(strings.TrimSpace(line), "#") {
+			if i > 0 && strings.Contains(lines[i-1], safeCheck) && !strings.HasPrefix(strings.TrimSpace(lines[i-1]), "#") {
+				hasSafeBlock = true
+			} else {
+				needsFix = true
+			}
 		}
 	}
 
-	if found {
+	if hasSafeBlock && !needsFix {
 		return false, nil
 	}
 
@@ -128,8 +139,23 @@ func EnablePamTlog(pamFile string) (bool, error) {
 		return false, fmt.Errorf("failed to backup PAM file %s: %w", pamFile, err)
 	}
 
-	lines = append(lines, config.PamTlogLine)
-	output := strings.Join(lines, "\n") + "\n"
+	var newLines []string
+	
+	for _, line := range lines {
+		if strings.Contains(line, tlogLine) && !strings.HasPrefix(strings.TrimSpace(line), "#") {
+			continue
+		}
+		if strings.Contains(line, safeCheck) && !strings.HasPrefix(strings.TrimSpace(line), "#") {
+			continue
+		}
+		
+		newLines = append(newLines, line)
+	}
+
+	newLines = append(newLines, "session [success=ignore default=1] pam_exec.so quiet /usr/bin/test -t 0")
+	newLines = append(newLines, config.PamTlogLine)
+
+	output := strings.Join(newLines, "\n") + "\n"
 	
 	if err := os.WriteFile(pamFile, []byte(output), 0644); err != nil {
 		return false, fmt.Errorf("failed to update PAM file %s: %w", pamFile, err)
@@ -148,8 +174,14 @@ func DisablePamTlog(pamFile string) (bool, error) {
     newLines := []string{}
     changed := false
 
+    safeCheck := "pam_exec.so quiet /usr/bin/test -t 0"
+
     for _, line := range lines {
         if strings.Contains(line, "pam_tlog.so") {
+            changed = true
+            continue
+        }
+        if strings.Contains(line, safeCheck) {
             changed = true
             continue
         }
@@ -169,4 +201,15 @@ func DisablePamTlog(pamFile string) (bool, error) {
         return false, err
     }
     return true, nil
+}
+
+func RestartSSHService() error {
+	services := []string{"ssh", "sshd"}
+	for _, s := range services {
+		cmd := exec.Command("systemctl", "restart", s)
+		if err := cmd.Run(); err == nil {
+			return nil
+		}
+	}
+	return fmt.Errorf("failed to restart ssh service")
 }

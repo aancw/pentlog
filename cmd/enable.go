@@ -50,13 +50,20 @@ var enableCmd = &cobra.Command{
 		}
 
 		if enableSSH {
+			fmt.Println("WARNING: Enabling PAM for SSH will restart the SSH service.")
 			fmt.Print("Enabling PAM for SSH sessions (sshd)... ")
 			changed, err := system.EnablePamTlog(config.PamSSHD)
 			if err != nil {
 				fmt.Printf("FAIL: %v\n", err)
 			} else {
 				if changed {
-					fmt.Println("OK")
+					fmt.Print("OK. Restarting SSH... ")
+					if err := system.RestartSSHService(); err != nil {
+						fmt.Printf("FAIL (%v)\n", err)
+						fmt.Println("Please restart ssh service manually.")
+					} else {
+						fmt.Println("DONE")
+					}
 				} else {
 					fmt.Println("Already enabled")
 				}
