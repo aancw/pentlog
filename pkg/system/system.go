@@ -111,8 +111,10 @@ func EnablePamTlog(pamFile string) (bool, error) {
 	scanner := bufio.NewScanner(f)
 	lines := []string{}
 	
-	safeCheck := "pam_exec.so quiet /usr/bin/test -t 0"
+safeCheck := "pam_exec.so quiet /usr/bin/test -t 0"
 	tlogLine := "pam_tlog.so"
+	beginMarker := "# BEGIN PENTLOG MANAGED BLOCK"
+	endMarker := "# END PENTLOG MANAGED BLOCK"
 
 	hasSafeBlock := false
 	needsFix := false
@@ -124,7 +126,11 @@ func EnablePamTlog(pamFile string) (bool, error) {
 	for i, line := range lines {
 		if strings.Contains(line, tlogLine) && !strings.HasPrefix(strings.TrimSpace(line), "#") {
 			if i > 0 && strings.Contains(lines[i-1], safeCheck) && !strings.HasPrefix(strings.TrimSpace(lines[i-1]), "#") {
-				hasSafeBlock = true
+				if i > 1 && strings.TrimSpace(lines[i-2]) == beginMarker {
+					hasSafeBlock = true
+				} else {
+					needsFix = true
+				}
 			} else {
 				needsFix = true
 			}
@@ -140,23 +146,26 @@ func EnablePamTlog(pamFile string) (bool, error) {
 	}
 
 	var newLines []string
-	
 	for _, line := range lines {
-		if strings.Contains(line, tlogLine) && !strings.HasPrefix(strings.TrimSpace(line), "#") {
+		trimmed := strings.TrimSpace(line)
+		if strings.Contains(line, tlogLine) && !strings.HasPrefix(trimmed, "#") {
 			continue
 		}
-		if strings.Contains(line, safeCheck) && !strings.HasPrefix(strings.TrimSpace(line), "#") {
+		if strings.Contains(line, safeCheck) && !strings.HasPrefix(trimmed, "#") {
 			continue
 		}
-		
+		if trimmed == beginMarker || trimmed == endMarker {
+			continue
+		}
 		newLines = append(newLines, line)
 	}
 
+	newLines = append(newLines, beginMarker)
 	newLines = append(newLines, "session [success=ignore default=1] pam_exec.so quiet /usr/bin/test -t 0")
 	newLines = append(newLines, config.PamTlogLine)
+	newLines = append(newLines, endMarker)
 
 	output := strings.Join(newLines, "\n") + "\n"
-	
 	if err := os.WriteFile(pamFile, []byte(output), 0644); err != nil {
 		return false, fmt.Errorf("failed to update PAM file %s: %w", pamFile, err)
 	}
@@ -175,8 +184,11 @@ func DisablePamTlog(pamFile string) (bool, error) {
     changed := false
 
     safeCheck := "pam_exec.so quiet /usr/bin/test -t 0"
+	beginMarker := "# BEGIN PENTLOG MANAGED BLOCK"
+	endMarker := "# END PENTLOG MANAGED BLOCK"
 
     for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
         if strings.Contains(line, "pam_tlog.so") {
             changed = true
             continue
@@ -185,6 +197,10 @@ func DisablePamTlog(pamFile string) (bool, error) {
             changed = true
             continue
         }
+		if trimmed == beginMarker || trimmed == endMarker {
+			changed = true
+			continue
+		}
         newLines = append(newLines, line)
     }
 

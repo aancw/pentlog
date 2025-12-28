@@ -51,7 +51,7 @@ var setupCmd = &cobra.Command{
 			fmt.Printf("found %s\n", pamFile)
 		}
 
-		fmt.Printf("Enabling PAM for local sessions (%s)... ", pamFile)
+		fmt.Printf("Enabling PENTLOG MANAGED BLOCK for local sessions (%s)... ", pamFile)
 		changed, err := system.EnablePamTlog(pamFile)
 		if err != nil {
 			fmt.Printf("FAIL\n%v\n", err)

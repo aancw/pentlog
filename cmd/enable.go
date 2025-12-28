@@ -30,7 +30,7 @@ var enableCmd = &cobra.Command{
 		}
 
 		if enableLocal {
-			fmt.Print("Enabling PAM for local sessions... ")
+			fmt.Print("Enabling PENTLOG MANAGED BLOCK for local sessions... ")
 			pamFile, err := system.DetectLocalPamFile()
 			if err != nil {
 				fmt.Printf("FAIL: %v\n", err)
@@ -51,7 +51,7 @@ var enableCmd = &cobra.Command{
 
 		if enableSSH {
 			fmt.Println("WARNING: Enabling PAM for SSH will restart the SSH service.")
-			fmt.Print("Enabling PAM for SSH sessions (sshd)... ")
+			fmt.Print("Enabling PENTLOG MANAGED BLOCK for SSH sessions (sshd)... ")
 			changed, err := system.EnablePamTlog(config.PamSSHD)
 			if err != nil {
 				fmt.Printf("FAIL: %v\n", err)
