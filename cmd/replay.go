@@ -21,15 +21,20 @@ var replayCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		path, err := logs.GetSessionPath(id)
+		session, err := logs.GetSession(id)
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
 			os.Exit(1)
 		}
 
-		fmt.Printf("Replaying session %d (%s)...\n", id, path)
+		if session.TimingPath == "" {
+			fmt.Println("Error: timing file missing for this session; cannot replay.")
+			os.Exit(1)
+		}
 
-		c := exec.Command("tlog-play", path)
+		fmt.Printf("Replaying session %d (%s)...\n", id, session.Path)
+
+		c := exec.Command("scriptreplay", session.TimingPath, session.Path)
 		c.Stdout = os.Stdout
 		c.Stderr = os.Stderr
 		c.Stdin = os.Stdin

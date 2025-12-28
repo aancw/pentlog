@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"strings"
 	"pentlog/pkg/config"
 	"pentlog/pkg/metadata"
 	"pentlog/pkg/system"
@@ -16,7 +15,7 @@ var statusCmd = &cobra.Command{
 	Short: "Show current tool and engagement status",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("=== Pentlog Status ===")
-		
+
 		ctx, err := metadata.Load()
 		if err != nil {
 			fmt.Println("Context: No active engagement found.")
@@ -26,23 +25,22 @@ var statusCmd = &cobra.Command{
 			fmt.Printf("  Operator: %s\n", ctx.Operator)
 		}
 
-		checkPam := func(name, path string) {
-			content, err := os.ReadFile(path)
-			status := "DISABLED"
-			if err == nil && strings.Contains(string(content), "pam_tlog.so") {
-				status = "ENABLED"
-			}
-			fmt.Printf("%s (%s): %s\n", name, path, status)
-		}
-
-		pamLocal, err := system.DetectLocalPamFile()
+		logDir, err := config.GetLogsDir()
 		if err != nil {
-			fmt.Printf("PAM Local: ERROR (Not found)\n")
+			fmt.Printf("Log directory: ERROR (%v)\n", err)
 		} else {
-			checkPam("PAM Local", pamLocal)
+			if _, err := os.Stat(logDir); err != nil {
+				fmt.Printf("Log directory: missing (%s)\n", logDir)
+			} else {
+				fmt.Printf("Log directory: %s\n", logDir)
+			}
 		}
 
-		checkPam("PAM SSH", config.PamSSHD)
+		if err := system.CheckDependencies(); err != nil {
+			fmt.Printf("Recorder dependencies: MISSING (%v)\n", err)
+		} else {
+			fmt.Println("Recorder dependencies: OK (script, scriptreplay)")
+		}
 	},
 }
 

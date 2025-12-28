@@ -6,18 +6,12 @@ import (
 )
 
 const (
-	// System Paths (Linux)
-	TlogLogPath        = "/var/log/tlog"
-	TlogConfigPath     = "/etc/tlog/tlog-rec-session.conf"
-	PamSSHD            = "/etc/pam.d/sshd"
-	PamTlogLine        = "session required pam_tlog.so"
-
-	// User Paths
-	PentlogDirName     = ".pentlog"
-	ContextFileName    = "context.json"
-	HashesDirName      = "hashes"
-	ExtractsDirName    = "extracts"
-	HashesFileName     = "sha256.txt"
+	PentlogDirName  = ".pentlog"
+	ContextFileName = "context.json"
+	HashesDirName   = "hashes"
+	ExtractsDirName = "extracts"
+	HashesFileName  = "sha256.txt"
+	LogsDirName     = "logs"
 )
 
 func GetUserPentlogDir() (string, error) {
@@ -54,4 +48,12 @@ func GetExtractsDir() (string, error) {
 		return "", err
 	}
 	return filepath.Join(dir, ExtractsDirName), nil
+}
+
+func GetLogsDir() (string, error) {
+	dir, err := GetUserPentlogDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, LogsDirName), nil
 }

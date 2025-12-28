@@ -25,9 +25,9 @@ var sessionsCmd = &cobra.Command{
 		}
 
 		w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
-		fmt.Fprintln(w, "ID\tTIME\tSIZE\tFILENAME")
+		fmt.Fprintln(w, "ID\tTIME\tSIZE\tFILE")
 		for _, s := range sessions {
-			fmt.Fprintf(w, "%d\t%s\t%d\t%s\n", s.ID, s.ModTime, s.Size, s.Filename)
+			fmt.Fprintf(w, "%d\t%s\t%d\t%s\n", s.ID, s.ModTime, s.Size, s.DisplayPath)
 		}
 		w.Flush()
 	},
@@ -36,4 +36,3 @@ var sessionsCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(sessionsCmd)
 }
-

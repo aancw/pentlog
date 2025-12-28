@@ -1,15 +1,15 @@
 # pentlog
 
 Evidence-First Pentest Logging Tool.
-Orchestrates `tlog` for secure terminal recording across Linux distributions.
+Captures shell activity as plain-text terminal logs backed by `script`/`scriptreplay`.
 
 ## Features
 
-- **Distro-Agnostic**: Supports any Linux with `tlog` (Kali, Debian, RHEL, CentOS, Fedora, Arch).
-- **Full Capture**: Records all terminal I/O via managed PAM blocks.
-- **SCP/SFTP Safe**: TTY-aware configuration prevents data corruption during file transfers.
-- **Resilient**: Survives SSH disconnects and terminal crashes.
-- **Context-Aware**: Tracks Engagement metadata and Pentest phases.
+- **No Root Required**: Start recorded shells as a normal user; logs land in your home directory.
+- **Context-Aware**: Tracks client/engagement/scope/operator/phase metadata and stamps every log.
+- **Replayable**: Timing files enable faithful playback via `scriptreplay`.
+- **Extraction Friendly**: Quickly dump per-phase command history to Markdown.
+- **Integrity Ready**: Freeze command hashes every log for evidence packaging.
 
 ## Installation
 
@@ -20,19 +20,13 @@ go build -o pentlog main.go
 # Cross-compile on Mac for Linux
 GOOS=linux GOARCH=amd64 go build -o pentlog main.go
 
-# Setup (Requires Root)
-sudo ./pentlog setup
+# Initial setup (checks deps, creates ~/.pentlog/logs)
+./pentlog setup
 ```
 
 ## Usage
 
-### 1. Enable Logging
-```bash
-# Enable for local and SSH sessions (will restart SSH service)
-sudo ./pentlog enable --local --ssh
-```
-
-### 2. Start Engagement / Switch Context
+### 1. Start Engagement / Switch Context
 ```bash
 # Run as your normal user
 ./pentlog start \
@@ -42,44 +36,42 @@ sudo ./pentlog enable --local --ssh
   --operator "kali" \
   --phase "recon"
 
-# OPTION A: Spawn a new shell with context (Easiest)
+# Start a recorded shell with context (Recommended)
 ./pentlog shell
 
-# OPTION B: Apply to current shell
+# OR: Apply context to current shell for scripting
 eval $(./pentlog env)
+
+# OR: Clear current active context
+./pentlog reset
 ```
 
-### 3. Check Status
+### 2. Check Status
 ```bash
 ./pentlog status
 ```
 
-### 4. Manage & Replay
+### 3. Manage & Replay
 ```bash
 # List all recorded sessions
-sudo ./pentlog sessions
+./pentlog sessions
 
 # Replay a specific session ID
-sudo ./pentlog replay <ID>
+./pentlog replay <ID>
 ```
 
-### 5. Extraction & Integrity
+### 4. Extraction & Integrity
 ```bash
-# Extract commands for a specific phase (Markdown output)
-sudo ./pentlog extract recon > recon_report.md
+# Extract logs for a specific phase (Markdown output)
+./pentlog extract recon > recon_report.md
 
 # Generate SHA256 hashes of all logs
-sudo ./pentlog freeze
+./pentlog freeze
 ```
 
-## Security & Reliability
+## Storage Layout
 
-- **Managed Blocks**: PAM configurations are wrapped in `# BEGIN/END PENTLOG MANAGED BLOCK` for easy auditing.
-- **Backups**: `pentlog` automatically creates timestamped `.bak` files before modifying any system configuration.
-- **Root-Owned Logs**: Session logs in `/var/log/tlog/` are protected from non-root users.
-
-## Directory Structure
-
-- User Configuration: `~/.pentlog/`
-- System Logs: `/var/log/tlog/`
+- User Configuration & Context: `~/.pentlog/context.json`
+- Manual Session Logs + Timing + Metadata: `~/.pentlog/logs/<client>/<engagement>/<phase>/manual-<operator>-<timestamp>.{log,timing,json}`
 - Evidence Hashes: `~/.pentlog/hashes/sha256.txt`
+- Extraction Reports: `~/.pentlog/extracts/`
