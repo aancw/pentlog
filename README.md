@@ -56,7 +56,8 @@ eval $(./pentlog env)
 # List all recorded sessions
 ./pentlog sessions
 
-# Replay a specific session ID
+# Replay a specific session ID (fast replay, Ctrl+C to stop)
+# Terminal is reset automatically afterward.
 ./pentlog replay <ID>
 ```
 

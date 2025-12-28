@@ -69,9 +69,7 @@ var shellCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		timingArg := fmt.Sprintf("--timing=%s", timingFilePath)
-
-		c := exec.Command(scriptPath, "--quiet", "--flush", "--append", timingArg, logFilePath)
+		c := exec.Command(scriptPath, "--quiet", "--flush", "--append", "-t", timingFilePath, logFilePath)
 		c.Stdin = os.Stdin
 		c.Stdout = os.Stdout
 		c.Stderr = os.Stderr
