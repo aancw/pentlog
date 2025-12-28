@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	// System Paths (Linux/Kali)
+	// System Paths (Linux)
 	TlogLogPath        = "/var/log/tlog"
 	TlogConfigPath     = "/etc/tlog/tlog-rec-session.conf"
 	PamSSHD            = "/etc/pam.d/sshd"

@@ -67,5 +67,3 @@ sudo ./pentlog enable --local --ssh
 - Configuration: `~/.pentlog/context.json`, `~/.pentlog/history.jsonl`
 - Logs: `/var/log/tlog/`
 - Hashes: `~/.pentlog/hashes/sha256.txt`
-
-```

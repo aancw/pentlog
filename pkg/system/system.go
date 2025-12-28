@@ -17,7 +17,7 @@ func IsRoot() bool {
 }
 
 func CheckDependencies() error {
-	deps := []string{"tlog", "jq"}
+	deps := []string{"tlog-rec-session", "tlog-play", "jq"}
 	for _, dep := range deps {
 		_, err := exec.LookPath(dep)
 		if err != nil {
