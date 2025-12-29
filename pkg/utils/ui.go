@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"syscall"
 	"unsafe"
@@ -57,4 +58,15 @@ func PrintCenteredBlock(lines []string) {
 	for _, line := range centered {
 		fmt.Println(line)
 	}
+}
+
+func ShortenPath(path string) string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return path
+	}
+	if strings.HasPrefix(path, home) {
+		return "~" + strings.TrimPrefix(path, home)
+	}
+	return path
 }

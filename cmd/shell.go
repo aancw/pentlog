@@ -81,6 +81,13 @@ var shellCmd = &cobra.Command{
 		newEnv = append(newEnv, fmt.Sprintf("PENTLOG_PHASE=%s", ctx.Phase))
 		c.Env = newEnv
 
+		fmt.Println("Starting RECORDED session...")
+		fmt.Printf("Log:    %s\n", utils.ShortenPath(logFilePath))
+		if recorder.SupportsTiming() {
+			fmt.Printf("Timing: %s\n", utils.ShortenPath(timingFilePath))
+		}
+		fmt.Println()
+
 		summary := []string{
 			"---------------------------------------------------",
 			fmt.Sprintf("Client:     %s", ctx.Client),
@@ -92,12 +99,8 @@ var shellCmd = &cobra.Command{
 		}
 		utils.PrintCenteredBlock(summary)
 
-		fmt.Printf("Starting RECORDED session...\n")
-		fmt.Printf("Log file: %s\n", logFilePath)
-		if recorder.SupportsTiming() {
-			fmt.Printf("Timing file: %s\n", timingFilePath)
-		}
-		fmt.Println("\nType 'exit' or Ctrl+D to stop recording.")
+		fmt.Println()
+		utils.PrintCenteredBlock([]string{"Type 'exit' or Ctrl+D to stop recording."})
 
 		if err := c.Run(); err != nil {
 			if exitError, ok := err.(*exec.ExitError); ok {
