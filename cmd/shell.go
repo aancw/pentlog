@@ -63,13 +63,12 @@ var shellCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		scriptPath, err := exec.LookPath("script")
+		recorder := system.NewRecorder()
+		c, err := recorder.BuildCommand(timingFilePath, logFilePath)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: 'script' command not found.\n")
+			fmt.Fprintf(os.Stderr, "Error creating recorder command: %v\n", err)
 			os.Exit(1)
 		}
-
-		c := exec.Command(scriptPath, "--quiet", "--flush", "--append", "-t", timingFilePath, logFilePath)
 		c.Stdin = os.Stdin
 		c.Stdout = os.Stdout
 		c.Stderr = os.Stderr
@@ -84,7 +83,9 @@ var shellCmd = &cobra.Command{
 
 		fmt.Printf("Starting RECORDED session for: %s [%s]\n", ctx.Client, ctx.Phase)
 		fmt.Printf("Log file: %s\n", logFilePath)
-		fmt.Printf("Timing file: %s\n", timingFilePath)
+		if recorder.SupportsTiming() {
+			fmt.Printf("Timing file: %s\n", timingFilePath)
+		}
 		fmt.Println("Type 'exit' or Ctrl+D to stop recording.")
 
 		if err := c.Run(); err != nil {

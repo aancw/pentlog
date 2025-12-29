@@ -5,10 +5,15 @@ import (
 	"os"
 	"os/exec"
 	"pentlog/pkg/config"
+	"runtime"
 )
 
 func CheckDependencies() error {
-	deps := []string{"script", "scriptreplay"}
+	deps := []string{"script"}
+	if runtime.GOOS == "linux" {
+		deps = append(deps, "scriptreplay")
+	}
+
 	for _, dep := range deps {
 		if _, err := exec.LookPath(dep); err != nil {
 			return fmt.Errorf("%s not found in PATH", dep)

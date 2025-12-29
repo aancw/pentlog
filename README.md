@@ -39,9 +39,6 @@ GOOS=linux GOARCH=amd64 go build -o pentlog main.go
 # Start a recorded shell with context (Recommended)
 ./pentlog shell
 
-# OR: Apply context to current shell for scripting
-eval $(./pentlog env)
-
 # OR: Clear current active context
 ./pentlog reset
 ```

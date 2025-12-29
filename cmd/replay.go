@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"pentlog/pkg/logs"
+	"runtime"
 	"strconv"
 	"syscall"
 
@@ -20,6 +21,16 @@ var replayCmd = &cobra.Command{
 		id, err := strconv.Atoi(args[0])
 		if err != nil {
 			fmt.Println("ID must be a number")
+			os.Exit(1)
+		}
+
+		if runtime.GOOS == "darwin" {
+			fmt.Println("Warning: Session replay is not available on macOS.")
+			os.Exit(1)
+		}
+
+		if _, err := exec.LookPath("scriptreplay"); err != nil {
+			fmt.Println("Error: 'scriptreplay' command not found.")
 			os.Exit(1)
 		}
 
