@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"pentlog/pkg/metadata"
+	"pentlog/pkg/utils"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -36,13 +37,17 @@ var startCmd = &cobra.Command{
 		}
 
 		fmt.Println("Context saved and history updated.")
-		fmt.Println("---------------------------------------------------")
-		fmt.Printf("Client:     %s\n", ctx.Client)
-		fmt.Printf("Engagement: %s\n", ctx.Engagement)
-		fmt.Printf("Scope:      %s\n", ctx.Scope)
-		fmt.Printf("Operator:   %s\n", ctx.Operator)
-		fmt.Printf("Phase:      %s\n", ctx.Phase)
-		fmt.Println("---------------------------------------------------")
+
+		summary := []string{
+			"---------------------------------------------------",
+			fmt.Sprintf("Client:     %s", ctx.Client),
+			fmt.Sprintf("Engagement: %s", ctx.Engagement),
+			fmt.Sprintf("Scope:      %s", ctx.Scope),
+			fmt.Sprintf("Operator:   %s", ctx.Operator),
+			fmt.Sprintf("Phase:      %s", ctx.Phase),
+			"---------------------------------------------------",
+		}
+		utils.PrintCenteredBlock(summary)
 		fmt.Println("To enter this context immediately, run:")
 		fmt.Println("  ./pentlog shell")
 		fmt.Println("\nOr for scripting:")

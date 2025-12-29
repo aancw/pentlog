@@ -28,13 +28,13 @@ GOOS=linux GOARCH=amd64 go build -o pentlog main.go
 
 ### 1. Start Engagement / Switch Context
 ```bash
-# Run as your normal user
+# Run as your normal user using short flags
 ./pentlog start \
-  --client "ACME Corp" \
-  --engagement "Q1 PenTest" \
-  --scope "10.10.10.0/24" \
-  --operator "kali" \
-  --phase "recon"
+  -c "ACME Corp" \
+  -e "Q1 PenTest" \
+  -s "10.10.10.0/24" \
+  -o "kali" \
+  -p "recon"
 
 # Start a recorded shell with context (Recommended)
 ./pentlog shell
@@ -48,17 +48,23 @@ GOOS=linux GOARCH=amd64 go build -o pentlog main.go
 ./pentlog status
 ```
 
-### 3. Manage & Replay
+### 3. Search History
+```bash
+# Search all logs using simple string or RegEx
+./pentlog search "password|token"
+```
+
+### 4. Manage & Replay
 ```bash
 # List all recorded sessions
 ./pentlog sessions
 
-# Replay a specific session ID (fast replay, Ctrl+C to stop)
-# Terminal is reset automatically afterward.
-./pentlog replay <ID>
+# Replay a specific session ID (Linux only)
+# Use -s/--speed to control playback speed (e.g. 2.0 = 2x speed)
+./pentlog replay <ID> -s 2.0
 ```
 
-### 4. Extraction & Integrity
+### 5. Extraction & Integrity
 ```bash
 # Extract logs for a specific phase (Markdown output)
 ./pentlog extract recon > recon_report.md
