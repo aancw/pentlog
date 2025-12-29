@@ -3,8 +3,8 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"time"
 	"pentlog/pkg/metadata"
+	"time"
 
 	"github.com/spf13/cobra"
 )
@@ -51,15 +51,15 @@ var startCmd = &cobra.Command{
 }
 
 func init() {
-	startCmd.Flags().StringVar(&startClient, "client", "", "Client name")
-	startCmd.Flags().StringVar(&startEngagement, "engagement", "", "Engagement type/name")
-	startCmd.Flags().StringVar(&startScope, "scope", "", "Scope definition")
-	startCmd.Flags().StringVar(&startOperator, "operator", "", "Operator name")
-	startCmd.Flags().StringVar(&startPhase, "phase", "generic", "Pentest phase (recon, exploit, post, pivot, cleanup)")
+	startCmd.Flags().StringVarP(&startClient, "client", "c", "", "Client name")
+	startCmd.Flags().StringVarP(&startEngagement, "engagement", "e", "", "Engagement type/name")
+	startCmd.Flags().StringVarP(&startScope, "scope", "s", "", "Scope definition")
+	startCmd.Flags().StringVarP(&startOperator, "operator", "o", "", "Operator name")
+	startCmd.Flags().StringVarP(&startPhase, "phase", "p", "generic", "Pentest phase (recon, exploit, post, pivot, cleanup)")
 
 	startCmd.MarkFlagRequired("client")
 	startCmd.MarkFlagRequired("engagement")
 	startCmd.MarkFlagRequired("operator")
-	
+
 	rootCmd.AddCommand(startCmd)
 }

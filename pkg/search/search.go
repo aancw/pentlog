@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 	"pentlog/pkg/logs"
-	"strings"
+	"regexp"
 )
 
 type Match struct {
@@ -15,13 +15,17 @@ type Match struct {
 }
 
 func Search(query string) ([]Match, error) {
+	regex, err := regexp.Compile(query)
+	if err != nil {
+		return nil, fmt.Errorf("invalid regex query: %w", err)
+	}
+
 	sessions, err := logs.ListSessions()
 	if err != nil {
 		return nil, fmt.Errorf("failed to list sessions: %w", err)
 	}
 
 	var results []Match
-	lowerQuery := strings.ToLower(query)
 
 	for _, session := range sessions {
 		if session.Path == "" {
@@ -39,7 +43,7 @@ func Search(query string) ([]Match, error) {
 			lineNum++
 			line := scanner.Text()
 
-			if strings.Contains(strings.ToLower(line), lowerQuery) {
+			if regex.MatchString(line) {
 				results = append(results, Match{
 					Session: session,
 					LineNum: lineNum,
