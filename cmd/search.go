@@ -40,7 +40,11 @@ var searchCmd = &cobra.Command{
 		}
 
 		for _, match := range results {
-			fmt.Printf("[%d] %s:%d: %s\n", match.Session.ID, match.Session.DisplayPath, match.LineNum, match.Content)
+			if match.IsNote {
+				fmt.Printf("[%d] %s [NOTE]: %s\n", match.Session.ID, match.Session.DisplayPath, match.Content)
+			} else {
+				fmt.Printf("[%d] %s:%d: %s\n", match.Session.ID, match.Session.DisplayPath, match.LineNum, match.Content)
+			}
 		}
 		fmt.Printf("\nFound %d matches.\n", len(results))
 	},

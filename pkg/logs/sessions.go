@@ -21,6 +21,12 @@ type SessionMetadata struct {
 	Timestamp  string `json:"timestamp"`
 }
 
+type SessionNote struct {
+	Timestamp  string `json:"timestamp"`
+	Content    string `json:"content"`
+	ByteOffset int64  `json:"byte_offset"`
+}
+
 type Session struct {
 	ID          int
 	Filename    string
@@ -28,6 +34,7 @@ type Session struct {
 	DisplayPath string
 	TimingPath  string
 	MetaPath    string
+	NotesPath   string
 	ModTime     string
 	Size        int64
 	Metadata    SessionMetadata
@@ -62,6 +69,17 @@ func ListSessions() ([]Session, error) {
 		}
 
 		ext := filepath.Ext(path)
+		if strings.HasSuffix(path, ".notes.json") {
+			base := strings.TrimSuffix(path, ".notes.json")
+			session := sMap[base]
+			if session == nil {
+				session = &Session{}
+				sMap[base] = session
+			}
+			session.NotesPath = path
+			return nil
+		}
+
 		base := strings.TrimSuffix(path, ext)
 		session := sMap[base]
 		if session == nil {
@@ -153,4 +171,42 @@ func loadMetadata(path string) (SessionMetadata, error) {
 		return meta, err
 	}
 	return meta, nil
+}
+
+func AppendNote(notesPath string, note SessionNote) error {
+	var notes []SessionNote
+
+	if _, err := os.Stat(notesPath); err == nil {
+		data, err := os.ReadFile(notesPath)
+		if err == nil {
+			json.Unmarshal(data, &notes)
+		}
+	}
+
+	notes = append(notes, note)
+
+	data, err := json.MarshalIndent(notes, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(notesPath, data, 0644)
+}
+
+func ReadNotes(notesPath string) ([]SessionNote, error) {
+	var notes []SessionNote
+
+	data, err := os.ReadFile(notesPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return []SessionNote{}, nil
+		}
+		return nil, err
+	}
+
+	if err := json.Unmarshal(data, &notes); err != nil {
+		return nil, err
+	}
+
+	return notes, nil
 }

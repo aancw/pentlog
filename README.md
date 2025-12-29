@@ -46,17 +46,29 @@ When moving from one phase to another (e.g., recon -> exploit), use `switch`.
 # Prompts for new phase (e.g., "exploit")
 ```
 
-### 4. Search & Extract
+### 4. Notes / Bookmarks
+Add timestamped notes during your session without leaving the terminal.
+```bash
+# Add a note (e.g. "Found SQLi")
+./pentlog note add "Found SQLi"
+
+# Review list of notes (Interactive)
+# Works both inside a shell (current session) AND offline (select past session)
+./pentlog note list
+```
+
+### 5. Search & Extract
 All commands function interactively if arguments are omitted.
 ```bash
-# Search logs (prompts for Regex query)
+# Search logs and notes (prompts for Regex query)
+# Results verify if keyword was found in log content or user notes
 ./pentlog search
 
 # Extract a report (prompts for phase)
 ./pentlog extract > report.md
 ```
 
-### 5. Replay (Interactive)
+### 6. Replay (Interactive)
 Replay recorded sessions with an interactive selection menu.
 ```bash
 # Lists recent sessions to pick from
@@ -66,7 +78,7 @@ Replay recorded sessions with an interactive selection menu.
 ./pentlog replay 1 -s 2.0
 ```
 
-### 6. Integrity
+### 7. Integrity
 ```bash
 # Generate SHA256 hashes of all logs
 ./pentlog freeze
