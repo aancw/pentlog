@@ -26,49 +26,48 @@ GOOS=linux GOARCH=amd64 go build -o pentlog main.go
 
 ## Usage
 
-### 1. Start Engagement / Switch Context
+### 1. Initialize Engagement (Interactive)
+The recommended way to start is using the interactive `create` mode.
 ```bash
-# Run as your normal user using short flags
-./pentlog start \
-  -c "ACME Corp" \
-  -e "Q1 PenTest" \
-  -s "10.10.10.0/24" \
-  -o "kali" \
-  -p "recon"
+./pentlog create
+# Prompts for: Client, Engagement, Operator, etc.
+```
 
-# Start a recorded shell with context (Recommended)
+### 2. Enter Shell
+Once initialized, start a recorded shell session.
+```bash
 ./pentlog shell
-
-# OR: Clear current active context
-./pentlog reset
 ```
 
-### 2. Check Status
+### 3. Switch Phases
+When moving from one phase to another (e.g., recon -> exploit), use `switch`.
 ```bash
-./pentlog status
+./pentlog switch
+# Prompts for new phase (e.g., "exploit")
 ```
 
-### 3. Search History
+### 4. Search & Extract
+All commands function interactively if arguments are omitted.
 ```bash
-# Search all logs using simple string or RegEx
-./pentlog search "password|token"
+# Search logs (prompts for Regex query)
+./pentlog search
+
+# Extract a report (prompts for phase)
+./pentlog extract > report.md
 ```
 
-### 4. Manage & Replay
+### 5. Replay (Interactive)
+Replay recorded sessions with an interactive selection menu.
 ```bash
-# List all recorded sessions
-./pentlog sessions
+# Lists recent sessions to pick from
+./pentlog replay
 
-# Replay a specific session ID (Linux only)
-# Use -s/--speed to control playback speed (e.g. 2.0 = 2x speed)
-./pentlog replay <ID> -s 2.0
+# Or specify ID directly (Linux Only)
+./pentlog replay 1 -s 2.0
 ```
 
-### 5. Extraction & Integrity
+### 6. Integrity
 ```bash
-# Extract logs for a specific phase (Markdown output)
-./pentlog extract recon > recon_report.md
-
 # Generate SHA256 hashes of all logs
 ./pentlog freeze
 ```

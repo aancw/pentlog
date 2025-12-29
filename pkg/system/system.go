@@ -22,6 +22,16 @@ func CheckDependencies() error {
 	return nil
 }
 
+func CheckReplayDependencies() error {
+	if runtime.GOOS == "darwin" {
+		return fmt.Errorf("session replay is not natively supported on macOS")
+	}
+	if _, err := exec.LookPath("scriptreplay"); err != nil {
+		return fmt.Errorf("'scriptreplay' command not found")
+	}
+	return nil
+}
+
 func EnsureLogDir() (string, error) {
 	dir, err := config.GetLogsDir()
 	if err != nil {

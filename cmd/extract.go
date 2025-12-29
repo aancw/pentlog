@@ -4,16 +4,28 @@ import (
 	"fmt"
 	"os"
 	"pentlog/pkg/logs"
+	"pentlog/pkg/utils"
 
 	"github.com/spf13/cobra"
 )
 
 var extractCmd = &cobra.Command{
-	Use:   "extract <phase>",
+	Use:   "extract [phase]",
 	Short: "Extract commands for a specific phase (recon, exploit, etc.)",
-	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		phase := args[0]
+		phase := ""
+		if len(args) > 0 {
+			phase = args[0]
+		}
+
+		if phase == "" {
+			phase = utils.PromptString("Phase", "recon")
+		}
+
+		if phase == "" {
+			fmt.Println("Error: Phase cannot be empty.")
+			os.Exit(1)
+		}
 		fmt.Printf("Extracting logs for phase: %s...\n", phase)
 
 		report, err := logs.ExtractCommands(phase)

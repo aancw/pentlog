@@ -6,7 +6,8 @@ import (
 	"os/exec"
 	"os/signal"
 	"pentlog/pkg/logs"
-	"runtime"
+	"pentlog/pkg/system"
+	"pentlog/pkg/utils"
 	"strconv"
 	"syscall"
 
@@ -16,24 +17,52 @@ import (
 var replaySpeed float64
 
 var replayCmd = &cobra.Command{
-	Use:   "replay <id>",
-	Short: "Replay a session",
-	Args:  cobra.ExactArgs(1),
+	Use:   "replay [id]",
+	Short: "Replay a session (Interactive)",
 	Run: func(cmd *cobra.Command, args []string) {
-		if runtime.GOOS == "darwin" {
-			fmt.Println("Warning: Session replay is not available on macOS.")
-			os.Exit(1)
+		if err := system.CheckReplayDependencies(); err != nil {
+			fmt.Printf("Warning: %v\n", err)
+			fmt.Println("Replay might fail or be limited.")
 		}
 
-		if _, err := exec.LookPath("scriptreplay"); err != nil {
-			fmt.Println("Error: 'scriptreplay' command not found.")
-			os.Exit(1)
-		}
+		var id int
+		var err error
 
-		id, err := strconv.Atoi(args[0])
-		if err != nil {
-			fmt.Println("ID must be a number")
-			os.Exit(1)
+		if len(args) > 0 {
+			id, err = strconv.Atoi(args[0])
+			if err != nil {
+				fmt.Printf("Invalid session ID: %s\n", args[0])
+				os.Exit(1)
+			}
+		} else {
+			sessions, err := logs.ListSessions()
+			if err != nil {
+				fmt.Printf("Error listing sessions: %v\n", err)
+				os.Exit(1)
+			}
+			if len(sessions) == 0 {
+				fmt.Println("No sessions found.")
+				return
+			}
+
+			startIdx := 0
+			if len(sessions) > 15 {
+				startIdx = len(sessions) - 15
+			}
+			displaySessions := sessions[startIdx:]
+
+			var items []string
+			for _, s := range displaySessions {
+				items = append(items, fmt.Sprintf("ID %d | %s | %s", s.ID, s.ModTime, s.DisplayPath))
+			}
+
+			fmt.Println("Recent Sessions:")
+			idx := utils.SelectItem("Select Session to Replay:", items)
+			if idx == -1 {
+				fmt.Println("Selection canceled.")
+				return
+			}
+			id = displaySessions[idx].ID
 		}
 
 		session, err := logs.GetSession(id)

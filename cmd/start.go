@@ -20,8 +20,12 @@ var (
 
 var startCmd = &cobra.Command{
 	Use:   "start",
-	Short: "Start a new engagement context",
+	Short: "Start a new engagement context (Deprecated: use 'pentlog create')",
 	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Println("Warning: 'pentlog start' is deprecated and will be removed in future versions.")
+		fmt.Println("Please use 'pentlog create' instead.")
+		fmt.Println()
+
 		ctx := metadata.Context{
 			Client:     startClient,
 			Engagement: startEngagement,

@@ -4,16 +4,28 @@ import (
 	"fmt"
 	"os"
 	"pentlog/pkg/search"
+	"pentlog/pkg/utils"
 
 	"github.com/spf13/cobra"
 )
 
 var searchCmd = &cobra.Command{
-	Use:   "search <query>",
+	Use:   "search [query]",
 	Short: "Search command history across all sessions (supports Regex)",
-	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		query := args[0]
+		query := ""
+		if len(args) > 0 {
+			query = args[0]
+		}
+
+		if query == "" {
+			query = utils.PromptString("Search Query (Regex)", "")
+		}
+
+		if query == "" {
+			fmt.Println("Error: Search query cannot be empty.")
+			os.Exit(1)
+		}
 
 		fmt.Printf("Searching for %q...\n", query)
 		results, err := search.Search(query)
