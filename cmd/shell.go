@@ -165,6 +165,7 @@ var shellCmd = &cobra.Command{
 		if err := c.Run(); err != nil {
 			if exitError, ok := err.(*exec.ExitError); ok {
 				if exitError.ExitCode() != 0 {
+					fmt.Println("\nLeaving pentlog shell session.")
 					os.Exit(exitError.ExitCode())
 				}
 			} else {
@@ -172,6 +173,7 @@ var shellCmd = &cobra.Command{
 				os.Exit(1)
 			}
 		}
+		fmt.Println("\nLeaving pentlog shell session.")
 	},
 }
 
