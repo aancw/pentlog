@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 	"syscall"
 	"unsafe"
@@ -25,14 +26,13 @@ func GetTerminalWidth() int {
 	if int(ret) == 0 && ws.Col > 0 {
 		return int(ws.Col)
 	}
-	return 80 // Default fallback
+	return 80
 }
 
 func CenterBlock(lines []string) []string {
 	width := GetTerminalWidth()
 	var centered []string
 
-	// Find longest line to keep block integrity
 	maxLen := 0
 	for _, line := range lines {
 		if len(line) > maxLen {
@@ -40,7 +40,6 @@ func CenterBlock(lines []string) []string {
 		}
 	}
 
-	// Calculate left pad for the whole block
 	padding := (width - maxLen) / 2
 	if padding < 0 {
 		padding = 0
@@ -69,4 +68,24 @@ func ShortenPath(path string) string {
 		return "~" + strings.TrimPrefix(path, home)
 	}
 	return path
+}
+
+func StripANSI(str string) string {
+	const ansi = "[\u001B\u009B][[\\]()#;?]*(?:(?:(?:[a-zA-Z\\d]*(?:;[a-zA-Z\\d]*)*)?\u0007)|(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PRZcf-ntqry=><~]))"
+	var re = regexp.MustCompile(ansi)
+	stripped := re.ReplaceAllString(str, "")
+
+	reControl := regexp.MustCompile(`[\x08\r]`)
+	return reControl.ReplaceAllString(stripped, "")
+}
+
+func TruncateString(str string, length int) string {
+	if length <= 0 {
+		return ""
+	}
+	runes := []rune(str)
+	if len(runes) > length {
+		return string(runes[:length])
+	}
+	return str
 }

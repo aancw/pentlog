@@ -19,7 +19,17 @@ var extractCmd = &cobra.Command{
 		}
 
 		if phase == "" {
-			phase = utils.PromptString("Phase", "recon")
+			phases := []string{"recon", "exploitation", "post-exploitation", "pivot", "cleanup", "Custom"}
+			idx := utils.SelectItem("Select Phase", phases)
+			if idx == -1 {
+				fmt.Println("Selection canceled.")
+				return
+			}
+			phase = phases[idx]
+
+			if phase == "Custom" {
+				phase = utils.PromptString("Enter Custom Phase", "")
+			}
 		}
 
 		if phase == "" {
