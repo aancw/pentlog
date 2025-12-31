@@ -3,7 +3,9 @@ package cmd
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
+	"os/exec"
 	"pentlog/pkg/logs"
 	"pentlog/pkg/search"
 	"pentlog/pkg/utils"
@@ -14,76 +16,72 @@ import (
 )
 
 var searchCmd = &cobra.Command{
-	Use:   "search [query]",
+	Use:   "search",
 	Short: "Search command history across all sessions (supports Regex)",
 	Run: func(cmd *cobra.Command, args []string) {
 		query := ""
 		var scope []logs.Session
 
-		if len(args) > 0 {
-			query = args[0]
-		} else {
-			allSessions, err := logs.ListSessions()
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error listing sessions: %v\n", err)
-				os.Exit(1)
-			}
-
-			clientMap := make(map[string]bool)
-			var clients []string
-			for _, s := range allSessions {
-				if s.Metadata.Client != "" && !clientMap[s.Metadata.Client] {
-					clientMap[s.Metadata.Client] = true
-					clients = append(clients, s.Metadata.Client)
-				}
-			}
-
-			if len(clients) == 0 {
-				fmt.Println("No clients found in sessions.")
-				return
-			}
-
-			clientIdx := utils.SelectItem("Select Client", clients)
-			if clientIdx == -1 {
-				return
-			}
-			selectedClient := clients[clientIdx]
-
-			var scopedSessions []logs.Session
-			engagementMap := make(map[string]bool)
-			var engagements []string
-
-			for _, s := range allSessions {
-				if s.Metadata.Client == selectedClient {
-					scopedSessions = append(scopedSessions, s)
-					if s.Metadata.Engagement != "" && !engagementMap[s.Metadata.Engagement] {
-						engagementMap[s.Metadata.Engagement] = true
-						engagements = append(engagements, s.Metadata.Engagement)
-					}
-				}
-			}
-
-			if len(engagements) == 0 {
-				fmt.Println("No engagements found for this client.")
-				return
-			}
-
-			engIdx := utils.SelectItem("Select Engagement", engagements)
-			if engIdx == -1 {
-				return
-			}
-			selectedEngagement := engagements[engIdx]
-
-			var finalScope []logs.Session
-			for _, s := range scopedSessions {
-				if s.Metadata.Engagement == selectedEngagement {
-					finalScope = append(finalScope, s)
-				}
-			}
-			scope = finalScope
-
-			query = utils.PromptString("Search Query (Regex)", "")
+		allSessions, err := logs.ListSessions()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error listing sessions: %v\n", err)
+			os.Exit(1)
 		}
+
+		clientMap := make(map[string]bool)
+		var clients []string
+		for _, s := range allSessions {
+			if s.Metadata.Client != "" && !clientMap[s.Metadata.Client] {
+				clientMap[s.Metadata.Client] = true
+				clients = append(clients, s.Metadata.Client)
+			}
+		}
+
+		if len(clients) == 0 {
+			fmt.Println("No clients found in sessions.")
+			return
+		}
+
+		clientIdx := utils.SelectItem("Select Client", clients)
+		if clientIdx == -1 {
+			return
+		}
+		selectedClient := clients[clientIdx]
+
+		var scopedSessions []logs.Session
+		engagementMap := make(map[string]bool)
+		var engagements []string
+
+		for _, s := range allSessions {
+			if s.Metadata.Client == selectedClient {
+				scopedSessions = append(scopedSessions, s)
+				if s.Metadata.Engagement != "" && !engagementMap[s.Metadata.Engagement] {
+					engagementMap[s.Metadata.Engagement] = true
+					engagements = append(engagements, s.Metadata.Engagement)
+				}
+			}
+		}
+
+		if len(engagements) == 0 {
+			fmt.Println("No engagements found for this client.")
+			return
+		}
+
+		engIdx := utils.SelectItem("Select Engagement", engagements)
+		if engIdx == -1 {
+			return
+		}
+		selectedEngagement := engagements[engIdx]
+
+		var finalScope []logs.Session
+		for _, s := range scopedSessions {
+			if s.Metadata.Engagement == selectedEngagement {
+				finalScope = append(finalScope, s)
+			}
+		}
+		scope = finalScope
+
+		query = utils.PromptString("Search Query (Regex)", "")
 
 		if query == "" {
 			fmt.Println("Error: Search query cannot be empty.")
@@ -174,85 +172,102 @@ var searchCmd = &cobra.Command{
 			})
 		}
 
+		items = append(items, item{
+			Label: "Exit Search",
+		})
+
 		templates := &promptui.SelectTemplates{
 			Label:    "{{ . }}",
 			Active:   "\U000025B6 {{ .Label | cyan }}",
 			Inactive: "  {{ .Label }}",
-			Selected: "\U000025B6 Content: {{ .CleanContent | cyan }}",
+			Selected: "\U000025B6 Match: {{ .Label | cyan }}",
 			Details: `
+{{ if .CleanContent }}
 --------- Match Details ----------
 {{ "Session:" | faint }}	{{ .DisplaySession }}
 {{ "File:" | faint }}	{{ .DisplayFile }}
 {{ "Context (5 lines):" | faint }}
-{{ .CleanContext }}`,
+{{ .CleanContext }}
+{{ end }}`,
 		}
 
-		prompt := promptui.Select{
-			Label:     fmt.Sprintf("Found %d matches. Select to view context:", len(results)),
-			Items:     items,
-			Templates: templates,
-			Size:      10,
-		}
-
-		i, _, err := prompt.Run()
-		if err != nil {
-			if err == promptui.ErrInterrupt {
-				os.Exit(0)
+		// Persistent Search Loop
+		for {
+			prompt := promptui.Select{
+				Label:     fmt.Sprintf("Found %d matches. Select to view context (Esc/Ctrl+C to exit):", len(results)),
+				Items:     items,
+				Templates: templates,
+				Size:      10,
+				Searcher: func(input string, index int) bool {
+					return strings.Contains(strings.ToLower(items[index].Label), strings.ToLower(input))
+				},
 			}
-			return
-		}
 
-		selected := items[i].Match
-		viewContext(selected)
+			i, _, err := prompt.Run()
+			if err != nil {
+				if err == promptui.ErrInterrupt {
+					break
+				}
+				continue
+			}
+
+			if i == len(items)-1 {
+				break
+			}
+
+			selected := items[i].Match
+			viewInPager(selected)
+		}
 	},
 }
 
-func viewContext(m search.Match) {
-	f, err := os.Open(m.Session.Path)
-	if err != nil {
-		fmt.Printf("Error opening file: %v\n", err)
-		return
+func viewInPager(m search.Match) {
+	line := m.LineNum
+
+	var args []string
+
+	args = append(args, fmt.Sprintf("+%dG", line), "-j.5", "-N")
+
+	pager := os.Getenv("PAGER")
+	if pager == "" {
+		pager = "less"
 	}
-	defer f.Close()
 
-	fmt.Printf("\n--- Context View (%s) ---\n", m.Session.DisplayPath)
+	var cmd *exec.Cmd
 
-	scanner := bufio.NewScanner(f)
-	currentLine := 0
-
-	if m.IsNote {
-		offset := int64(m.LineNum)
-		if offset >= 0 {
-			f.Seek(offset, 0)
-			scanner = bufio.NewScanner(f)
-			for i := 0; i < 10 && scanner.Scan(); i++ {
-				fmt.Println(scanner.Text())
-			}
-		} else {
-			fmt.Println("No offset information for this note.")
-		}
+	if strings.Contains(pager, "less") {
+		finalArgs := []string{"-R"}
+		finalArgs = append(finalArgs, args...)
+		cmd = exec.Command("less", finalArgs...)
 	} else {
-		targetLine := m.LineNum
-		startLine := targetLine - 2
-		if startLine < 1 {
-			startLine = 1
-		}
-
-		for scanner.Scan() {
-			currentLine++
-			if currentLine >= startLine {
-				if currentLine == targetLine {
-					fmt.Printf("\033[1;32m> %s\033[0m\n", scanner.Text())
-				} else {
-					fmt.Println(scanner.Text())
-				}
-				if currentLine >= targetLine+5 {
-					break
-				}
-			}
-		}
+		cmd = exec.Command(pager, args...)
 	}
-	fmt.Println("-----------------------------------")
+
+	r, w := io.Pipe()
+	cmd.Stdin = r
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	go func() {
+		defer w.Close()
+		f, err := os.Open(m.Session.Path)
+		if err != nil {
+			fmt.Fprintf(w, "Error opening file: %v\n", err)
+			return
+		}
+		defer f.Close()
+
+		cleaner := utils.NewCleanReader(f)
+		if _, err := io.Copy(w, cleaner); err != nil {
+			return
+		}
+	}()
+
+	if err := cmd.Run(); err != nil {
+		fmt.Printf("Error opening pager: %v\n", err)
+		fmt.Println("Press Enter to continue...")
+		bufio.NewReader(os.Stdin).ReadBytes('\n')
+	}
 }
 
 func init() {

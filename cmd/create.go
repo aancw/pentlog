@@ -23,7 +23,6 @@ var createCmd = &cobra.Command{
 	Short:   "Initialize a new engagement context (Interactive)",
 	Aliases: []string{"init"},
 	Run: func(cmd *cobra.Command, args []string) {
-		// potential for interactive mode if flags are empty
 		if createClient == "" {
 			createClient = utils.PromptString("Client Name", "")
 		}

@@ -3,8 +3,10 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"pentlog/pkg/logs"
 	"pentlog/pkg/utils"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -44,7 +46,44 @@ var extractCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		fmt.Println(report)
+		for {
+			actions := []string{"Preview (pager)", "Save to File", "Exit"}
+			actionIdx := utils.SelectItem("Action", actions)
+
+			if actionIdx == -1 || actionIdx == 2 {
+				break
+			}
+
+			switch actionIdx {
+			case 0:
+				pager := os.Getenv("PAGER")
+				if pager == "" {
+					pager = "less -R"
+				}
+				cmd := exec.Command("sh", "-c", fmt.Sprintf("%s", pager))
+				cmd.Stdin = strings.NewReader(report)
+				cmd.Stdout = os.Stdout
+				cmd.Stderr = os.Stderr
+				if err := cmd.Run(); err != nil {
+					fmt.Printf("Error running pager: %v\n", err)
+				}
+
+			case 1:
+				defaultName := fmt.Sprintf("%s_report.md", phase)
+				filename := utils.PromptString("Enter filename", defaultName)
+				if filename == "" {
+					filename = defaultName
+				}
+
+				if err := os.WriteFile(filename, []byte(report), 0644); err != nil {
+					fmt.Printf("Error saving file: %v\n", err)
+				} else {
+					fmt.Printf("Report saved to %s\n", filename)
+					return
+				}
+			}
+		}
+
 	},
 }
 

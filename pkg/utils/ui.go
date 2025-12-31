@@ -75,8 +75,21 @@ func StripANSI(str string) string {
 	var re = regexp.MustCompile(ansi)
 	stripped := re.ReplaceAllString(str, "")
 
-	reControl := regexp.MustCompile(`[\x08\r]`)
-	return reControl.ReplaceAllString(stripped, "")
+	var stack []rune
+	for _, r := range stripped {
+		if r == '\x08' { // Backspace
+			if len(stack) > 0 {
+				stack = stack[:len(stack)-1]
+			}
+		} else if r == '\r' { // Carriage Return
+
+			continue
+		} else if r >= 0x20 || r == '\n' || r == '\t' {
+			stack = append(stack, r)
+		}
+	}
+
+	return string(stack)
 }
 
 func TruncateString(str string, length int) string {

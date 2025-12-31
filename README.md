@@ -7,8 +7,10 @@ Captures shell activity as plain-text terminal logs backed by `script`/`scriptre
 
 - **No Root Required**: Start recorded shells as a normal user; logs land in your home directory.
 - **Context-Aware**: Tracks client/engagement/scope/operator/phase metadata and stamps every log.
+- **Terminal-Perfect Logs**: Built-in **Virtual Terminal Emulator** guarantees that what you see in the search viewer matches exactly what you saw in your shell—preserving colors, handling overwrites/edits/redraws correctly, and eliminating ghost text.
+- **Interactive Workflows**: Seamlessly create engagements, switch phases, and search logs using intuitive TUI menus.
 - **Replayable**: Timing files enable faithful playback via `scriptreplay`.
-- **Extraction Friendly**: Quickly dump per-phase command history to Markdown.
+- **Extraction Friendly**: Extract structured Markdown reports for any phase with an interactive preview/save menu.
 - **Integrity Ready**: Freeze command hashes every log for evidence packaging.
 
 ## Installation
@@ -37,6 +39,7 @@ The recommended way to start is using the interactive `create` mode.
 Once initialized, start a recorded shell session.
 ```bash
 ./pentlog shell
+# Enters a recorded shell with custom PS1 and instant-logging.
 ```
 
 ### 3. Switch Phases
@@ -58,14 +61,18 @@ Add timestamped notes during your session without leaving the terminal.
 ```
 
 ### 5. Search & Extract
-All commands function interactively if arguments are omitted.
+All commands function interactively.
 ```bash
-# Search logs and notes (prompts for Regex query)
-# Results verify if keyword was found in log content or user notes
+# Search logs and notes (Interactive Loop)
+# - Select Client -> Engagement -> Query
+# - View results in a color-perfect pager (less)
+# - Jump straight to interesting lines of code
 ./pentlog search
 
-# Extract a report (prompts for phase)
-./pentlog extract > report.md
+# Extract a report (Interactive Menu)
+# - Select Phase
+# - Preview in Pager or Save to File
+./pentlog extract
 ```
 
 ### 6. Replay (Interactive)
