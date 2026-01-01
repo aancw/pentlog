@@ -2,7 +2,9 @@ package logs
 
 import (
 	"fmt"
+	"io"
 	"os"
+	"pentlog/pkg/utils"
 	"strings"
 )
 
@@ -21,7 +23,15 @@ func ExtractCommands(phase string) (string, error) {
 			continue
 		}
 
-		data, err := os.ReadFile(s.Path)
+		f, err := os.Open(s.Path)
+		if err != nil {
+			continue
+		}
+
+		cleaner := utils.NewCleanReader(f)
+		data, err := io.ReadAll(cleaner)
+		f.Close()
+
 		if err != nil {
 			continue
 		}
