@@ -91,6 +91,12 @@ Replay recorded sessions with an interactive selection menu.
 ./pentlog freeze
 ```
 
+### 8. Dashboard
+View an interactive executive summary of your engagement logic, including evidence size, recent findings, and statistical breakdowns.
+```bash
+./pentlog dashboard
+```
+
 ## Storage Layout
 
 - User Configuration & Context: `~/.pentlog/context.json`
