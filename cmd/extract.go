@@ -47,10 +47,10 @@ var extractCmd = &cobra.Command{
 		}
 
 		for {
-			actions := []string{"Preview (pager)", "Save to File", "Exit"}
+			actions := []string{"Preview (pager)", "Save to File", "Save to HTML", "Exit"}
 			actionIdx := utils.SelectItem("Action", actions)
 
-			if actionIdx == -1 || actionIdx == 2 {
+			if actionIdx == -1 || actionIdx == 3 {
 				break
 			}
 
@@ -79,6 +79,26 @@ var extractCmd = &cobra.Command{
 					fmt.Printf("Error saving file: %v\n", err)
 				} else {
 					fmt.Printf("Report saved to %s\n", filename)
+					return
+				}
+
+			case 2:
+				defaultName := fmt.Sprintf("%s_report.html", phase)
+				filename := utils.PromptString("Enter filename", defaultName)
+				if filename == "" {
+					filename = defaultName
+				}
+
+				htmlReport, err := logs.ExtractCommandsHTML(phase)
+				if err != nil {
+					fmt.Printf("Error generating HTML: %v\n", err)
+					continue
+				}
+
+				if err := os.WriteFile(filename, []byte(htmlReport), 0644); err != nil {
+					fmt.Printf("Error saving file: %v\n", err)
+				} else {
+					fmt.Printf("HTML Report saved to %s\n", filename)
 					return
 				}
 			}

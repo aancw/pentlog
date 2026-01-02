@@ -6,6 +6,7 @@ import (
 	"io"
 	"regexp"
 	"strconv"
+	"strings"
 )
 
 type CleanReader struct {
@@ -55,11 +56,12 @@ type Cell struct {
 }
 
 var (
-	reAnsiSeq = regexp.MustCompile(`^\x1b\[([0-9;]*)([A-Za-z])`)
+	reAnsiSeq = regexp.MustCompile(`^\x1b\[([?0-9;]*)([A-Za-z])`)
 	reOscSeq  = regexp.MustCompile(`^\x1b\][0-9];.*?\x07`)
+	reAltSeq  = regexp.MustCompile(`^\x1b([=><78]|[()][0-9A-Za-z])`)
 )
 
-func RenderAnsi(line string) string {
+func ParseAnsi(line string) []Cell {
 	var buffer []Cell
 	cursor := 0
 	currentStyle := ""
@@ -89,8 +91,13 @@ func RenderAnsi(line string) string {
 			// Look ahead for CSI ( [ ... char ) or OSC ( ] ... \07 )
 			remainder := string(runes[i:])
 
-			// OSC (Operating System Command) - usually title setting, ignore
 			if loc := reOscSeq.FindStringIndex(remainder); loc != nil {
+				i += loc[1]
+				continue
+			}
+
+			// Alternative Sequences (Keypad, Character Set, Cursor Save/Restore)
+			if loc := reAltSeq.FindStringIndex(remainder); loc != nil {
 				i += loc[1]
 				continue
 			}
@@ -113,8 +120,6 @@ func RenderAnsi(line string) string {
 
 				case "K": // EL - Erase in Line
 					// 0 (default): cursor to end
-					// 1: start to cursor
-					// 2: entire line
 					mode := 0
 					if params != "" {
 						if m, err := strconv.Atoi(params); err == nil {
@@ -155,6 +160,9 @@ func RenderAnsi(line string) string {
 						}
 					}
 					cursor += count
+					if cursor >= CapBufferLimit {
+						cursor = CapBufferLimit // prevent unbounded growth
+					}
 
 				case "G": // CHA - Cursor Horizontal Absolute
 					col := 1
@@ -167,7 +175,6 @@ func RenderAnsi(line string) string {
 					if cursor < 0 {
 						cursor = 0
 					}
-
 				}
 				continue
 			}
@@ -175,7 +182,8 @@ func RenderAnsi(line string) string {
 
 		if cursor >= len(buffer) {
 			if cursor > CapBufferLimit {
-
+				// Prevent buffer from growing indefinitely if cursor is way out
+				cursor = CapBufferLimit
 			}
 			gap := cursor - len(buffer)
 			for k := 0; k < gap; k++ {
@@ -188,7 +196,11 @@ func RenderAnsi(line string) string {
 		cursor++
 		i++
 	}
+	return buffer
+}
 
+func RenderAnsi(line string) string {
+	buffer := ParseAnsi(line)
 	var out bytes.Buffer
 	lastStyle := ""
 
@@ -205,6 +217,85 @@ func RenderAnsi(line string) string {
 	}
 
 	return out.String()
+}
+
+func RenderAnsiHTML(line string) string {
+	buffer := ParseAnsi(line)
+	var out bytes.Buffer
+	currentClass := ""
+
+	for _, cell := range buffer {
+		styleClass := getStyleClass(cell.Style)
+
+		if styleClass != currentClass {
+			if currentClass != "" {
+				out.WriteString("</span>")
+			}
+			if styleClass != "" {
+				out.WriteString("<span class=\"" + styleClass + "\">")
+			}
+			currentClass = styleClass
+		}
+
+		switch cell.Char {
+		case '&':
+			out.WriteString("&amp;")
+		case '<':
+			out.WriteString("&lt;")
+		case '>':
+			out.WriteString("&gt;")
+		case '"':
+			out.WriteString("&quot;")
+		case '\'':
+			out.WriteString("&#39;")
+		default:
+			out.WriteRune(cell.Char)
+		}
+	}
+
+	if currentClass != "" {
+		out.WriteString("</span>")
+	}
+
+	return out.String()
+}
+
+func getStyleClass(ansi string) string {
+	if ansi == "" || ansi == "\x1b[0m" {
+		return ""
+	}
+
+	// Simplified parsing for common colors
+	// \x1b[31;1m -> class="red bold"
+	// We can use regex to extract numbers
+
+	// Just standard colors mapping for now
+	// 30-37: black, red, green, yellow, blue, magenta, cyan, white
+	// 90-97: bright versions
+
+	var classes []string
+
+	re := regexp.MustCompile(`\d+`)
+	matches := re.FindAllString(ansi, -1)
+
+	for _, m := range matches {
+		code, _ := strconv.Atoi(m)
+		switch {
+		case code == 1:
+			classes = append(classes, "ansi-bold")
+		case code >= 30 && code <= 37:
+			colors := []string{"black", "red", "green", "yellow", "blue", "magenta", "cyan", "white"}
+			classes = append(classes, "ansi-"+colors[code-30])
+		case code >= 90 && code <= 97:
+			colors := []string{"bright-black", "bright-red", "bright-green", "bright-yellow", "bright-blue", "bright-magenta", "bright-cyan", "bright-white"}
+			classes = append(classes, "ansi-"+colors[code-90])
+		}
+	}
+
+	if len(classes) == 0 {
+		return ""
+	}
+	return strings.Join(classes, " ")
 }
 
 const CapBufferLimit = 10000
