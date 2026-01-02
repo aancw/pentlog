@@ -25,5 +25,17 @@ func Execute() {
 	}
 }
 
+const Version = "v0.1"
+
+var versionCmd = &cobra.Command{
+	Use:   "version",
+	Short: "Print the version number of pentlog",
+	Long:  `All software has versions. This is pentlog's`,
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Printf("pentlog %s\n", Version)
+	},
+}
+
 func init() {
+	rootCmd.AddCommand(versionCmd)
 }
