@@ -18,7 +18,7 @@ Captures shell activity as plain-text terminal logs backed by `script`/`scriptre
 ### Quick Install (Linux & macOS)
 
 ```bash
-curl --tlsv1.2 -sSf https://raw.githubusercontent.com/petruknisme/pentlog/main/install.sh | sh
+curl -sSf https://raw.githubusercontent.com/petruknisme/pentlog/main/install.sh | sh
 ```
 
 ### Build from Source
