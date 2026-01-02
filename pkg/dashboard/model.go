@@ -56,6 +56,8 @@ type Stats struct {
 	RecentSessions    []logs.Session
 	PhaseCounts       map[string]int
 	EngagementCounts  map[string]int
+	ClientSizes       map[string]int64
+	EngagementSizes   map[string]int64
 	RecentNotes       []NoteWithMeta
 }
 
@@ -108,6 +110,8 @@ func loadStats() tea.Msg {
 		TotalSessions:    len(sessions),
 		PhaseCounts:      make(map[string]int),
 		EngagementCounts: make(map[string]int),
+		ClientSizes:      make(map[string]int64),
+		EngagementSizes:  make(map[string]int64),
 	}
 
 	clients := make(map[string]bool)
@@ -123,10 +127,12 @@ func loadStats() tea.Msg {
 		stats.TotalSize += s.Size
 		if s.Metadata.Client != "" {
 			clients[s.Metadata.Client] = true
+			stats.ClientSizes[s.Metadata.Client] += s.Size
 		}
 		if s.Metadata.Engagement != "" {
 			engagements[s.Metadata.Engagement] = true
 			stats.EngagementCounts[s.Metadata.Engagement]++
+			stats.EngagementSizes[s.Metadata.Engagement] += s.Size
 		}
 		if s.Metadata.Phase != "" {
 			stats.PhaseCounts[s.Metadata.Phase]++
@@ -247,10 +253,25 @@ func (m Model) View() string {
 	}
 	sort.Strings(engs)
 	for _, e := range engs {
-		line := fmt.Sprintf("%-20s : %d logs", e, m.Stats.EngagementCounts[e])
+		size := formatSize(m.Stats.EngagementSizes[e])
+		line := fmt.Sprintf("%-20s : %d logs (%s)", e, m.Stats.EngagementCounts[e], size)
 		engStrs = append(engStrs, listItem(line))
 	}
 	engSection := lipgloss.JoinVertical(lipgloss.Left, engStrs...)
+
+	var clientStrs []string
+	clientStrs = append(clientStrs, listHeader("Client Data"))
+	var clients []string
+	for c := range m.Stats.ClientSizes {
+		clients = append(clients, c)
+	}
+	sort.Strings(clients)
+	for _, c := range clients {
+		size := formatSize(m.Stats.ClientSizes[c])
+		line := fmt.Sprintf("%-20s : %s", c, size)
+		clientStrs = append(clientStrs, listItem(line))
+	}
+	clientSection := lipgloss.JoinVertical(lipgloss.Left, clientStrs...)
 
 	var noteStrs []string
 	noteStrs = append(noteStrs, listHeader("Recent Findings"))
@@ -270,6 +291,7 @@ func (m Model) View() string {
 
 	middleRow := lipgloss.JoinHorizontal(lipgloss.Top,
 		lipgloss.NewStyle().MarginRight(4).Render(phaseSection),
+		lipgloss.NewStyle().MarginRight(4).Render(clientSection),
 		engSection,
 	)
 
