@@ -25,7 +25,7 @@ func Execute() {
 	}
 }
 
-const Version = "v0.1"
+const Version = "v0.3"
 
 var versionCmd = &cobra.Command{
 	Use:   "version",

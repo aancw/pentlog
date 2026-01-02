@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 
@@ -75,6 +76,7 @@ var updateCmd = &cobra.Command{
 		var rc io.ReadCloser
 		if token != "" {
 			rc, _, err = client.Repositories.DownloadReleaseAsset(ctx, RepoOwner, RepoName, targetAsset.GetID(), http.DefaultClient)
+
 		} else {
 			resp, err := http.Get(targetAsset.GetBrowserDownloadURL())
 			if err != nil {
@@ -92,31 +94,37 @@ var updateCmd = &cobra.Command{
 			fmt.Printf("Error downloading asset: %v\n", err)
 			return
 		}
-		defer rc.Close()
 
-		tmpFile, err := os.CreateTemp("", "pentlog-update-*")
-		if err != nil {
-			fmt.Printf("Error creating temp file: %v\n", err)
-			return
-		}
-		defer os.Remove(tmpFile.Name())
-
-		_, err = io.Copy(tmpFile, rc)
-		if err != nil {
-			fmt.Printf("Error writing to temp file: %v\n", err)
-			tmpFile.Close()
-			return
-		}
-		tmpFile.Close()
-
-		if err := os.Chmod(tmpFile.Name(), 0755); err != nil {
-			fmt.Printf("Error making binary executable: %v\n", err)
-			return
+		if rc != nil {
+			defer rc.Close()
 		}
 
 		exePath, err := os.Executable()
 		if err != nil {
 			fmt.Printf("Error finding executable path: %v\n", err)
+			return
+		}
+		exeDir := filepath.Dir(exePath)
+
+		tmpFile, err := os.CreateTemp(exeDir, "pentlog-update-*")
+		if err != nil {
+			fmt.Printf("Error creating temp file in %s: %v\n", exeDir, err)
+			return
+		}
+		defer os.Remove(tmpFile.Name())
+
+		if rc != nil {
+			_, err = io.Copy(tmpFile, rc)
+			if err != nil {
+				fmt.Printf("Error writing to temp file: %v\n", err)
+				tmpFile.Close()
+				return
+			}
+		}
+		tmpFile.Close()
+
+		if err := os.Chmod(tmpFile.Name(), 0755); err != nil {
+			fmt.Printf("Error making binary executable: %v\n", err)
 			return
 		}
 
