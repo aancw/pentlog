@@ -9,14 +9,14 @@ import (
 	"strings"
 )
 
-func ExtractCommands(phase string) (string, error) {
+func ExportCommands(phase string) (string, error) {
 	sessions, err := ListSessions()
 	if err != nil {
 		return "", err
 	}
 
 	var builder strings.Builder
-	builder.WriteString(fmt.Sprintf("# Extraction Report: %s\n\n", phase))
+	builder.WriteString(fmt.Sprintf("# Export Report: %s\n\n", phase))
 
 	found := false
 	for _, s := range sessions {
@@ -39,7 +39,7 @@ func ExtractCommands(phase string) (string, error) {
 
 		found = true
 		builder.WriteString(fmt.Sprintf("## Session %d (%s)\n", s.ID, s.ModTime))
-		builder.WriteString("```text\n")
+		builder.WriteString("```bash\n")
 		builder.Write(data)
 		builder.WriteString("\n```\n\n")
 	}
@@ -51,7 +51,7 @@ func ExtractCommands(phase string) (string, error) {
 	return builder.String(), nil
 }
 
-func ExtractCommandsHTML(phase string) (string, error) {
+func ExportCommandsHTML(phase string) (string, error) {
 	sessions, err := ListSessions()
 	if err != nil {
 		return "", err
@@ -63,7 +63,7 @@ func ExtractCommandsHTML(phase string) (string, error) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pentlog Extraction Report</title>
+    <title>Pentlog Export Report</title>
     <style>
         body {
             background-color: #1e1e1e;
@@ -118,7 +118,7 @@ func ExtractCommandsHTML(phase string) (string, error) {
 <body>
 `)
 
-	builder.WriteString(fmt.Sprintf("    <h1>Extraction Report: %s</h1>\n", phase))
+	builder.WriteString(fmt.Sprintf("    <h1>Export Report: %s</h1>\n", phase))
 
 	found := false
 	for _, s := range sessions {

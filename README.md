@@ -10,7 +10,7 @@ Captures shell activity as plain-text terminal logs backed by `script`/`scriptre
 - **Terminal-Perfect Logs**: Built-in **Virtual Terminal Emulator** guarantees that what you see in the search viewer matches exactly what you saw in your shell—preserving colors, handling overwrites/edits/redraws correctly, and eliminating ghost text.
 - **Interactive Workflows**: Seamlessly create engagements, switch phases, and search logs using intuitive TUI menus.
 - **Replayable**: Timing files enable faithful playback via `scriptreplay`.
-- **Extraction Friendly**: Extract structured Markdown reports for any phase with an interactive preview/save menu.
+- **Export Friendly**: Export structured Markdown reports for any phase with an interactive preview/save menu.
 - **Integrity Ready**: Freeze command hashes every log for evidence packaging.
 
 ## Installation
@@ -60,7 +60,7 @@ Add timestamped notes during your session without leaving the terminal.
 ./pentlog note list
 ```
 
-### 5. Search & Extract
+### 5. Search & Export
 All commands function interactively.
 ```bash
 # Search logs and notes (Interactive Loop)
@@ -69,10 +69,10 @@ All commands function interactively.
 # - Jump straight to interesting lines of code
 ./pentlog search
 
-# Extract a report (Interactive Menu)
+# Export a report (Interactive Menu)
 # - Select Phase
 # - Preview in Pager or Save to File
-./pentlog extract
+./pentlog export
 ```
 
 ### 6. Replay (Interactive)
@@ -102,4 +102,4 @@ View an interactive executive summary of your engagement logic, including eviden
 - User Configuration & Context: `~/.pentlog/context.json`
 - Manual Session Logs + Timing + Metadata: `~/.pentlog/logs/<client>/<engagement>/<phase>/manual-<operator>-<timestamp>.{log,timing,json}`
 - Evidence Hashes: `~/.pentlog/hashes/sha256.txt`
-- Extraction Reports: `~/.pentlog/extracts/`
+- Export Reports: Saved to current directory

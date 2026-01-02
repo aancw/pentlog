@@ -11,9 +11,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var extractCmd = &cobra.Command{
-	Use:   "extract [phase]",
-	Short: "Extract commands for a specific phase (recon, exploit, etc.)",
+var exportCmd = &cobra.Command{
+	Use:   "export [phase]",
+	Short: "Export commands for a specific phase (recon, exploit, etc.)",
 	Run: func(cmd *cobra.Command, args []string) {
 		phase := ""
 		if len(args) > 0 {
@@ -38,9 +38,9 @@ var extractCmd = &cobra.Command{
 			fmt.Println("Error: Phase cannot be empty.")
 			os.Exit(1)
 		}
-		fmt.Printf("Extracting logs for phase: %s...\n", phase)
+		fmt.Printf("Exporting logs for phase: %s...\n", phase)
 
-		report, err := logs.ExtractCommands(phase)
+		report, err := logs.ExportCommands(phase)
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
 			os.Exit(1)
@@ -89,7 +89,7 @@ var extractCmd = &cobra.Command{
 					filename = defaultName
 				}
 
-				htmlReport, err := logs.ExtractCommandsHTML(phase)
+				htmlReport, err := logs.ExportCommandsHTML(phase)
 				if err != nil {
 					fmt.Printf("Error generating HTML: %v\n", err)
 					continue
@@ -108,5 +108,5 @@ var extractCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(extractCmd)
+	rootCmd.AddCommand(exportCmd)
 }
