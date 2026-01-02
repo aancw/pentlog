@@ -45,6 +45,9 @@ else
     RELEASE_JSON=$(curl -s "$LATEST_URL")
 fi
 
+# Extract version
+VERSION=$(echo "$RELEASE_JSON" | grep "\"tag_name\":" | head -n 1 | cut -d '"' -f 4)
+
 # Check for rate limit or error
 if echo "$RELEASE_JSON" | grep -q "API rate limit"; then
     echo "Error: GitHub API rate limit exceeded. Please try again later."
@@ -72,7 +75,7 @@ if [ -z "$DOWNLOAD_URL" ]; then
     exit 1
 fi
 
-echo "Downloading $BINARY from $DOWNLOAD_URL..."
+echo "Downloading $BINARY ($VERSION)..."
 
 # Create temp directory
 TMP_DIR=$(mktemp -d)
@@ -81,12 +84,12 @@ trap 'rm -rf "$TMP_DIR"' EXIT
 # Download binary
 if [ -n "$GITHUB_HEADER" ] && [ "$IS_API_URL" = "1" ]; then
     # Use -H "Accept: application/octet-stream" specifically for API URL
-    curl -L -H "$GITHUB_HEADER" -H "Accept: application/octet-stream" -o "$TMP_DIR/pentlog" "$DOWNLOAD_URL" --progress-bar
+    curl -L -sS -H "$GITHUB_HEADER" -H "Accept: application/octet-stream" -o "$TMP_DIR/pentlog" "$DOWNLOAD_URL"
 elif [ -n "$GITHUB_HEADER" ]; then
     # Fallback for browser_url with auth (might fail on private S3)
-    curl -L -H "$GITHUB_HEADER" -o "$TMP_DIR/pentlog" "$DOWNLOAD_URL" --progress-bar
+    curl -L -sS -H "$GITHUB_HEADER" -o "$TMP_DIR/pentlog" "$DOWNLOAD_URL"
 else
-    curl -L -o "$TMP_DIR/pentlog" "$DOWNLOAD_URL" --progress-bar
+    curl -L -sS -o "$TMP_DIR/pentlog" "$DOWNLOAD_URL"
 fi
 
 # Make executable
