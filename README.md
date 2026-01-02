@@ -15,6 +15,14 @@ Captures shell activity as plain-text terminal logs backed by `script`/`scriptre
 
 ## Installation
 
+### Quick Install (Linux & macOS)
+
+```bash
+curl --tlsv1.2 -sSf https://raw.githubusercontent.com/petruknisme/pentlog/main/install.sh | sh
+```
+
+### Build from Source
+
 ```bash
 # Build on Linux
 go build -o pentlog main.go
@@ -31,21 +39,21 @@ GOOS=linux GOARCH=amd64 go build -o pentlog main.go
 ### 1. Initialize Engagement (Interactive)
 The recommended way to start is using the interactive `create` mode.
 ```bash
-./pentlog create
+pentlog create
 # Prompts for: Client, Engagement, Operator, etc.
 ```
 
 ### 2. Enter Shell
 Once initialized, start a recorded shell session.
 ```bash
-./pentlog shell
+pentlog shell
 # Enters a recorded shell with custom PS1 and instant-logging.
 ```
 
 ### 3. Switch Phases
 When moving from one phase to another (e.g., recon -> exploit), use `switch`.
 ```bash
-./pentlog switch
+pentlog switch
 # Prompts for new phase (e.g., "exploit")
 ```
 
@@ -53,11 +61,11 @@ When moving from one phase to another (e.g., recon -> exploit), use `switch`.
 Add timestamped notes during your session without leaving the terminal.
 ```bash
 # Add a note (e.g. "Found SQLi")
-./pentlog note add "Found SQLi"
+pentlog note add "Found SQLi"
 
 # Review list of notes (Interactive)
 # Works both inside a shell (current session) AND offline (select past session)
-./pentlog note list
+pentlog note list
 ```
 
 ### 5. Search & Export
@@ -67,34 +75,34 @@ All commands function interactively.
 # - Select Client -> Engagement -> Query
 # - View results in a color-perfect pager (less)
 # - Jump straight to interesting lines of code
-./pentlog search
+pentlog search
 
 # Export a report (Interactive Menu)
 # - Select Phase
 # - Preview in Pager or Save to File
-./pentlog export
+pentlog export
 ```
 
 ### 6. Replay (Interactive)
 Replay recorded sessions with an interactive selection menu.
 ```bash
 # Lists recent sessions to pick from
-./pentlog replay
+pentlog replay
 
 # Or specify ID directly (Linux Only)
-./pentlog replay 1 -s 2.0
+pentlog replay 1 -s 2.0
 ```
 
 ### 7. Integrity
 ```bash
 # Generate SHA256 hashes of all logs
-./pentlog freeze
+pentlog freeze
 ```
 
 ### 8. Dashboard
 View an interactive executive summary of your engagement logic, including evidence size, recent findings, and statistical breakdowns.
 ```bash
-./pentlog dashboard
+pentlog dashboard
 ```
 
 ## Storage Layout
