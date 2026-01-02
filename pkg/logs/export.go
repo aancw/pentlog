@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"pentlog/pkg/utils"
+	"sort"
 	"strings"
 )
 
@@ -15,10 +16,9 @@ func ExportCommands(client, engagement, phase string) (string, error) {
 		return "", err
 	}
 
-	var builder strings.Builder
-	builder.WriteString(fmt.Sprintf("# Export Report: %s\n\n", phase))
+	grouped := make(map[string]map[string][]Session)
+	hasData := false
 
-	found := false
 	for _, s := range sessions {
 		if client != "" && s.Metadata.Client != client {
 			continue
@@ -30,28 +30,67 @@ func ExportCommands(client, engagement, phase string) (string, error) {
 			continue
 		}
 
-		f, err := os.Open(s.Path)
-		if err != nil {
-			continue
+		if grouped[s.Metadata.Engagement] == nil {
+			grouped[s.Metadata.Engagement] = make(map[string][]Session)
 		}
-
-		cleaner := utils.NewCleanReader(f)
-		data, err := io.ReadAll(cleaner)
-		f.Close()
-
-		if err != nil {
-			continue
-		}
-
-		found = true
-		builder.WriteString(fmt.Sprintf("## Session %d (%s)\n", s.ID, s.ModTime))
-		builder.WriteString("```bash\n")
-		builder.Write(data)
-		builder.WriteString("\n```\n\n")
+		grouped[s.Metadata.Engagement][s.Metadata.Phase] = append(grouped[s.Metadata.Engagement][s.Metadata.Phase], s)
+		hasData = true
 	}
 
-	if !found {
-		return "", fmt.Errorf("no sessions found for phase: %s", phase)
+	if !hasData {
+		return "", fmt.Errorf("no sessions found matching criteria")
+	}
+
+	var builder strings.Builder
+	builder.WriteString(fmt.Sprintf("# Report for Client %s\n\n", client))
+
+	var engKeys []string
+	for k := range grouped {
+		engKeys = append(engKeys, k)
+	}
+	sort.Strings(engKeys)
+
+	for _, eng := range engKeys {
+		builder.WriteString(fmt.Sprintf("## Engagement: %s\n", eng))
+		builder.WriteString("---------------------------------------------------\n\n")
+
+		phases := grouped[eng]
+		var phaseKeys []string
+		for k := range phases {
+			phaseKeys = append(phaseKeys, k)
+		}
+		sort.Strings(phaseKeys)
+
+		for _, p := range phaseKeys {
+			builder.WriteString(fmt.Sprintf("### Phase: %s\n", p))
+			builder.WriteString("--------------------\n\n")
+
+			sessList := phases[p]
+			// Sort sessions by ID
+			sort.Slice(sessList, func(i, j int) bool {
+				return sessList[i].ID < sessList[j].ID
+			})
+
+			for _, s := range sessList {
+				f, err := os.Open(s.Path)
+				if err != nil {
+					continue
+				}
+
+				cleaner := utils.NewCleanReader(f)
+				data, err := io.ReadAll(cleaner)
+				f.Close()
+
+				if err != nil {
+					continue
+				}
+
+				builder.WriteString(fmt.Sprintf("#### Session %d (%s)\n", s.ID, s.ModTime))
+				builder.WriteString("```bash\n")
+				builder.Write(data)
+				builder.WriteString("\n```\n\n")
+			}
+		}
 	}
 
 	return builder.String(), nil
@@ -61,6 +100,31 @@ func ExportCommandsHTML(client, engagement, phase string) (string, error) {
 	sessions, err := ListSessions()
 	if err != nil {
 		return "", err
+	}
+
+	grouped := make(map[string]map[string][]Session)
+	hasData := false
+
+	for _, s := range sessions {
+		if client != "" && s.Metadata.Client != client {
+			continue
+		}
+		if engagement != "" && s.Metadata.Engagement != engagement {
+			continue
+		}
+		if phase != "" && strings.TrimSpace(strings.ToLower(s.Metadata.Phase)) != strings.TrimSpace(strings.ToLower(phase)) {
+			continue
+		}
+
+		if grouped[s.Metadata.Engagement] == nil {
+			grouped[s.Metadata.Engagement] = make(map[string][]Session)
+		}
+		grouped[s.Metadata.Engagement][s.Metadata.Phase] = append(grouped[s.Metadata.Engagement][s.Metadata.Phase], s)
+		hasData = true
+	}
+
+	if !hasData {
+		return "", fmt.Errorf("no sessions found matching criteria")
 	}
 
 	var builder strings.Builder
@@ -77,15 +141,11 @@ func ExportCommandsHTML(client, engagement, phase string) (string, error) {
             font-family: 'Courier New', Courier, monospace;
             padding: 20px;
         }
-        h1 {
-            color: #569cd6;
-        }
-        h2 {
-            color: #4ec9b0;
-            border-bottom: 1px solid #444;
-            padding-bottom: 5px;
-            margin-top: 30px;
-        }
+        h1 { color: #569cd6; border-bottom: 2px solid #569cd6; padding-bottom: 10px; }
+        h2 { color: #4ec9b0; margin-top: 40px; border-bottom: 1px solid #444; padding-bottom: 5px; }
+        h3 { color: #dcdcaa; margin-top: 30px; }
+        h4 { color: #9cdcfe; margin-top: 20px; font-size: 1.1em; }
+        
         .session {
             background-color: #252526;
             padding: 15px;
@@ -124,47 +184,57 @@ func ExportCommandsHTML(client, engagement, phase string) (string, error) {
 <body>
 `)
 
-	builder.WriteString(fmt.Sprintf("    <h1>Export Report: %s</h1>\n", phase))
+	builder.WriteString(fmt.Sprintf("    <h1>Report for Client: %s</h1>\n", client))
 
-	found := false
-	for _, s := range sessions {
-		if client != "" && s.Metadata.Client != client {
-			continue
-		}
-		if engagement != "" && s.Metadata.Engagement != engagement {
-			continue
-		}
-		if phase != "" && strings.TrimSpace(strings.ToLower(s.Metadata.Phase)) != strings.TrimSpace(strings.ToLower(phase)) {
-			continue
-		}
+	var engKeys []string
+	for k := range grouped {
+		engKeys = append(engKeys, k)
+	}
+	sort.Strings(engKeys)
 
-		f, err := os.Open(s.Path)
-		if err != nil {
-			continue
+	for _, eng := range engKeys {
+		builder.WriteString(fmt.Sprintf("    <h2>Engagement: %s</h2>\n", eng))
+
+		phases := grouped[eng]
+		var phaseKeys []string
+		for k := range phases {
+			phaseKeys = append(phaseKeys, k)
 		}
+		sort.Strings(phaseKeys)
 
-		builder.WriteString("    <div class=\"session\">\n")
-		builder.WriteString(fmt.Sprintf("        <h2>Session %d (%s)</h2>\n", s.ID, s.ModTime))
-		builder.WriteString("        <div class=\"log-content\">\n")
+		for _, p := range phaseKeys {
+			builder.WriteString(fmt.Sprintf("    <h3>Phase: %s</h3>\n", p))
 
-		scanner := bufio.NewScanner(f)
-		for scanner.Scan() {
-			line := scanner.Text()
-			htmlLine := utils.RenderAnsiHTML(line)
-			builder.WriteString(htmlLine + "\n")
+			sessList := phases[p]
+			sort.Slice(sessList, func(i, j int) bool {
+				return sessList[i].ID < sessList[j].ID
+			})
+
+			for _, s := range sessList {
+				f, err := os.Open(s.Path)
+				if err != nil {
+					continue
+				}
+
+				builder.WriteString("    <div class=\"session\">\n")
+				builder.WriteString(fmt.Sprintf("        <h4>Session %d (%s)</h4>\n", s.ID, s.ModTime))
+				builder.WriteString("        <div class=\"log-content\">\n")
+
+				scanner := bufio.NewScanner(f)
+				for scanner.Scan() {
+					line := scanner.Text()
+					htmlLine := utils.RenderAnsiHTML(line)
+					builder.WriteString(htmlLine + "\n")
+				}
+				f.Close()
+
+				builder.WriteString("\n        </div>\n")
+				builder.WriteString("    </div>\n")
+			}
 		}
-		f.Close()
-
-		builder.WriteString("\n        </div>\n")
-		builder.WriteString("    </div>\n")
-		found = true
 	}
 
 	builder.WriteString("</body>\n</html>")
-
-	if !found {
-		return "", fmt.Errorf("no sessions found for phase: %s", phase)
-	}
 
 	return builder.String(), nil
 }
