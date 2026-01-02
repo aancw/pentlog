@@ -15,32 +15,80 @@ var exportCmd = &cobra.Command{
 	Use:   "export [phase]",
 	Short: "Export commands for a specific phase (recon, exploit, etc.)",
 	Run: func(cmd *cobra.Command, args []string) {
-		phase := ""
-		if len(args) > 0 {
-			phase = args[0]
+		sessions, err := logs.ListSessions()
+		if err != nil {
+			fmt.Printf("Error listing sessions: %v\n", err)
+			return
 		}
 
-		if phase == "" {
-			phases := []string{"recon", "exploitation", "post-exploitation", "pivot", "cleanup", "Custom"}
-			idx := utils.SelectItem("Select Phase", phases)
-			if idx == -1 {
-				fmt.Println("Selection canceled.")
-				return
+		clientMap := make(map[string]bool)
+		for _, s := range sessions {
+			clientMap[s.Metadata.Client] = true
+		}
+		var clients []string
+		for c := range clientMap {
+			clients = append(clients, c)
+		}
+		if len(clients) == 0 {
+			fmt.Println("No clients found.")
+			return
+		}
+
+		clientIdx := utils.SelectItem("Select Client", clients)
+		if clientIdx == -1 {
+			return
+		}
+		selectedClient := clients[clientIdx]
+
+		engMap := make(map[string]bool)
+		for _, s := range sessions {
+			if s.Metadata.Client == selectedClient {
+				engMap[s.Metadata.Engagement] = true
 			}
-			phase = phases[idx]
+		}
+		var engagements []string
+		for e := range engMap {
+			engagements = append(engagements, e)
+		}
 
-			if phase == "Custom" {
-				phase = utils.PromptString("Enter Custom Phase", "")
+		engagements = append([]string{"All Engagements"}, engagements...)
+
+		engIdx := utils.SelectItem("Select Engagement", engagements)
+		if engIdx == -1 {
+			return
+		}
+		selectedEngagement := engagements[engIdx]
+		if selectedEngagement == "All Engagements" {
+			selectedEngagement = ""
+		}
+
+		phaseMap := make(map[string]bool)
+		for _, s := range sessions {
+			if s.Metadata.Client == selectedClient {
+				if selectedEngagement != "" && s.Metadata.Engagement != selectedEngagement {
+					continue
+				}
+				phaseMap[s.Metadata.Phase] = true
 			}
 		}
-
-		if phase == "" {
-			fmt.Println("Error: Phase cannot be empty.")
-			os.Exit(1)
+		var phases []string
+		for p := range phaseMap {
+			phases = append(phases, p)
 		}
-		fmt.Printf("Exporting logs for phase: %s...\n", phase)
+		phases = append([]string{"All Phases"}, phases...)
 
-		report, err := logs.ExportCommands(phase)
+		phaseIdx := utils.SelectItem("Select Phase to Export", phases)
+		if phaseIdx == -1 {
+			return
+		}
+		selectedPhase := phases[phaseIdx]
+		if selectedPhase == "All Phases" {
+			selectedPhase = ""
+		}
+
+		fmt.Printf("Exporting logs for Client: %s, Engagement: %s, Phase: %s...\n", selectedClient, selectedEngagement, selectedPhase)
+
+		report, err := logs.ExportCommands(selectedClient, selectedEngagement, selectedPhase)
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
 			os.Exit(1)
@@ -69,7 +117,15 @@ var exportCmd = &cobra.Command{
 				}
 
 			case 1:
-				defaultName := fmt.Sprintf("%s_report.md", phase)
+				fileNamePhase := selectedPhase
+				if fileNamePhase == "" {
+					fileNamePhase = "all-phases"
+				}
+				fileNameEng := selectedEngagement
+				if fileNameEng == "" {
+					fileNameEng = "all-engagements"
+				}
+				defaultName := fmt.Sprintf("%s_%s_%s_report.md", utils.Slugify(selectedClient), utils.Slugify(fileNameEng), utils.Slugify(fileNamePhase))
 				filename := utils.PromptString("Enter filename", defaultName)
 				if filename == "" {
 					filename = defaultName
@@ -83,13 +139,21 @@ var exportCmd = &cobra.Command{
 				}
 
 			case 2:
-				defaultName := fmt.Sprintf("%s_report.html", phase)
+				fileNamePhase := selectedPhase
+				if fileNamePhase == "" {
+					fileNamePhase = "all-phases"
+				}
+				fileNameEng := selectedEngagement
+				if fileNameEng == "" {
+					fileNameEng = "all-engagements"
+				}
+				defaultName := fmt.Sprintf("%s_%s_%s_report.html", utils.Slugify(selectedClient), utils.Slugify(fileNameEng), utils.Slugify(fileNamePhase))
 				filename := utils.PromptString("Enter filename", defaultName)
 				if filename == "" {
 					filename = defaultName
 				}
 
-				htmlReport, err := logs.ExportCommandsHTML(phase)
+				htmlReport, err := logs.ExportCommandsHTML(selectedClient, selectedEngagement, selectedPhase)
 				if err != nil {
 					fmt.Printf("Error generating HTML: %v\n", err)
 					continue

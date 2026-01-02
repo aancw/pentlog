@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-func ExportCommands(phase string) (string, error) {
+func ExportCommands(client, engagement, phase string) (string, error) {
 	sessions, err := ListSessions()
 	if err != nil {
 		return "", err
@@ -20,7 +20,13 @@ func ExportCommands(phase string) (string, error) {
 
 	found := false
 	for _, s := range sessions {
-		if strings.TrimSpace(strings.ToLower(s.Metadata.Phase)) != strings.TrimSpace(strings.ToLower(phase)) {
+		if client != "" && s.Metadata.Client != client {
+			continue
+		}
+		if engagement != "" && s.Metadata.Engagement != engagement {
+			continue
+		}
+		if phase != "" && strings.TrimSpace(strings.ToLower(s.Metadata.Phase)) != strings.TrimSpace(strings.ToLower(phase)) {
 			continue
 		}
 
@@ -51,7 +57,7 @@ func ExportCommands(phase string) (string, error) {
 	return builder.String(), nil
 }
 
-func ExportCommandsHTML(phase string) (string, error) {
+func ExportCommandsHTML(client, engagement, phase string) (string, error) {
 	sessions, err := ListSessions()
 	if err != nil {
 		return "", err
@@ -122,7 +128,13 @@ func ExportCommandsHTML(phase string) (string, error) {
 
 	found := false
 	for _, s := range sessions {
-		if strings.TrimSpace(strings.ToLower(s.Metadata.Phase)) != strings.TrimSpace(strings.ToLower(phase)) {
+		if client != "" && s.Metadata.Client != client {
+			continue
+		}
+		if engagement != "" && s.Metadata.Engagement != engagement {
+			continue
+		}
+		if phase != "" && strings.TrimSpace(strings.ToLower(s.Metadata.Phase)) != strings.TrimSpace(strings.ToLower(phase)) {
 			continue
 		}
 
