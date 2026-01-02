@@ -51,9 +51,20 @@ if echo "$RELEASE_JSON" | grep -q "API rate limit"; then
     exit 1
 fi
 
-# Extract download URL
-# Fallback to grep/cut for minimal dependency (no jq required)
-DOWNLOAD_URL=$(echo "$RELEASE_JSON" | grep "browser_download_url" | grep "$BINARY" | head -n 1 | cut -d '"' -f 4)
+
+if [ -n "$GITHUB_HEADER" ]; then
+
+    ASSET_ID=$(echo "$RELEASE_JSON" | grep -C 5 "$BINARY" | grep "\"id\":" | head -n 1 | tr -d " \"," | cut -d: -f2)
+    
+    if [ -n "$ASSET_ID" ]; then
+        DOWNLOAD_URL="https://api.github.com/repos/$REPO/releases/assets/$ASSET_ID"
+        IS_API_URL=1
+    fi
+fi
+
+if [ -z "$DOWNLOAD_URL" ]; then
+    DOWNLOAD_URL=$(echo "$RELEASE_JSON" | grep "browser_download_url" | grep "$BINARY" | head -n 1 | cut -d '"' -f 4)
+fi
 
 if [ -z "$DOWNLOAD_URL" ]; then
     echo "Error: Could not find download URL for $BINARY in latest release."
@@ -68,8 +79,12 @@ TMP_DIR=$(mktemp -d)
 trap 'rm -rf "$TMP_DIR"' EXIT
 
 # Download binary
-if [ -n "$GITHUB_HEADER" ]; then
+if [ -n "$GITHUB_HEADER" ] && [ "$IS_API_URL" = "1" ]; then
+    # Use -H "Accept: application/octet-stream" specifically for API URL
     curl -L -H "$GITHUB_HEADER" -H "Accept: application/octet-stream" -o "$TMP_DIR/pentlog" "$DOWNLOAD_URL" --progress-bar
+elif [ -n "$GITHUB_HEADER" ]; then
+    # Fallback for browser_url with auth (might fail on private S3)
+    curl -L -H "$GITHUB_HEADER" -o "$TMP_DIR/pentlog" "$DOWNLOAD_URL" --progress-bar
 else
     curl -L -o "$TMP_DIR/pentlog" "$DOWNLOAD_URL" --progress-bar
 fi
