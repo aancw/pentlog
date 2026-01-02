@@ -110,6 +110,24 @@ View an interactive executive summary of your engagement logic, including eviden
 pentlog dashboard
 ```
 
+### 9. Versioning & Updates
+
+Check your current version:
+```bash
+pentlog version
+```
+
+Update to the latest version automatically using the built-in update command:
+```bash
+# Public repository (authenticated via GITHUB_TOKEN if set, otherwise anonymous)
+pentlog update
+
+# For private repositories, set GH_TOKEN or GITHUB_TOKEN
+export GH_TOKEN="your_personal_access_token"
+pentlog update
+```
+The updater checks the upstream server, displays the new version, downloads the appropriate binary for your OS/Arch, and performs an in-place upgrade.
+
 ## Storage Layout
 
 - User Configuration & Context: `~/.pentlog/context.json`

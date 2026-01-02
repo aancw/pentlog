@@ -10,6 +10,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/google/go-github/v80/github"
 	"github.com/spf13/cobra"
 )
@@ -40,7 +41,7 @@ var updateCmd = &cobra.Command{
 			client = github.NewClient(nil)
 		}
 
-		fmt.Printf("Checking for updates in %s/%s...\n", RepoOwner, RepoName)
+		fmt.Println("Checking for updates in upstream server...")
 		release, _, err := client.Repositories.GetLatestRelease(ctx, RepoOwner, RepoName)
 		if err != nil {
 			fmt.Printf("Error fetching latest release: %v\n", err)
@@ -71,7 +72,8 @@ var updateCmd = &cobra.Command{
 			return
 		}
 
-		fmt.Printf("Downloading %s...\n", targetAsset.GetName())
+		fmt.Printf("OS: %s, Arch: %s\n", runtime.GOOS, runtime.GOARCH)
+		fmt.Println("Downloading update...")
 
 		var rc io.ReadCloser
 		if token != "" {
@@ -133,7 +135,8 @@ var updateCmd = &cobra.Command{
 			return
 		}
 
-		fmt.Printf("Successfully updated to %s\n", tagName)
+		greenArrow := lipgloss.NewStyle().Foreground(lipgloss.Color("42")).Render("->")
+		fmt.Printf("Successfully updated: %s %s %s\n", Version, greenArrow, tagName)
 	},
 }
 
