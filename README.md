@@ -1,5 +1,10 @@
 # pentlog
 
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/aancw/pentlog)
+![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/aancw/pentlog)
+![GitHub all releases](https://img.shields.io/github/downloads/aancw/pentlog/total)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 Evidence-First Pentest Logging Tool.
 Captures shell activity as plain-text terminal logs backed by `script`/`scriptreplay`.
 
@@ -18,7 +23,7 @@ Captures shell activity as plain-text terminal logs backed by `script`/`scriptre
 ### Quick Install (Linux & macOS)
 
 ```bash
-curl -sSf https://raw.githubusercontent.com/petruknisme/pentlog/main/install.sh | sh
+curl -sSf https://raw.githubusercontent.com/aancw/pentlog/main/install.sh | sh
 ```
 
 ### Build from Source
