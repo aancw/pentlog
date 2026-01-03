@@ -103,10 +103,44 @@ var exportCmd = &cobra.Command{
 
 		var analysisResult string
 		if analyze {
+			confDir, err := config.GetUserPentlogDir()
+			if err != nil {
+				fmt.Printf("Error getting pentlog directory: %v\n", err)
+				os.Exit(1)
+			}
+			aiConfigPath := filepath.Join(confDir, "ai.yml")
+
+			if _, err := os.Stat(aiConfigPath); os.IsNotExist(err) {
+				idx := utils.SelectItem("AI config not found. Create one?", []string{"Yes", "No"})
+				if idx != 0 {
+					return
+				}
+
+				providerIdx := utils.SelectItem("Select Provider", []string{"Gemini", "Ollama"})
+				var content string
+				if providerIdx == 0 { // Gemini
+					apiKey := utils.PromptString("Enter Gemini API Key", "")
+					content = fmt.Sprintf("provider: \"gemini\"\ngemini:\n  api_key: \"%s\"\n", apiKey)
+				} else if providerIdx == 1 { // Ollama
+					model := utils.PromptString("Enter Ollama Model", "llama3:8b")
+					url := utils.PromptString("Enter Ollama URL", "http://localhost:11434")
+					content = fmt.Sprintf("provider: \"ollama\"\nollama:\n  model: \"%s\"\n  url: \"%s\"\n", model, url)
+				} else {
+					return
+				}
+
+				if err := os.WriteFile(aiConfigPath, []byte(content), 0644); err != nil {
+					fmt.Printf("Error creating config file: %v\n", err)
+					os.Exit(1)
+				}
+				fmt.Printf("AI config created at %s\n", aiConfigPath)
+			}
+
 			spin := utils.NewSpinner("Summarizing report with AI...")
 			spin.Start()
-			cfg, err := ai.LoadConfig("setting-ai.yaml")
+			cfg, err := ai.LoadConfig(aiConfigPath)
 			if err != nil {
+				spin.Stop()
 				fmt.Printf("failed to load config: %v\n", err)
 				os.Exit(1)
 			}
