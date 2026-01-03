@@ -8,6 +8,19 @@
 Evidence-First Pentest Logging Tool.
 Captures shell activity as plain-text terminal logs backed by `script`/`scriptreplay`.
 
+<p align="center">
+  <img src="pentlog.png" width="500">
+</p>
+
+## 📜 Table of Contents
+
+- [✨ Features](#features)
+- [🛠️ Installation](#installation)
+- [🚀 Usage](#usage)
+- [🧠 AI Analysis](#ai-analysis)
+- [📦 Storage Layout](#storage-layout)
+
+
 ## Features
 
 - **No Root Required**: Start recorded shells as a normal user; logs land in your home directory.
@@ -17,6 +30,7 @@ Captures shell activity as plain-text terminal logs backed by `script`/`scriptre
 - **Replayable**: Timing files enable faithful playback via `scriptreplay`.
 - **Export Friendly**: Export structured Markdown reports for any phase with an interactive preview/save menu.
 - **Integrity Ready**: Freeze command hashes every log for evidence packaging.
+- **AI Analysis**: Analyze your reports with AI to get a summary of the findings.
 
 ## Installation
 
@@ -36,7 +50,7 @@ go build -o pentlog main.go
 GOOS=linux GOARCH=amd64 go build -o pentlog main.go
 
 # Initial setup (checks deps, creates ~/.pentlog/logs)
-./pentlog setup
+pentlog setup
 ```
 
 ## Usage
@@ -127,6 +141,51 @@ export GH_TOKEN="your_personal_access_token"
 pentlog update
 ```
 The updater checks the upstream server, displays the new version, downloads the appropriate binary for your OS/Arch, and performs an in-place upgrade.
+
+### AI Analysis
+Analyze your reports with AI to get a summary of the findings.
+
+#### Configuration
+Create a `setting-ai.yaml` file in the same directory as the `pentlog` binary.
+
+**Supported Providers:**
+
+*   **Gemini:**
+    ```yaml
+    provider: "gemini"
+    gemini:
+      api_key: "YOUR_GEMINI_API_KEY"
+    ```
+*   **Ollama:**
+    ```yaml
+    provider: "ollama"
+    ollama:
+      model: "llama3:8b"
+      url: "http://localhost:11434"
+    ```
+
+#### Usage
+There are two ways to use the AI analysis feature:
+
+1.  **Analyze an existing report:**
+    ```bash
+    # Summarized analysis (default)
+    pentlog analyze <report_file>
+
+    # Full analysis
+    pentlog analyze --full-report <report_file>
+    ```
+
+2.  **Analyze a report during export:**
+    ```bash
+    # Summarized analysis (default)
+    pentlog export --analyze
+
+    # Full analysis
+    pentlog export --analyze --full-report
+    ```
+
+
 
 ## Storage Layout
 

@@ -5,13 +5,17 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"pentlog/pkg/ai"
 	"pentlog/pkg/config"
 	"pentlog/pkg/logs"
 	"pentlog/pkg/utils"
 	"strings"
 
+	"github.com/gomarkdown/markdown"
 	"github.com/spf13/cobra"
 )
+
+var analyze bool
 
 var exportCmd = &cobra.Command{
 	Use:   "export [phase]",
@@ -94,6 +98,41 @@ var exportCmd = &cobra.Command{
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
 			os.Exit(1)
+		}
+
+		if analyze {
+			cfg, err := ai.LoadConfig("setting-ai.yaml")
+			if err != nil {
+				fmt.Printf("failed to load config: %v\n", err)
+				os.Exit(1)
+			}
+
+			var analyzer ai.AIAnalyzer
+			switch cfg.Provider {
+			case "gemini":
+				analyzer, err = ai.NewGeminiClient(cfg)
+				if err != nil {
+					fmt.Printf("failed to create gemini client: %v\n", err)
+					os.Exit(1)
+				}
+			case "ollama":
+				analyzer, err = ai.NewOllamaClient(cfg)
+				if err != nil {
+					fmt.Printf("failed to create ollama client: %v\n", err)
+					os.Exit(1)
+				}
+			default:
+				fmt.Printf("unknown AI provider: %s\n", cfg.Provider)
+				os.Exit(1)
+			}
+
+			analysis, err := analyzer.Analyze(report, !fullReport)
+			if err != nil {
+				fmt.Printf("failed to analyze report: %v\n", err)
+				os.Exit(1)
+			}
+
+			report += "\n\n--- AI Analysis ---\n" + analysis
 		}
 
 		for {
@@ -187,6 +226,48 @@ var exportCmd = &cobra.Command{
 					continue
 				}
 
+				if analyze {
+					cfg, err := ai.LoadConfig("setting-ai.yaml")
+					if err != nil {
+						fmt.Printf("failed to load config: %v\n", err)
+						os.Exit(1)
+					}
+
+					var analyzer ai.AIAnalyzer
+					switch cfg.Provider {
+					case "gemini":
+						analyzer, err = ai.NewGeminiClient(cfg)
+						if err != nil {
+							fmt.Printf("failed to create gemini client: %v\n", err)
+							os.Exit(1)
+						}
+					case "ollama":
+						analyzer, err = ai.NewOllamaClient(cfg)
+						if err != nil {
+							fmt.Printf("failed to create ollama client: %v\n", err)
+							os.Exit(1)
+						}
+					default:
+						fmt.Printf("unknown AI provider: %s\n", cfg.Provider)
+						os.Exit(1)
+					}
+
+					analysis, err := analyzer.Analyze(htmlReport, !fullReport)
+					if err != nil {
+						fmt.Printf("failed to analyze report: %v\n", err)
+						os.Exit(1)
+					}
+
+					analysisHTML := markdown.ToHTML([]byte(analysis), nil, nil)
+
+					htmlReport += "<div class=\"session\">"
+					htmlReport += "    <h4>AI Analysis</h4>"
+					htmlReport += "    <div class=\"log-content\">"
+					htmlReport += "        " + string(analysisHTML)
+					htmlReport += "    </div>"
+					htmlReport += "</div>"
+				}
+
 				if err := os.WriteFile(fullPath, []byte(htmlReport), 0644); err != nil {
 					fmt.Printf("Error saving file: %v\n", err)
 				} else {
@@ -201,4 +282,5 @@ var exportCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(exportCmd)
+	exportCmd.Flags().BoolVar(&analyze, "analyze", false, "Analyze the report with an AI provider")
 }
