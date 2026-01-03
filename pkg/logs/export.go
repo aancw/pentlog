@@ -1,7 +1,6 @@
 package logs
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"os"
@@ -159,6 +158,14 @@ func ExportCommandsHTML(client, engagement, phase string) (string, error) {
             font-size: 14px;
             line-height: 1.5;
         }
+        .ai-content {
+            white-space: normal;
+            word-wrap: break-word;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #dcdcaa;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
 
         /* ANSI Colors */
         .ansi-bold { font-weight: bold; }
@@ -220,13 +227,17 @@ func ExportCommandsHTML(client, engagement, phase string) (string, error) {
 				builder.WriteString(fmt.Sprintf("        <h4>Session %d (%s)</h4>\n", s.ID, s.ModTime))
 				builder.WriteString("        <div class=\"log-content\">\n")
 
-				scanner := bufio.NewScanner(f)
-				for scanner.Scan() {
-					line := scanner.Text()
-					htmlLine := utils.RenderAnsiHTML(line)
-					builder.WriteString(htmlLine + "\n")
-				}
+				rawData, err := io.ReadAll(f)
 				f.Close()
+				if err != nil {
+					continue
+				}
+				cleanData := utils.CleanTuiMarkers(rawData)
+				lines := strings.Split(string(cleanData), "\n")
+				for _, line := range lines {
+					htmlContent := utils.RenderAnsiHTML(line)
+					builder.WriteString(htmlContent + "\n")
+				}
 
 				builder.WriteString("\n        </div>\n")
 				builder.WriteString("    </div>\n")

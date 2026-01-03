@@ -57,8 +57,11 @@ type Cell struct {
 
 var (
 	reAnsiSeq = regexp.MustCompile(`^\x1b\[([?0-9;]*)([A-Za-z])`)
-	reOscSeq  = regexp.MustCompile(`^\x1b\][0-9];.*?\x07`)
+	reOscSeq  = regexp.MustCompile(`^\x1b\][0-9]*;.*?(?:\x07|\x1b\\)`)
 	reAltSeq  = regexp.MustCompile(`^\x1b([=><78]|[()][0-9A-Za-z])`)
+
+	// Regex to match the TUI block. using (?s) for dot-all (match newlines)
+	reTuiBlock = regexp.MustCompile(`(?s)\x1b]99;PENTLOG_TUI_START\x07.*?\x1b]99;PENTLOG_TUI_END\x07`)
 )
 
 func ParseAnsi(line string) []Cell {
@@ -299,3 +302,9 @@ func getStyleClass(ansi string) string {
 }
 
 const CapBufferLimit = 10000
+
+// CleanTuiMarkers removes the interactive TUI blocks from the log data
+// based on the special OSC markers injected by the vuln command.
+func CleanTuiMarkers(input []byte) []byte {
+	return reTuiBlock.ReplaceAll(input, []byte(""))
+}

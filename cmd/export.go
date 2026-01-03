@@ -9,6 +9,7 @@ import (
 	"pentlog/pkg/config"
 	"pentlog/pkg/logs"
 	"pentlog/pkg/utils"
+	"pentlog/pkg/vulns"
 	"strings"
 
 	"github.com/gomarkdown/markdown"
@@ -132,8 +133,54 @@ var exportCmd = &cobra.Command{
 				os.Exit(1)
 			}
 
-			report += "\n\n--- AI Analysis ---\n" + analysis
+			// Clean up excessive newlines
+			analysis = strings.TrimSpace(analysis)
+
+			analysisBlock := "\n## AI Analysis\n\n" + analysis + "\n\n---\n"
+
+			lines := strings.SplitN(report, "\n", 2)
+			if len(lines) > 1 {
+				report = lines[0] + "\n" + analysisBlock + lines[1]
+			} else {
+				report = analysisBlock + report
+			}
 		}
+
+		// --- Findings (Top of Report) ---
+		manager := vulns.NewManager(selectedClient, selectedEngagement)
+		findingsList, err := manager.List()
+		if err == nil && len(findingsList) > 0 {
+			filteredFindings := []vulns.Vuln{}
+			for _, f := range findingsList {
+				if selectedPhase != "" && !strings.EqualFold(f.Phase, selectedPhase) {
+					continue
+				}
+				filteredFindings = append(filteredFindings, f)
+			}
+
+			if len(filteredFindings) > 0 {
+				var sb strings.Builder
+				sb.WriteString("\n## Findings & Vulnerabilities\n\n")
+				sb.WriteString("| ID | Severity | Title | Phase | Status |\n")
+				sb.WriteString("|---|---|---|---|---|\n")
+				for _, f := range filteredFindings {
+					phaseDisplay := f.Phase
+					if phaseDisplay == "" {
+						phaseDisplay = "-"
+					}
+					sb.WriteString(fmt.Sprintf("| %s | %s | %s | %s | %s |\n", f.ID, f.Severity, f.Title, phaseDisplay, f.Status))
+				}
+				sb.WriteString("\n---\n\n")
+
+				lines := strings.SplitN(report, "\n", 2)
+				if len(lines) > 1 {
+					report = lines[0] + "\n" + sb.String() + lines[1]
+				} else {
+					report = sb.String() + report
+				}
+			}
+		}
+		// ----------------------------
 
 		for {
 			actions := []string{"Preview (pager)", "Save to File", "Save to HTML", "Exit"}
@@ -258,15 +305,81 @@ var exportCmd = &cobra.Command{
 						os.Exit(1)
 					}
 
+					// Clean up excessive newlines
+					analysis = strings.TrimSpace(analysis)
 					analysisHTML := markdown.ToHTML([]byte(analysis), nil, nil)
 
-					htmlReport += "<div class=\"session\">"
-					htmlReport += "    <h4>AI Analysis</h4>"
-					htmlReport += "    <div class=\"log-content\">"
-					htmlReport += "        " + string(analysisHTML)
-					htmlReport += "    </div>"
-					htmlReport += "</div>"
+					analysisBlock := "<div class=\"session\">"
+					analysisBlock += "    <h2>AI Analysis</h2>"
+					analysisBlock += "    <div class=\"ai-content\">"
+					analysisBlock += string(analysisHTML)
+					analysisBlock += "    </div>"
+					analysisBlock += "</div><hr style='border-color: #444; margin-top: 40px;'/>"
+
+					if idx := strings.Index(htmlReport, "</h1>"); idx != -1 {
+						htmlReport = htmlReport[:idx+5] + analysisBlock + htmlReport[idx+5:]
+					}
 				}
+
+				// --- Findings (Top of Report HTML) ---
+				manager := vulns.NewManager(selectedClient, selectedEngagement)
+				findingsList, err := manager.List()
+				if err == nil && len(findingsList) > 0 {
+					filteredFindings := []vulns.Vuln{}
+					for _, f := range findingsList {
+						if selectedPhase != "" && !strings.EqualFold(f.Phase, selectedPhase) {
+							continue
+						}
+						filteredFindings = append(filteredFindings, f)
+					}
+
+					if len(filteredFindings) > 0 {
+						var sb strings.Builder
+						sb.WriteString("\n    <h2>Findings & Vulnerabilities</h2>\n")
+						sb.WriteString(`    <table border="1" style="width:100%; border-collapse: collapse; border: 1px solid #444; margin-top: 20px;">`)
+						sb.WriteString(`<thead><tr style="background-color: #252526; color: #dcdcaa;">
+<th style="padding: 10px; border: 1px solid #444;">ID</th>
+<th style="padding: 10px; border: 1px solid #444;">Severity</th>
+<th style="padding: 10px; border: 1px solid #444;">Title</th>
+<th style="padding: 10px; border: 1px solid #444;">Phase</th>
+<th style="padding: 10px; border: 1px solid #444;">Status</th>
+</tr></thead><tbody>`)
+
+						for _, f := range filteredFindings {
+							sevColor := "#d4d4d4"
+							switch f.Severity {
+							case vulns.SeverityCritical:
+								sevColor = "#ff0000"
+							case vulns.SeverityHigh:
+								sevColor = "#ff5500"
+							case vulns.SeverityMedium:
+								sevColor = "#ffaa00"
+							case vulns.SeverityLow:
+								sevColor = "#ffff00"
+							case vulns.SeverityInfo:
+								sevColor = "#00ffff"
+							}
+							phaseDisplay := f.Phase
+							if phaseDisplay == "" {
+								phaseDisplay = "-"
+							}
+
+							sb.WriteString(fmt.Sprintf(`<tr>
+<td style="padding: 10px; border: 1px solid #444;">%s</td>
+<td style="padding: 10px; border: 1px solid #444; color: %s; font-weight: bold;">%s</td>
+<td style="padding: 10px; border: 1px solid #444;">%s</td>
+<td style="padding: 10px; border: 1px solid #444;">%s</td>
+<td style="padding: 10px; border: 1px solid #444;">%s</td>
+</tr>`, f.ID, sevColor, f.Severity, f.Title, phaseDisplay, f.Status))
+						}
+						sb.WriteString("</tbody></table>\n\n<hr style='border-color: #444; margin-top: 40px;'/>\n")
+
+						if idx := strings.Index(htmlReport, "</h1>"); idx != -1 {
+							htmlReport = htmlReport[:idx+5] + sb.String() + htmlReport[idx+5:]
+						}
+					}
+				}
+				// ----------------------------
 
 				if err := os.WriteFile(fullPath, []byte(htmlReport), 0644); err != nil {
 					fmt.Printf("Error saving file: %v\n", err)

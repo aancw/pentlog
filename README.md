@@ -19,6 +19,7 @@ Captures shell activity as plain-text terminal logs backed by `script`/`scriptre
 - [🚀 Usage](#usage)
 - [🧠 AI Analysis](#ai-analysis)
 - [📦 Storage Layout](#storage-layout)
+- [📝 License](#license)
 
 
 ## Features
