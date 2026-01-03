@@ -19,6 +19,7 @@ Captures shell activity as plain-text terminal logs backed by `script`/`scriptre
 - [🚀 Usage](#usage)
 - [🧠 AI Analysis](#ai-analysis)
 - [📦 Storage Layout](#storage-layout)
+- [🗺️ Roadmap](#roadmap)
 - [📝 License](#license)
 
 
@@ -146,25 +147,6 @@ The updater checks the upstream server, displays the new version, downloads the 
 ### AI Analysis
 Analyze your reports with AI to get a summary of the findings.
 
-#### Configuration
-Create a `setting-ai.yaml` file in the same directory as the `pentlog` binary.
-
-**Supported Providers:**
-
-*   **Gemini:**
-    ```yaml
-    provider: "gemini"
-    gemini:
-      api_key: "YOUR_GEMINI_API_KEY"
-    ```
-*   **Ollama:**
-    ```yaml
-    provider: "ollama"
-    ollama:
-      model: "llama3:8b"
-      url: "http://localhost:11434"
-    ```
-
 #### Usage
 There are two ways to use the AI analysis feature:
 
@@ -186,14 +168,15 @@ There are two ways to use the AI analysis feature:
     pentlog export --analyze --full-report
     ```
 
-
-
 ## Storage Layout
 
 - User Configuration & Context: `~/.pentlog/context.json`
 - Manual Session Logs + Timing + Metadata: `~/.pentlog/logs/<client>/<engagement>/<phase>/manual-<operator>-<timestamp>.{log,timing,json}`
 - Evidence Hashes: `~/.pentlog/hashes/sha256.txt`
 - Export Reports: `~/.pentlog/reports/<client>/`
+
+## Roadmap
+Check out our [ROADMAP.md](ROADMAP.md) to see what features are currently implemented and what we have planned for the future.
 
 ## Acknowledgements
 
