@@ -101,7 +101,10 @@ var exportCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
+		var analysisResult string
 		if analyze {
+			spin := utils.NewSpinner("Summarizing report with AI...")
+			spin.Start()
 			cfg, err := ai.LoadConfig("setting-ai.yaml")
 			if err != nil {
 				fmt.Printf("failed to load config: %v\n", err)
@@ -127,16 +130,17 @@ var exportCmd = &cobra.Command{
 				os.Exit(1)
 			}
 
-			analysis, err := analyzer.Analyze(report, !fullReport)
+			analysisResult, err = analyzer.Analyze(report, !fullReport)
+			spin.Stop()
 			if err != nil {
 				fmt.Printf("failed to analyze report: %v\n", err)
 				os.Exit(1)
 			}
 
 			// Clean up excessive newlines
-			analysis = strings.TrimSpace(analysis)
+			analysisResult = strings.TrimSpace(analysisResult)
 
-			analysisBlock := "\n## AI Analysis\n\n" + analysis + "\n\n---\n"
+			analysisBlock := "\n## AI Analysis\n\n" + analysisResult + "\n\n---\n"
 
 			lines := strings.SplitN(report, "\n", 2)
 			if len(lines) > 1 {
@@ -273,41 +277,8 @@ var exportCmd = &cobra.Command{
 					continue
 				}
 
-				if analyze {
-					cfg, err := ai.LoadConfig("setting-ai.yaml")
-					if err != nil {
-						fmt.Printf("failed to load config: %v\n", err)
-						os.Exit(1)
-					}
-
-					var analyzer ai.AIAnalyzer
-					switch cfg.Provider {
-					case "gemini":
-						analyzer, err = ai.NewGeminiClient(cfg)
-						if err != nil {
-							fmt.Printf("failed to create gemini client: %v\n", err)
-							os.Exit(1)
-						}
-					case "ollama":
-						analyzer, err = ai.NewOllamaClient(cfg)
-						if err != nil {
-							fmt.Printf("failed to create ollama client: %v\n", err)
-							os.Exit(1)
-						}
-					default:
-						fmt.Printf("unknown AI provider: %s\n", cfg.Provider)
-						os.Exit(1)
-					}
-
-					analysis, err := analyzer.Analyze(htmlReport, !fullReport)
-					if err != nil {
-						fmt.Printf("failed to analyze report: %v\n", err)
-						os.Exit(1)
-					}
-
-					// Clean up excessive newlines
-					analysis = strings.TrimSpace(analysis)
-					analysisHTML := markdown.ToHTML([]byte(analysis), nil, nil)
+				if analyze && analysisResult != "" {
+					analysisHTML := markdown.ToHTML([]byte(analysisResult), nil, nil)
 
 					analysisBlock := "<div class=\"session\">"
 					analysisBlock += "    <h2>AI Analysis</h2>"
