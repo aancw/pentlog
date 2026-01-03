@@ -1,0 +1,10 @@
+# AI Provider Settings
+# provider can be "gemini" or "ollama"
+provider: "ollama"
+
+gemini:
+  api_key: "GEMINI_API_KEY"
+
+ollama:
+  model: "llama3:8b"
+  url: "http://localhost:11434"

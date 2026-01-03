@@ -7,6 +7,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var fullReport bool
+
+const Version = "v0.3"
+
 var rootCmd = &cobra.Command{
 	Use:   "pentlog",
 	Short: "Evidence-First Pentest Logging Tool",
@@ -25,8 +29,6 @@ func Execute() {
 	}
 }
 
-const Version = "v0.3"
-
 var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print the version number of pentlog",
@@ -38,4 +40,5 @@ var versionCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(versionCmd)
+	rootCmd.PersistentFlags().BoolVar(&fullReport, "full-report", false, "Perform a full analysis without summarization")
 }
