@@ -61,6 +61,9 @@ This document outlines the current status of `pentlog` and our plans for future 
     - [x] `pentlog version` command.
     - [x] `pentlog update` self-updater via GitHub Releases.
     - [x] Installation script (`install.sh`).
+    - [x] **Shell Completion**
+        - [x] Interactive setup for Zsh and Bash.
+        - [x] Automatic configuration update.
 
 ---
 

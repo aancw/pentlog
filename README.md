@@ -175,6 +175,25 @@ There are two ways to use the AI analysis feature:
 - Evidence Hashes: `~/.pentlog/hashes/sha256.txt`
 - Export Reports: `~/.pentlog/reports/<client>/`
 
+
+## Shell Completion
+
+Pentlog provides an interactive setup to enable shell completion (suggestions) for Zsh and Bash.
+
+```bash
+pentlog completion
+```
+Select your shell and follow the prompts to automatically install the script and update your configuration.
+
+Alternatively, you can manually source the script:
+```bash
+# Zsh
+source <(pentlog completion zsh)
+
+# Bash
+source <(pentlog completion bash)
+```
+
 ## Roadmap
 Check out our [ROADMAP.md](ROADMAP.md) to see what features are currently implemented and what we have planned for the future.
 
