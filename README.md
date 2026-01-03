@@ -133,4 +133,4 @@ The updater checks the upstream server, displays the new version, downloads the 
 - User Configuration & Context: `~/.pentlog/context.json`
 - Manual Session Logs + Timing + Metadata: `~/.pentlog/logs/<client>/<engagement>/<phase>/manual-<operator>-<timestamp>.{log,timing,json}`
 - Evidence Hashes: `~/.pentlog/hashes/sha256.txt`
-- Export Reports: Saved to current directory
+- Export Reports: `~/.pentlog/reports/<client>/`
