@@ -194,3 +194,7 @@ There are two ways to use the AI analysis feature:
 - Manual Session Logs + Timing + Metadata: `~/.pentlog/logs/<client>/<engagement>/<phase>/manual-<operator>-<timestamp>.{log,timing,json}`
 - Evidence Hashes: `~/.pentlog/hashes/sha256.txt`
 - Export Reports: `~/.pentlog/reports/<client>/`
+
+## Special Thanks
+
+Thanks to [roomkangali](https://github.com/roomkangali) for adding the [AI Summary feature](#ai-analysis)!
