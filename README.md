@@ -195,6 +195,10 @@ There are two ways to use the AI analysis feature:
 - Evidence Hashes: `~/.pentlog/hashes/sha256.txt`
 - Export Reports: `~/.pentlog/reports/<client>/`
 
-## Special Thanks
+## Acknowledgements
 
-Thanks to [roomkangali](https://github.com/roomkangali) for adding the [AI Summary feature](#ai-analysis)!
+Thanks to [roomkangali](https://github.com/roomkangali) for adding the [AI Summary feature](#ai-analysis) and the logo!
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
