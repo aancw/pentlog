@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"pentlog/pkg/config"
 	"pentlog/pkg/logs"
 	"pentlog/pkg/utils"
 	"strings"
@@ -125,16 +127,29 @@ var exportCmd = &cobra.Command{
 				if fileNameEng == "" {
 					fileNameEng = "all-engagements"
 				}
+				reportsBaseDir, err := config.GetReportsDir()
+				if err != nil {
+					fmt.Printf("Error getting reports directory: %v\n", err)
+					return
+				}
+				reportDir := filepath.Join(reportsBaseDir, utils.Slugify(selectedClient))
+				if err := os.MkdirAll(reportDir, 0755); err != nil {
+					fmt.Printf("Error creating report directory: %v\n", err)
+					return
+				}
+
 				defaultName := fmt.Sprintf("%s_%s_%s_report.md", utils.Slugify(selectedClient), utils.Slugify(fileNameEng), utils.Slugify(fileNamePhase))
 				filename := utils.PromptString("Enter filename", defaultName)
 				if filename == "" {
 					filename = defaultName
 				}
 
-				if err := os.WriteFile(filename, []byte(report), 0644); err != nil {
+				fullPath := filepath.Join(reportDir, filename)
+
+				if err := os.WriteFile(fullPath, []byte(report), 0644); err != nil {
 					fmt.Printf("Error saving file: %v\n", err)
 				} else {
-					fmt.Printf("Report saved to %s\n", filename)
+					fmt.Printf("Report saved to %s\n", fullPath)
 					return
 				}
 
@@ -147,11 +162,24 @@ var exportCmd = &cobra.Command{
 				if fileNameEng == "" {
 					fileNameEng = "all-engagements"
 				}
+				reportsBaseDir, err := config.GetReportsDir()
+				if err != nil {
+					fmt.Printf("Error getting reports directory: %v\n", err)
+					continue
+				}
+				reportDir := filepath.Join(reportsBaseDir, utils.Slugify(selectedClient))
+				if err := os.MkdirAll(reportDir, 0755); err != nil {
+					fmt.Printf("Error creating report directory: %v\n", err)
+					continue
+				}
+
 				defaultName := fmt.Sprintf("%s_%s_%s_report.html", utils.Slugify(selectedClient), utils.Slugify(fileNameEng), utils.Slugify(fileNamePhase))
 				filename := utils.PromptString("Enter filename", defaultName)
 				if filename == "" {
 					filename = defaultName
 				}
+
+				fullPath := filepath.Join(reportDir, filename)
 
 				htmlReport, err := logs.ExportCommandsHTML(selectedClient, selectedEngagement, selectedPhase)
 				if err != nil {
@@ -159,10 +187,10 @@ var exportCmd = &cobra.Command{
 					continue
 				}
 
-				if err := os.WriteFile(filename, []byte(htmlReport), 0644); err != nil {
+				if err := os.WriteFile(fullPath, []byte(htmlReport), 0644); err != nil {
 					fmt.Printf("Error saving file: %v\n", err)
 				} else {
-					fmt.Printf("HTML Report saved to %s\n", filename)
+					fmt.Printf("HTML Report saved to %s\n", fullPath)
 					return
 				}
 			}
