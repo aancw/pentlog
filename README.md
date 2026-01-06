@@ -234,7 +234,9 @@ Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduc
 
 ## Acknowledgements
 
-Thanks to [roomkangali](https://github.com/roomkangali) for adding the [AI Summary feature](#ai-analysis) and the logo!
+- Thanks to [roomkangali](https://github.com/roomkangali) for adding the [AI Summary feature](#ai-analysis) and the logo!
+- Special thanks to the authors of `ttyrec/ttyplay` for the underlying recording technology.
+- Special thanks to the authors of `ttygif` for the GIF export functionality.
 
 ## License
 

@@ -83,7 +83,10 @@ This document outlines the current status of `pentlog` and our plans for future 
 - [ ] **Remote Backup**
     - [ ] Backup to SFTP or S3-compatible storage (AWS, R2, MinIO).
 
-### Advanced Analysis
+### Advanced Analysis & Export
+- [ ] **Export to Visuals**
+    - [ ] Export session to GIF (via `ttygif`).
+    - [ ] Export to MP4/WebM.
 - [ ] **Custom Report Templates**
     - [ ] Jinja2/Go template engine support.
     - [ ] User-defined export formats.
