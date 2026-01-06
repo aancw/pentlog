@@ -3,7 +3,6 @@ package system
 import (
 	"fmt"
 	"os/exec"
-	"runtime"
 )
 
 type Recorder interface {
@@ -12,42 +11,20 @@ type Recorder interface {
 }
 
 func NewRecorder() Recorder {
-	switch runtime.GOOS {
-	case "darwin":
-		return &MacRecorder{}
-	default:
-		return &LinuxRecorder{}
-	}
+	return &TtyrecRecorder{}
 }
 
-type LinuxRecorder struct{}
+type TtyrecRecorder struct{}
 
-func (l *LinuxRecorder) BuildCommand(timingFile, logFile string) (*exec.Cmd, error) {
-	scriptPath, err := exec.LookPath("script")
+func (t *TtyrecRecorder) BuildCommand(timingFile, logFile string) (*exec.Cmd, error) {
+	path, err := exec.LookPath("ttyrec")
 	if err != nil {
-		return nil, fmt.Errorf("'script' command not found")
+		return nil, fmt.Errorf("'ttyrec' command not found")
 	}
 
-	return exec.Command(scriptPath, "--quiet", "--flush", "--append", "-t"+timingFile, logFile), nil
+	return exec.Command(path, "-a", logFile), nil
 }
 
-func (l *LinuxRecorder) SupportsTiming() bool {
+func (t *TtyrecRecorder) SupportsTiming() bool {
 	return true
-}
-
-type MacRecorder struct{}
-
-func (m *MacRecorder) BuildCommand(timingFile, logFile string) (*exec.Cmd, error) {
-	scriptPath, err := exec.LookPath("script")
-	if err != nil {
-		return nil, fmt.Errorf("'script' command not found")
-	}
-
-	// macOS/BSD flags: -q (quiet) -F (flush) -a (append)
-	// Note: Standard BSD script on macOS does not easily support separate timing files like Linux.
-	return exec.Command(scriptPath, "-q", "-F", "-a", logFile), nil
-}
-
-func (m *MacRecorder) SupportsTiming() bool {
-	return false
 }

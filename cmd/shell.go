@@ -45,8 +45,7 @@ var shellCmd = &cobra.Command{
 
 		timestamp := time.Now().Format("20060102-150405")
 		baseName := fmt.Sprintf("manual-%s-%s", utils.Slugify(ctx.Operator), timestamp)
-		logFilePath := filepath.Join(sessionDir, baseName+".log")
-		timingFilePath := filepath.Join(sessionDir, baseName+".timing")
+		logFilePath := filepath.Join(sessionDir, baseName+".tty")
 		metaFilePath := filepath.Join(sessionDir, baseName+".json")
 
 		meta := logs.SessionMetadata{
@@ -64,7 +63,7 @@ var shellCmd = &cobra.Command{
 		}
 
 		recorder := system.NewRecorder()
-		c, err := recorder.BuildCommand(timingFilePath, logFilePath)
+		c, err := recorder.BuildCommand("", logFilePath)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error creating recorder command: %v\n", err)
 			os.Exit(1)
@@ -143,9 +142,6 @@ var shellCmd = &cobra.Command{
 
 		fmt.Println("Starting RECORDED session...")
 		fmt.Printf("Log:    %s\n", utils.ShortenPath(logFilePath))
-		if recorder.SupportsTiming() {
-			fmt.Printf("Timing: %s\n", utils.ShortenPath(timingFilePath))
-		}
 		fmt.Println()
 
 		summary := []string{

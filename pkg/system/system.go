@@ -5,29 +5,23 @@ import (
 	"os"
 	"os/exec"
 	"pentlog/pkg/config"
-	"runtime"
 )
 
 func CheckDependencies() error {
-	deps := []string{"script"}
-	if runtime.GOOS == "linux" {
-		deps = append(deps, "scriptreplay")
-	}
+	deps := []string{"ttyrec"}
+	deps = append(deps, "ttyplay")
 
 	for _, dep := range deps {
 		if _, err := exec.LookPath(dep); err != nil {
-			return fmt.Errorf("%s not found in PATH", dep)
+			return fmt.Errorf("%s not found in PATH. Please install it (e.g., 'brew install ttyrec' or 'apt install ttyrec')", dep)
 		}
 	}
 	return nil
 }
 
 func CheckReplayDependencies() error {
-	if runtime.GOOS == "darwin" {
-		return fmt.Errorf("session replay is not natively supported on macOS")
-	}
-	if _, err := exec.LookPath("scriptreplay"); err != nil {
-		return fmt.Errorf("'scriptreplay' command not found")
+	if _, err := exec.LookPath("ttyplay"); err != nil {
+		return fmt.Errorf("'ttyplay' command not found")
 	}
 	return nil
 }
