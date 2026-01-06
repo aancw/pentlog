@@ -3,9 +3,11 @@ package cmd
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"pentlog/pkg/logs"
+	"pentlog/pkg/utils"
 	"strings"
 	"text/tabwriter"
 	"time"
@@ -128,7 +130,17 @@ var noteListCmd = &cobra.Command{
 			if selectedSession.NotesPath != "" {
 				notesPath = selectedSession.NotesPath
 			} else {
-				notesPath = filepath.Join(selectedSession.Path, "notes.json")
+				ext := filepath.Ext(selectedSession.Path)
+				if ext == ".tty" {
+					notesPath = strings.TrimSuffix(selectedSession.Path, ".tty") + ".notes.json"
+				} else {
+					info, err := os.Stat(selectedSession.Path)
+					if err == nil && !info.IsDir() {
+						notesPath = strings.TrimSuffix(selectedSession.Path, ext) + ".notes.json"
+					} else {
+						notesPath = filepath.Join(selectedSession.Path, "notes.json")
+					}
+				}
 			}
 			runInteractiveNoteList(notesPath, selectedSession.Path, true)
 		}
@@ -260,11 +272,21 @@ func previewLogContext(note logs.SessionNote, logPath string) {
 		return
 	}
 
+	var reader io.Reader = f
+	if strings.HasSuffix(logPath, ".tty") {
+		reader = logs.NewTtyReader(f)
+	}
+
 	fmt.Printf("\n--- Context Preview (Offset %d) ---\n", note.ByteOffset)
-	scanner := bufio.NewScanner(f)
+	scanner := bufio.NewScanner(reader)
 	linesToPrint := 10
 	for i := 0; i < linesToPrint && scanner.Scan(); i++ {
-		fmt.Println(scanner.Text())
+		line := utils.StripANSI(scanner.Text())
+		if strings.TrimSpace(line) != "" {
+			fmt.Println(line)
+		} else {
+			i--
+		}
 	}
 	fmt.Println("-----------------------------------")
 }
