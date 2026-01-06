@@ -10,7 +10,7 @@ import (
 
 var fullReport bool
 
-const Version = "v0.5"
+const Version = "v0.6.0"
 
 var rootCmd = &cobra.Command{
 	Use:   "pentlog",
