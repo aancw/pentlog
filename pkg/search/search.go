@@ -3,9 +3,12 @@ package search
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"pentlog/pkg/logs"
+	"pentlog/pkg/utils"
 	"regexp"
+	"strings"
 )
 
 type Match struct {
@@ -41,10 +44,18 @@ func Search(query string, scopeSessions []logs.Session) ([]Match, error) {
 			f, err := os.Open(session.Path)
 			if err == nil {
 
+				var r io.Reader = f
+				if strings.HasSuffix(session.Path, ".tty") {
+					r = logs.NewTtyReader(f)
+				}
+
 				var lines []string
-				scanner := bufio.NewScanner(f)
+				scanner := bufio.NewScanner(r)
 				for scanner.Scan() {
-					lines = append(lines, scanner.Text())
+					// Strip ANSI codes and terminal control sequences to get clean text
+					// This handles backspaces, colors, and cursor movements
+					cleanText := utils.StripANSI(scanner.Text())
+					lines = append(lines, cleanText)
 				}
 				f.Close()
 

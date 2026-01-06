@@ -257,7 +257,12 @@ func viewInPager(m search.Match) {
 		}
 		defer f.Close()
 
-		cleaner := utils.NewCleanReader(f)
+		var r io.Reader = f
+		if strings.HasSuffix(m.Session.Path, ".tty") {
+			r = logs.NewTtyReader(f)
+		}
+
+		cleaner := utils.NewCleanReader(r)
 		if _, err := io.Copy(w, cleaner); err != nil {
 			return
 		}

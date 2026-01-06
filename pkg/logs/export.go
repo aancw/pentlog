@@ -76,7 +76,12 @@ func ExportCommands(client, engagement, phase string) (string, error) {
 					continue
 				}
 
-				cleaner := utils.NewCleanReader(f)
+				var r io.Reader = f
+				if strings.HasSuffix(s.Path, ".tty") {
+					r = NewTtyReader(f)
+				}
+
+				cleaner := utils.NewCleanReader(r)
 				data, err := io.ReadAll(cleaner)
 				f.Close()
 
@@ -227,7 +232,12 @@ func ExportCommandsHTML(client, engagement, phase string) (string, error) {
 				builder.WriteString(fmt.Sprintf("        <h4>Session %d (%s)</h4>\n", s.ID, s.ModTime))
 				builder.WriteString("        <div class=\"log-content\">\n")
 
-				rawData, err := io.ReadAll(f)
+				var r io.Reader = f
+				if strings.HasSuffix(s.Path, ".tty") {
+					r = NewTtyReader(f)
+				}
+
+				rawData, err := io.ReadAll(r)
 				f.Close()
 				if err != nil {
 					continue

@@ -162,11 +162,11 @@ var shellCmd = &cobra.Command{
 			if exitError, ok := err.(*exec.ExitError); ok {
 				if exitError.ExitCode() != 0 {
 					fmt.Println("\nLeaving pentlog shell session.")
-					os.Exit(exitError.ExitCode())
+					return
 				}
 			} else {
 				fmt.Fprintf(os.Stderr, "Error running recorder: %v\n", err)
-				os.Exit(1)
+				return
 			}
 		}
 		fmt.Println("\nLeaving pentlog shell session.")
