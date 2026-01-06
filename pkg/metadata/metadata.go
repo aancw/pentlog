@@ -42,7 +42,7 @@ func Save(ctx Context) error {
 		return err
 	}
 	defer f.Close()
-	
+
 	lineData, err := json.Marshal(ctx)
 	if err != nil {
 		return err
@@ -61,7 +61,7 @@ func Load() (*Context, error) {
 	}
 
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return nil, fmt.Errorf("context file not found. Run 'pentlog start' first")
+		return nil, fmt.Errorf("context file not found. Run 'pentlog create' first")
 	}
 
 	data, err := os.ReadFile(path)
@@ -83,7 +83,7 @@ func LoadHistory() ([]Context, error) {
 		return nil, err
 	}
 	historyPath := filepath.Join(dir, "history.jsonl")
-	
+
 	f, err := os.Open(historyPath)
 	if err != nil {
 		if os.IsNotExist(err) {

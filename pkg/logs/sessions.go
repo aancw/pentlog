@@ -32,7 +32,6 @@ type Session struct {
 	Filename    string
 	Path        string
 	DisplayPath string
-	TimingPath  string
 	MetaPath    string
 	NotesPath   string
 	ModTime     string
@@ -88,7 +87,7 @@ func ListSessions() ([]Session, error) {
 		}
 
 		switch ext {
-		case ".log":
+		case ".tty": // New ttyrec format
 			session.Filename = filepath.Base(path)
 			session.Path = path
 			if rel, err := filepath.Rel(rootDir, path); err == nil {
@@ -101,8 +100,7 @@ func ListSessions() ([]Session, error) {
 				session.Size = info.Size()
 				session.sortKey = info.ModTime()
 			}
-		case ".timing":
-			session.TimingPath = path
+
 		case ".json":
 			session.MetaPath = path
 			if meta, err := loadMetadata(path); err == nil {
@@ -123,7 +121,7 @@ func ListSessions() ([]Session, error) {
 			continue
 		}
 		if s.Filename == "" {
-			s.Filename = filepath.Base(base) + ".log"
+			s.Filename = filepath.Base(base) + ".tty"
 		}
 		if s.DisplayPath == "" {
 			if rel, err := filepath.Rel(rootDir, s.Path); err == nil {
