@@ -140,20 +140,16 @@ var shellCmd = &cobra.Command{
 		c.Stderr = os.Stderr
 		c.Env = newEnv
 
-		fmt.Println("Starting RECORDED session...")
-		fmt.Printf("Log:    %s\n", utils.ShortenPath(logFilePath))
 		fmt.Println()
 
 		summary := []string{
-			"---------------------------------------------------",
 			fmt.Sprintf("Client:     %s", ctx.Client),
 			fmt.Sprintf("Engagement: %s", ctx.Engagement),
 			fmt.Sprintf("Scope:      %s", ctx.Scope),
 			fmt.Sprintf("Operator:   %s", ctx.Operator),
 			fmt.Sprintf("Phase:      %s", ctx.Phase),
-			"---------------------------------------------------",
 		}
-		utils.PrintCenteredBlock(summary)
+		utils.PrintBox("Active Session", summary)
 
 		fmt.Println()
 		utils.PrintCenteredBlock([]string{"Type 'exit' or Ctrl+D to stop recording."})

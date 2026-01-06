@@ -102,3 +102,44 @@ func TruncateString(str string, length int) string {
 	}
 	return str
 }
+
+func PrintBox(title string, lines []string) {
+	width := GetTerminalWidth()
+	contentWidth := 0
+	for _, line := range lines {
+		if len(line) > contentWidth {
+			contentWidth = len(line)
+		}
+	}
+	if len(title)+2 > contentWidth {
+		contentWidth = len(title) + 2
+	}
+
+	boxWidth := contentWidth + 4
+
+	leftMargin := (width - boxWidth) / 2
+	if leftMargin < 0 {
+		leftMargin = 0
+	}
+	margin := strings.Repeat(" ", leftMargin)
+
+	topLeft := "┌"
+	topRight := "┐"
+	bottomLeft := "└"
+	bottomRight := "┘"
+	horizontal := "─"
+	vertical := "│"
+
+	fmt.Printf("%s%s%s%s\n", margin, topLeft, strings.Repeat(horizontal, boxWidth-2), topRight)
+
+	if title != "" {
+		fmt.Printf("%s%s %- *s %s\n", margin, vertical, boxWidth-4, title, vertical)
+		fmt.Printf("%s%s%s%s\n", margin, "├", strings.Repeat(horizontal, boxWidth-2), "┤")
+	}
+
+	for _, line := range lines {
+		fmt.Printf("%s%s %- *s %s\n", margin, vertical, boxWidth-4, line, vertical)
+	}
+
+	fmt.Printf("%s%s%s%s\n", margin, bottomLeft, strings.Repeat(horizontal, boxWidth-2), bottomRight)
+}
