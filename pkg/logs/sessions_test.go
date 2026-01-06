@@ -35,8 +35,8 @@ func TestListSessions(t *testing.T) {
 	tsStr := ts.Format("20060102-150405")
 	baseName := fmt.Sprintf("manual-tester-%s", tsStr)
 
-	// Write .log
-	if err := os.WriteFile(filepath.Join(sessionDir, baseName+".log"), []byte("log content"), 0600); err != nil {
+	// Write .tty
+	if err := os.WriteFile(filepath.Join(sessionDir, baseName+".tty"), []byte("log content"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	// Write .timing
@@ -61,7 +61,7 @@ func TestListSessions(t *testing.T) {
 	oldTs := ts.Add(-1 * time.Hour)
 	oldTsStr := oldTs.Format("20060102-150405")
 	oldBaseName := fmt.Sprintf("manual-tester-%s", oldTsStr)
-	if err := os.WriteFile(filepath.Join(sessionDir, oldBaseName+".log"), []byte("old log"), 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(sessionDir, oldBaseName+".tty"), []byte("old log"), 0600); err != nil {
 		t.Fatal(err)
 	}
 

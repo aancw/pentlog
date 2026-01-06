@@ -3,6 +3,7 @@ package dashboard
 import (
 	"fmt"
 	"pentlog/pkg/logs"
+	"pentlog/pkg/vulns"
 	"sort"
 	"strings"
 
@@ -58,12 +59,7 @@ type Stats struct {
 	EngagementCounts  map[string]int
 	ClientSizes       map[string]int64
 	EngagementSizes   map[string]int64
-	RecentNotes       []NoteWithMeta
-}
-
-type NoteWithMeta struct {
-	Note      logs.SessionNote
-	SessionID int
+	RecentVulns       []vulns.Vuln
 }
 
 type Model struct {
@@ -150,32 +146,35 @@ func loadStats() tea.Msg {
 	stats.UniqueEngagements = len(engagements)
 	stats.TotalNotes = noteCount
 
-	var recentNotes []NoteWithMeta
-	countNotes := 0
-	for _, s := range reversedSessions {
-		if s.NotesPath != "" {
-			notes, err := logs.ReadNotes(s.NotesPath)
-			if err == nil && len(notes) > 0 {
-				for k := len(notes) - 1; k >= 0; k-- {
-					recentNotes = append(recentNotes, NoteWithMeta{Note: notes[k], SessionID: s.ID})
-					countNotes++
-					if countNotes >= 5 {
-						break
-					}
-				}
+	var allVulns []vulns.Vuln
+
+	uniqueContexts := make(map[string]bool)
+	for _, s := range sessions {
+		key := s.Metadata.Client + "|" + s.Metadata.Engagement
+		if !uniqueContexts[key] {
+			uniqueContexts[key] = true
+			mgr := vulns.NewManager(s.Metadata.Client, s.Metadata.Engagement)
+			if vList, err := mgr.List(); err == nil {
+				allVulns = append(allVulns, vList...)
 			}
 		}
-		if countNotes >= 5 {
-			break
-		}
 	}
-	stats.RecentNotes = recentNotes
 
-	count := 5
-	if len(reversedSessions) < 5 {
-		count = len(reversedSessions)
+	sort.Slice(allVulns, func(i, j int) bool {
+		return allVulns[i].CreatedAt.After(allVulns[j].CreatedAt)
+	})
+
+	maxCount := 5
+	if len(allVulns) < 5 {
+		maxCount = len(allVulns)
 	}
-	stats.RecentSessions = reversedSessions[:count]
+	stats.RecentVulns = allVulns[:maxCount]
+
+	countSession := 5
+	if len(reversedSessions) < 5 {
+		countSession = len(reversedSessions)
+	}
+	stats.RecentSessions = reversedSessions[:countSession]
 
 	return stats
 }
@@ -275,15 +274,15 @@ func (m Model) View() string {
 
 	var noteStrs []string
 	noteStrs = append(noteStrs, listHeader("Recent Findings"))
-	if len(m.Stats.RecentNotes) == 0 {
-		noteStrs = append(noteStrs, listItem("No notes found."))
+	if len(m.Stats.RecentVulns) == 0 {
+		noteStrs = append(noteStrs, listItem("No vulnerabilities found."))
 	} else {
-		for _, n := range m.Stats.RecentNotes {
-			content := n.Note.Content
-			if len(content) > 50 {
-				content = content[:47] + "..."
+		for _, v := range m.Stats.RecentVulns {
+			title := v.Title
+			if len(title) > 40 {
+				title = title[:37] + "..."
 			}
-			line := fmt.Sprintf("[%d] %s: %s", n.SessionID, n.Note.Timestamp, content)
+			line := fmt.Sprintf("[%s] %s (%s)", v.Severity, title, v.Status)
 			noteStrs = append(noteStrs, listItem(line))
 		}
 	}

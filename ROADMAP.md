@@ -13,6 +13,8 @@ This document outlines the current status of `pentlog` and our plans for future 
     - [x] Track Client, Engagement, and Operator metadata.
     - [x] Support multiple phases (e.g., Recon, Exploit) per engagement.
     - [x] Timestamp every log entry.
+    - [x] Global Setup Validation.
+    - [x] Migration: `script` to `ttyrec` backend.
 - [x] **Data Integrity**
     - [x] Generate SHA256 hashes for all logs (`pentlog freeze`).
     - [x] Verify evidence chain-of-custody.
@@ -38,6 +40,7 @@ This document outlines the current status of `pentlog` and our plans for future 
     - [x] `pentlog create` wizard for starting engagements.
     - [x] `pentlog switch` menu for changing phases.
     - [x] Custom shell prompt (PS1) injection.
+    - [x] Aesthetic Shell UI (Boxed Banner).
 
 ### Analysis & Reporting
 - [x] **Export Engine**
@@ -80,7 +83,10 @@ This document outlines the current status of `pentlog` and our plans for future 
 - [ ] **Remote Backup**
     - [ ] Backup to SFTP or S3-compatible storage (AWS, R2, MinIO).
 
-### Advanced Analysis
+### Advanced Analysis & Export
+- [ ] **Export to Visuals**
+    - [ ] Export session to GIF (via `ttygif`).
+    - [ ] Export to MP4/WebM.
 - [ ] **Custom Report Templates**
     - [ ] Jinja2/Go template engine support.
     - [ ] User-defined export formats.

@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Evidence-First Pentest Logging Tool.
-Captures shell activity as plain-text terminal logs backed by `script`/`scriptreplay`.
+Captures shell activity as high-fidelity terminal logs backed by `ttyrec`.
 
 <p align="center">
   <img src="pentlog.png" width="500">
@@ -31,7 +31,7 @@ Captures shell activity as plain-text terminal logs backed by `script`/`scriptre
 - **Context-Aware**: Tracks client/engagement/scope/operator/phase metadata and stamps every log.
 - **Terminal-Perfect Logs**: Built-in **Virtual Terminal Emulator** guarantees that what you see in the search viewer matches exactly what you saw in your shell—preserving colors, handling overwrites/edits/redraws correctly, and eliminating ghost text.
 - **Interactive Workflows**: Seamlessly create engagements, switch phases, and search logs using intuitive TUI menus.
-- **Replayable**: Timing files enable faithful playback via `scriptreplay`.
+- **Replayable**: Timing files enable faithful playback via `ttyplay`.
 - **Export Friendly**: Export structured Markdown reports for any phase with an interactive preview/save menu.
 - **Integrity Ready**: Freeze command hashes every log for evidence packaging.
 - **AI Analysis**: Analyze your reports with AI to get a summary of the findings.
@@ -78,12 +78,17 @@ go build -o pentlog main.go
 GOOS=linux GOARCH=amd64 go build -o pentlog main.go
 
 # Initial setup (checks deps, creates ~/.pentlog/logs)
+# ⚠️ REQUIRED before first use!
 pentlog setup
 ```
 
 ## Usage
 
 ### 1. Initialize Engagement (Interactive)
+> [!IMPORTANT]
+> You **MUST** run `pentlog setup` before creating any engagements.
+> This ensures that the logging directory structure and dependencies are correctly initialized.
+
 The recommended way to start is using the interactive `create` mode.
 ```bash
 pentlog create
@@ -229,7 +234,9 @@ Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduc
 
 ## Acknowledgements
 
-Thanks to [roomkangali](https://github.com/roomkangali) for adding the [AI Summary feature](#ai-analysis) and the logo!
+- Thanks to [roomkangali](https://github.com/roomkangali) for adding the [AI Summary feature](#ai-analysis) and the logo!
+- Special thanks to the authors of `ttyrec/ttyplay` for the underlying recording technology.
+- Special thanks to the authors of `ttygif` for the GIF export functionality.
 
 ## License
 

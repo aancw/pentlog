@@ -71,17 +71,16 @@ var replayCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		if session.TimingPath == "" {
-			fmt.Println("Error: timing file missing for this session; cannot replay.")
+		if session.Path == "" {
+			fmt.Println("Error: session file missing; cannot replay.")
 			os.Exit(1)
 		}
 
 		fmt.Printf("Replaying session %d (%s) at %.1fx speed...\n", id, session.DisplayPath, replaySpeed)
 		fmt.Println("Press Ctrl+C to stop early. Terminal will be restored automatically.")
 
-		// Use --divisor for speed control (divisor = speed, e.g. 2.0x speed = divisor 2)
-		divisor := fmt.Sprintf("%f", replaySpeed)
-		c := exec.Command("scriptreplay", "--divisor", divisor, session.TimingPath, session.Path)
+		speed := fmt.Sprintf("%f", replaySpeed)
+		c := exec.Command("ttyplay", "-s", speed, session.Path)
 
 		sigCh := make(chan os.Signal, 1)
 		signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
@@ -89,7 +88,7 @@ var replayCmd = &cobra.Command{
 		defer close(sigCh)
 		go func() {
 			for range sigCh {
-				// Forward Ctrl+C to scriptreplay so it exits cleanly.
+				// Forward Ctrl+C to ttyplay so it exits cleanly.
 				if c.Process != nil {
 					_ = c.Process.Signal(os.Interrupt)
 				}
@@ -101,7 +100,8 @@ var replayCmd = &cobra.Command{
 
 		err = c.Run()
 
-		// Reset terminal state using reset -I to avoid losing scrollback; fall back to stty sane.
+		// Reset terminal state
+		// ttyplay usually handles this, but a safety reset is good
 		if errReset := exec.Command("reset", "-I").Run(); errReset != nil {
 			_ = exec.Command("stty", "sane").Run()
 		}

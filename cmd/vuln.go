@@ -9,7 +9,6 @@ import (
 	"pentlog/pkg/vulns"
 
 	"github.com/charmbracelet/huh"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 )
 
@@ -75,7 +74,7 @@ func runVulnAdd(cmd *cobra.Command, args []string) {
 		huh.NewGroup(
 			huh.NewInput().
 				Title("Title").
-				Placeholder("e.g. Unauthenticated RCE").
+				Placeholder("Input the title...").
 				Value(&title),
 
 			huh.NewSelect[string]().
@@ -139,29 +138,15 @@ func runVulnList(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
 	fmt.Fprintln(w, "ID\tSEVERITY\tTITLE\tSTATUS")
 
 	for _, v := range list {
-		sevColor := lipgloss.NewStyle()
-		switch v.Severity {
-		case vulns.SeverityCritical:
-			sevColor = sevColor.Foreground(lipgloss.Color("#FF0000")).Bold(true)
-		case vulns.SeverityHigh:
-			sevColor = sevColor.Foreground(lipgloss.Color("#FF5500")).Bold(true)
-		case vulns.SeverityMedium:
-			sevColor = sevColor.Foreground(lipgloss.Color("#FFAA00"))
-		case vulns.SeverityLow:
-			sevColor = sevColor.Foreground(lipgloss.Color("#FFFF00"))
-		case vulns.SeverityInfo:
-			sevColor = sevColor.Foreground(lipgloss.Color("#00FFFF"))
-		}
-
 		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
 			v.ID,
-			sevColor.Render(string(v.Severity)),
+			v.Severity,
 			v.Title,
-			string(v.Status),
+			v.Status,
 		)
 	}
 	w.Flush()

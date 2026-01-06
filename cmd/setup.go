@@ -29,7 +29,7 @@ var setupCmd = &cobra.Command{
 		}
 		fmt.Printf("OK (%s)\n", logDir)
 
-		fmt.Println("Setup complete. Use 'pentlog shell' after connecting to record your session.")
+		fmt.Println("Setup complete. Run 'pentlog create' to initialize a new session.")
 	},
 }
 
