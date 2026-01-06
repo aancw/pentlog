@@ -36,3 +36,14 @@ func EnsureLogDir() (string, error) {
 	}
 	return dir, nil
 }
+
+func IsSetupRun() (bool, error) {
+	dir, err := config.GetLogsDir()
+	if err != nil {
+		return false, err
+	}
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		return false, nil
+	}
+	return true, nil
+}

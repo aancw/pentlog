@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"pentlog/pkg/system"
 
 	"github.com/spf13/cobra"
 )
@@ -17,6 +18,27 @@ var rootCmd = &cobra.Command{
 	Long: `pentlog is a CLI tool designed to orchestrate tlog for pentest and exam use cases.
 It ensures that all terminal activity is recorded, context-aware, and replayable.
 Features include automated hashing (integrity), markdown export, and full shell replay capability.`,
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		// Commands that don't require setup
+		allowed := map[string]bool{
+			"setup":      true,
+			"version":    true,
+			"update":     true,
+			"completion": true,
+			"help":       true,
+		}
+
+		if allowed[cmd.Name()] {
+			return
+		}
+
+		// Check if setup has run
+		if run, _ := system.IsSetupRun(); !run {
+			fmt.Println("Error: pentlog is not initialized.")
+			fmt.Println("Please run 'pentlog setup' first to initialize the environment.")
+			os.Exit(1)
+		}
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 		cmd.Help()
 	},
