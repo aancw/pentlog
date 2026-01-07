@@ -108,6 +108,7 @@ var shellCmd = &cobra.Command{
 			}
 
 			zshContent += "\n# Pentlog Prompt Injection\n"
+			zshContent += "setopt TRANSIENT_RPROMPT\n"
 			zshContent += fmt.Sprintf("RPROMPT=\"%%F{cyan}%s%%f $RPROMPT\"\n", promptSegment)
 
 			if err := os.WriteFile(zshrcPath, []byte(zshContent), 0644); err != nil {
