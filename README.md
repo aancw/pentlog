@@ -120,6 +120,7 @@ pentlog note add "Found SQLi"
 pentlog note list
 ```
 
+
 ### 5. Search & Export
 All commands function interactively.
 ```bash
@@ -171,7 +172,7 @@ pentlog update
 ```
 The updater checks the upstream server, displays the new version, downloads the appropriate binary for your OS/Arch, and performs an in-place upgrade.
 
-### AI Analysis
+### 10. AI Analysis
 Analyze your reports with AI to get a summary of the findings.
 
 #### Usage
@@ -194,16 +195,7 @@ There are two ways to use the AI analysis feature:
     # Full analysis
     pentlog export --analyze --full-report
     ```
-
-## Storage Layout
-
-- User Configuration & Context: `~/.pentlog/context.json`
-- Manual Session Logs + Timing + Metadata: `~/.pentlog/logs/<client>/<engagement>/<phase>/manual-<operator>-<timestamp>.{log,timing,json}`
-- Evidence Hashes: `~/.pentlog/hashes/sha256.txt`
-- Export Reports: `~/.pentlog/reports/<client>/`
-
-
-## Shell Completion
+### 11. Shell Completion
 
 Pentlog provides an interactive setup to enable shell completion (suggestions) for Zsh and Bash.
 
@@ -220,6 +212,17 @@ source <(pentlog completion zsh)
 # Bash
 source <(pentlog completion bash)
 ```
+
+## PentLog Demo
+
+[![asciicast](https://asciinema.org/a/50dfZoej2Gy2oYKCTUWxwpMwb.svg)](https://asciinema.org/a/50dfZoej2Gy2oYKCTUWxwpMwb)
+
+## Storage Layout
+
+- User Configuration & Context: `~/.pentlog/context.json`
+- Manual Session Logs + Timing + Metadata: `~/.pentlog/logs/<client>/<engagement>/<phase>/manual-<operator>-<timestamp>.{tty,json}`
+- Evidence Hashes: `~/.pentlog/hashes/sha256.txt`
+- Export Reports: `~/.pentlog/reports/<client>/`
 
 ## Roadmap
 Check out our [ROADMAP.md](ROADMAP.md) to see what features are currently implemented and what we have planned for the future.
