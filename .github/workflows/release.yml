@@ -16,9 +16,9 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v6
         with:
-          go-version: '1.21'
+          go-version: '1.24'
 
       - name: Build Darwin AMD64
         run: GOOS=darwin GOARCH=amd64 go build -o pentlog-darwin-amd64 .
