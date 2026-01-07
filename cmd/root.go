@@ -15,7 +15,7 @@ const Version = "v0.6.0"
 var rootCmd = &cobra.Command{
 	Use:   "pentlog",
 	Short: "Evidence-First Pentest Logging Tool",
-	Long: `pentlog is a CLI tool designed to orchestrate tlog for pentest and exam use cases.
+	Long: `pentlog is a CLI tool designed to orchestrate ttyrec for pentest and exam use cases.
 It ensures that all terminal activity is recorded, context-aware, and replayable.
 Features include automated hashing (integrity), markdown export, and full shell replay capability.`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {

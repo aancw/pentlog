@@ -141,6 +141,7 @@ var shellCmd = &cobra.Command{
 		c.Env = newEnv
 
 		fmt.Println()
+		fmt.Print(Banner)
 
 		summary := []string{
 			fmt.Sprintf("Client:     %s", ctx.Client),

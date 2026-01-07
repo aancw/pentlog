@@ -12,22 +12,7 @@ var setupCmd = &cobra.Command{
 	Use:   "setup",
 	Short: "Verify dependencies and prepare local logging",
 	Run: func(cmd *cobra.Command, args []string) {
-		const banner = `
- ███████████                       █████    █████                        
-░░███░░░░░███                     ░░███    ░░███                         
- ░███    ░███  ██████  ████████   ███████   ░███         ██████   ███████
- ░██████████  ███░░███░░███░░███ ░░░███░    ░███        ███░░███ ███░░███
- ░███░░░░░░  ░███████  ░███ ░███   ░███     ░███       ░███ ░███░███ ░███
- ░███        ░███░░░   ░███ ░███   ░███ ███ ░███      █░███ ░███░███ ░███
- █████       ░░██████  ████ █████  ░░█████  ███████████░░██████ ░░███████
-░░░░░         ░░░░░░  ░░░░ ░░░░░    ░░░░░  ░░░░░░░░░░░  ░░░░░░   ░░░░░███
-                                                                 ███ ░███
-                                                                ░░██████ 
-                                                                 ░░░░░░  
-                 PentLog — Evidence-First Pentest Logging Tool
-                                        created by Petruknisme
-`
-		fmt.Print(banner)
+		fmt.Print(Banner)
 		fmt.Println("Starting pentlog setup...")
 
 		fmt.Print("Checking dependencies... ")
