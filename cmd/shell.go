@@ -19,6 +19,11 @@ var shellCmd = &cobra.Command{
 	Use:   "shell",
 	Short: "Start a recorded shell with the engagement context loaded",
 	Run: func(cmd *cobra.Command, args []string) {
+		if os.Getenv("PENTLOG_SESSION_LOG_PATH") != "" {
+			fmt.Fprintln(os.Stderr, "Error: You are already in a pentlog shell session.")
+			os.Exit(1)
+		}
+
 		ctx, err := metadata.Load()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error loading context: %v\n", err)
