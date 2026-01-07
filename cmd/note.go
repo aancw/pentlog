@@ -254,6 +254,17 @@ func waitForEnter(msg string) {
 	bufio.NewReader(os.Stdin).ReadBytes('\n')
 }
 
+type CountingReader struct {
+	io.Reader
+	N int64
+}
+
+func (r *CountingReader) Read(p []byte) (n int, err error) {
+	n, err = r.Reader.Read(p)
+	r.N += int64(n)
+	return n, err
+}
+
 func previewLogContext(note logs.SessionNote, logPath string) {
 	if logPath == "" {
 		fmt.Println("Log path not available for preview.")
@@ -267,27 +278,40 @@ func previewLogContext(note logs.SessionNote, logPath string) {
 	}
 	defer f.Close()
 
-	if _, err := f.Seek(note.ByteOffset, 0); err != nil {
-		fmt.Printf("Error seeking log: %v\n", err)
-		return
-	}
+	limitReader := io.LimitReader(f, note.ByteOffset)
 
-	var reader io.Reader = f
+	var textReader io.Reader = limitReader
 	if strings.HasSuffix(logPath, ".tty") {
-		reader = logs.NewTtyReader(f)
+		textReader = logs.NewTtyReader(limitReader)
 	}
 
 	fmt.Printf("\n--- Context Preview (Offset %d) ---\n", note.ByteOffset)
-	scanner := bufio.NewScanner(reader)
-	linesToPrint := 10
-	for i := 0; i < linesToPrint && scanner.Scan(); i++ {
-		line := utils.StripANSI(scanner.Text())
-		if strings.TrimSpace(line) != "" {
-			fmt.Println(line)
+
+	cleaner := utils.NewCleanReader(textReader)
+
+	scanner := bufio.NewScanner(cleaner)
+
+	maxLines := 15
+	ringBuffer := make([]string, 0, maxLines)
+
+	for scanner.Scan() {
+
+		line := scanner.Text()
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
+		if len(ringBuffer) < maxLines {
+			ringBuffer = append(ringBuffer, line)
 		} else {
-			i--
+			// Shift left
+			ringBuffer = append(ringBuffer[1:], line)
 		}
 	}
+
+	for _, line := range ringBuffer {
+		fmt.Println(line)
+	}
+
 	fmt.Println("-----------------------------------")
 }
 
