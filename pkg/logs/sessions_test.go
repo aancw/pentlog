@@ -33,7 +33,7 @@ func TestListSessions(t *testing.T) {
 	// Create dummy session files
 	ts := time.Now()
 	tsStr := ts.Format("20060102-150405")
-	baseName := fmt.Sprintf("manual-tester-%s", tsStr)
+	baseName := fmt.Sprintf("session-tester-%s", tsStr)
 
 	// Write .tty
 	if err := os.WriteFile(filepath.Join(sessionDir, baseName+".tty"), []byte("log content"), 0600); err != nil {
@@ -60,7 +60,7 @@ func TestListSessions(t *testing.T) {
 	// Create another session (older)
 	oldTs := ts.Add(-1 * time.Hour)
 	oldTsStr := oldTs.Format("20060102-150405")
-	oldBaseName := fmt.Sprintf("manual-tester-%s", oldTsStr)
+	oldBaseName := fmt.Sprintf("session-tester-%s", oldTsStr)
 	if err := os.WriteFile(filepath.Join(sessionDir, oldBaseName+".tty"), []byte("old log"), 0600); err != nil {
 		t.Fatal(err)
 	}

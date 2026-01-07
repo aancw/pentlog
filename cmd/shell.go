@@ -49,7 +49,7 @@ var shellCmd = &cobra.Command{
 		}
 
 		timestamp := time.Now().Format("20060102-150405")
-		baseName := fmt.Sprintf("manual-%s-%s", utils.Slugify(ctx.Operator), timestamp)
+		baseName := fmt.Sprintf("session-%s-%s", utils.Slugify(ctx.Operator), timestamp)
 		logFilePath := filepath.Join(sessionDir, baseName+".tty")
 		metaFilePath := filepath.Join(sessionDir, baseName+".json")
 
