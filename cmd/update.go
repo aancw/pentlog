@@ -28,18 +28,7 @@ var updateCmd = &cobra.Command{
 		ctx := context.Background()
 		var client *github.Client
 
-		token := os.Getenv("GH_TOKEN")
-		if token == "" {
-			token = os.Getenv("GITHUB_TOKEN")
-		}
-
-		if token != "" {
-			fmt.Println("Using provided GitHub token for authentication...")
-			client = github.NewClient(nil).WithAuthToken(token)
-		} else {
-			fmt.Println("No GitHub token found. Attempting unauthenticated access (public repo)...")
-			client = github.NewClient(nil)
-		}
+		client = github.NewClient(nil)
 
 		fmt.Println("Checking for updates in upstream server...")
 		release, _, err := client.Repositories.GetLatestRelease(ctx, RepoOwner, RepoName)
@@ -75,31 +64,17 @@ var updateCmd = &cobra.Command{
 		fmt.Printf("OS: %s, Arch: %s\n", runtime.GOOS, runtime.GOARCH)
 		fmt.Println("Downloading update...")
 
-		var rc io.ReadCloser
-		if token != "" {
-			rc, _, err = client.Repositories.DownloadReleaseAsset(ctx, RepoOwner, RepoName, targetAsset.GetID(), http.DefaultClient)
-
-		} else {
-			resp, err := http.Get(targetAsset.GetBrowserDownloadURL())
-			if err != nil {
-				fmt.Printf("Error downloading asset: %v\n", err)
-				return
-			}
-			if resp.StatusCode != http.StatusOK {
-				fmt.Printf("Error downloading asset: status %s\n", resp.Status)
-				return
-			}
-			rc = resp.Body
-		}
-
+		resp, err := http.Get(targetAsset.GetBrowserDownloadURL())
 		if err != nil {
 			fmt.Printf("Error downloading asset: %v\n", err)
 			return
 		}
-
-		if rc != nil {
-			defer rc.Close()
+		if resp.StatusCode != http.StatusOK {
+			fmt.Printf("Error downloading asset: status %s\n", resp.Status)
+			return
 		}
+		rc := resp.Body
+		defer rc.Close()
 
 		exePath, err := os.Executable()
 		if err != nil {

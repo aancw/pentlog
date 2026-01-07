@@ -1,13 +1,25 @@
 #!/bin/sh
 set -e
 
+cat << 'EOF'
+ ███████████                       █████    █████                        
+░░███░░░░░███                     ░░███    ░░███                         
+ ░███    ░███  ██████  ████████   ███████   ░███         ██████   ███████
+ ░██████████  ███░░███░░███░░███ ░░░███░    ░███        ███░░███ ███░░███
+ ░███░░░░░░  ░███████  ░███ ░███   ░███     ░███       ░███ ░███░███ ░███
+ ░███        ░███░░░   ░███ ░███   ░███ ███ ░███      █░███ ░███░███ ░███
+ █████       ░░██████  ████ █████  ░░█████  ███████████░░██████ ░░███████
+░░░░░         ░░░░░░  ░░░░ ░░░░░    ░░░░░  ░░░░░░░░░░░  ░░░░░░   ░░░░░███
+                                                                 ███ ░███
+                                                                ░░██████ 
+                                                                 ░░░░░░  
+                 PentLog — Evidence-First Pentest Logging Tool
+                                        created by Petruknisme
+
+EOF
+
 REPO="aancw/pentlog"
 LATEST_URL="https://api.github.com/repos/$REPO/releases/latest"
-
-GITHUB_HEADER=""
-if [ -n "$GH_TOKEN" ]; then
-    GITHUB_HEADER="Authorization: token $GH_TOKEN"
-fi
 
 # Detect OS and Architecture
 OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
@@ -39,11 +51,7 @@ fi
 echo "Fetching latest release for $BINARY..."
 
 # Fetch release data
-if [ -n "$GITHUB_HEADER" ]; then
-    RELEASE_JSON=$(curl -s -H "$GITHUB_HEADER" "$LATEST_URL")
-else
-    RELEASE_JSON=$(curl -s "$LATEST_URL")
-fi
+RELEASE_JSON=$(curl -s "$LATEST_URL")
 
 # Extract version
 VERSION=$(echo "$RELEASE_JSON" | grep "\"tag_name\":" | head -n 1 | cut -d '"' -f 4)
@@ -54,20 +62,7 @@ if echo "$RELEASE_JSON" | grep -q "API rate limit"; then
     exit 1
 fi
 
-
-if [ -n "$GITHUB_HEADER" ]; then
-
-    ASSET_ID=$(echo "$RELEASE_JSON" | grep -C 5 "$BINARY" | grep "\"id\":" | head -n 1 | tr -d " \"," | cut -d: -f2)
-    
-    if [ -n "$ASSET_ID" ]; then
-        DOWNLOAD_URL="https://api.github.com/repos/$REPO/releases/assets/$ASSET_ID"
-        IS_API_URL=1
-    fi
-fi
-
-if [ -z "$DOWNLOAD_URL" ]; then
-    DOWNLOAD_URL=$(echo "$RELEASE_JSON" | grep "browser_download_url" | grep "$BINARY" | head -n 1 | cut -d '"' -f 4)
-fi
+DOWNLOAD_URL=$(echo "$RELEASE_JSON" | grep "browser_download_url" | grep "$BINARY" | head -n 1 | cut -d '"' -f 4)
 
 if [ -z "$DOWNLOAD_URL" ]; then
     echo "Error: Could not find download URL for $BINARY in latest release."
@@ -82,15 +77,7 @@ TMP_DIR=$(mktemp -d)
 trap 'rm -rf "$TMP_DIR"' EXIT
 
 # Download binary
-if [ -n "$GITHUB_HEADER" ] && [ "$IS_API_URL" = "1" ]; then
-    # Use -H "Accept: application/octet-stream" specifically for API URL
-    curl -L -sS -H "$GITHUB_HEADER" -H "Accept: application/octet-stream" -o "$TMP_DIR/pentlog" "$DOWNLOAD_URL"
-elif [ -n "$GITHUB_HEADER" ]; then
-    # Fallback for browser_url with auth (might fail on private S3)
-    curl -L -sS -H "$GITHUB_HEADER" -o "$TMP_DIR/pentlog" "$DOWNLOAD_URL"
-else
-    curl -L -sS -o "$TMP_DIR/pentlog" "$DOWNLOAD_URL"
-fi
+curl -L -sS -o "$TMP_DIR/pentlog" "$DOWNLOAD_URL"
 
 # Make executable
 chmod +x "$TMP_DIR/pentlog"
