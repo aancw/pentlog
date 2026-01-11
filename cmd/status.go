@@ -20,9 +20,14 @@ var statusCmd = &cobra.Command{
 			lines = append(lines, "Context: No active engagement found.")
 		} else {
 			lines = append(lines, "Context:    ACTIVE")
-			lines = append(lines, fmt.Sprintf("Client:     %s", ctx.Client))
-			lines = append(lines, fmt.Sprintf("Engagement: %s", ctx.Engagement))
-			lines = append(lines, fmt.Sprintf("Scope:      %s", ctx.Scope))
+			if ctx.Type == "Exam/Lab" {
+				lines = append(lines, fmt.Sprintf("Exam/Lab Name: %s", ctx.Client))
+				lines = append(lines, fmt.Sprintf("Target:        %s", ctx.Engagement))
+			} else {
+				lines = append(lines, fmt.Sprintf("Client:     %s", ctx.Client))
+				lines = append(lines, fmt.Sprintf("Engagement: %s", ctx.Engagement))
+				lines = append(lines, fmt.Sprintf("Scope:      %s", ctx.Scope))
+			}
 			lines = append(lines, fmt.Sprintf("Operator:   %s", ctx.Operator))
 			lines = append(lines, fmt.Sprintf("Phase:      %s", ctx.Phase))
 		}

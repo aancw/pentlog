@@ -149,13 +149,17 @@ var shellCmd = &cobra.Command{
 		fmt.Println()
 		fmt.Print(Banner)
 
-		summary := []string{
-			fmt.Sprintf("Client:     %s", ctx.Client),
-			fmt.Sprintf("Engagement: %s", ctx.Engagement),
-			fmt.Sprintf("Scope:      %s", ctx.Scope),
-			fmt.Sprintf("Operator:   %s", ctx.Operator),
-			fmt.Sprintf("Phase:      %s", ctx.Phase),
+		summary := []string{}
+		if ctx.Type == "Exam/Lab" {
+			summary = append(summary, fmt.Sprintf("Exam/Lab Name: %s", ctx.Client))
+			summary = append(summary, fmt.Sprintf("Target:        %s", ctx.Engagement))
+		} else {
+			summary = append(summary, fmt.Sprintf("Client:     %s", ctx.Client))
+			summary = append(summary, fmt.Sprintf("Engagement: %s", ctx.Engagement))
+			summary = append(summary, fmt.Sprintf("Scope:      %s", ctx.Scope))
 		}
+		summary = append(summary, fmt.Sprintf("Operator:   %s", ctx.Operator))
+		summary = append(summary, fmt.Sprintf("Phase:      %s", ctx.Phase))
 		utils.PrintBox("Active Session", summary)
 
 		fmt.Println()

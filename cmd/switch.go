@@ -26,6 +26,16 @@ var switchCmd = &cobra.Command{
 		}
 
 		if newPhase == "" {
+			if ctx.Type == "Exam/Lab" {
+				fmt.Printf("Current Target: %s\n", ctx.Engagement)
+				newTarget := utils.PromptString("New Target Host/IP", ctx.Engagement)
+				if newTarget != "" {
+					ctx.Engagement = newTarget
+					// Also update scope to match target
+					ctx.Scope = newTarget
+				}
+			}
+
 			fmt.Printf("Current Phase: %s\n", ctx.Phase)
 			newPhase = utils.PromptString("New Phase", "")
 		}
@@ -47,13 +57,19 @@ var switchCmd = &cobra.Command{
 
 		summary := []string{
 			"---------------------------------------------------",
-			fmt.Sprintf("Client:     %s", ctx.Client),
-			fmt.Sprintf("Engagement: %s", ctx.Engagement),
-			fmt.Sprintf("Scope:      %s", ctx.Scope),
-			fmt.Sprintf("Operator:   %s", ctx.Operator),
-			fmt.Sprintf("Phase:      %s", ctx.Phase),
-			"---------------------------------------------------",
 		}
+
+		if ctx.Type == "Exam/Lab" {
+			summary = append(summary, fmt.Sprintf("Exam/Lab Name: %s", ctx.Client))
+			summary = append(summary, fmt.Sprintf("Target:        %s", ctx.Engagement))
+		} else {
+			summary = append(summary, fmt.Sprintf("Client:     %s", ctx.Client))
+			summary = append(summary, fmt.Sprintf("Engagement: %s", ctx.Engagement))
+			summary = append(summary, fmt.Sprintf("Scope:      %s", ctx.Scope))
+		}
+		summary = append(summary, fmt.Sprintf("Operator:   %s", ctx.Operator))
+		summary = append(summary, fmt.Sprintf("Phase:      %s", ctx.Phase))
+		summary = append(summary, "---------------------------------------------------")
 		utils.PrintCenteredBlock(summary)
 	},
 }

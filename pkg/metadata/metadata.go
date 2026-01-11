@@ -15,6 +15,7 @@ type Context struct {
 	Operator   string `json:"operator"`
 	Phase      string `json:"phase"`
 	Timestamp  string `json:"timestamp"`
+	Type       string `json:"type"` // "Client" or "Exam/Lab"
 }
 
 func Save(ctx Context) error {
