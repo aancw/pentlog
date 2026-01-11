@@ -28,7 +28,7 @@ Captures shell activity as high-fidelity terminal logs backed by `ttyrec`.
 ## Features
 
 - **No Root Required**: Start recorded shells as a normal user; logs land in your home directory.
-- **Context-Aware**: Tracks client/engagement/scope/operator/phase metadata and stamps every log.
+- **Context-Aware**: Tracks metadata and stamps every log. Flexible support for **Client Engagements** and **Exam/Labs** (OSCP, HTB, etc.).
 - **Terminal-Perfect Logs**: Built-in **Virtual Terminal Emulator** guarantees that what you see in the search viewer matches exactly what you saw in your shell—preserving colors, handling overwrites/edits/redraws correctly, and eliminating ghost text.
 - **Interactive Workflows**: Seamlessly create engagements, switch phases, and search logs using intuitive TUI menus.
 - **Replayable**: Timing files enable faithful playback via `ttyplay`.
@@ -84,15 +84,18 @@ pentlog setup
 
 ## Usage
 
-### 1. Initialize Engagement (Interactive)
-> [!IMPORTANT]
-> You **MUST** run `pentlog setup` before creating any engagements.
 > This ensures that the logging directory structure and dependencies are correctly initialized.
+ 
+### 1. Initialize Engagement (Interactive)
+The `create` command supports two modes:
 
-The recommended way to start is using the interactive `create` mode.
+- **Client Mode**: Best for professional engagements. Tracks Client, Engagement, Scope, etc.
+- **Exam/Lab Mode**: Optimized for CTFs and Certifications (OSCP, PNPT, etc.). Tracks Exam Name and Target IP.
+
 ```bash
 pentlog create
-# Prompts for: Client, Engagement, Operator, etc.
+# Prompts for: Context Type (Client vs Exam/Lab)
+# Then prompts for relevant details based on selection.
 ```
 
 ### 2. Enter Shell
@@ -102,11 +105,14 @@ pentlog shell
 # Enters a recorded shell with custom PS1 and instant-logging.
 ```
 
-### 3. Switch Phases
-When moving from one phase to another (e.g., recon -> exploit), use `switch`.
+### 3. Switch Phases / Targets
+- **Client Mode**: Use `switch` to move between phases (e.g., recon -> exploit).
+- **Exam/Lab Mode**: Use `switch` to quickly jump to a **New Target IP** without re-running the setup wizard.
+
 ```bash
 pentlog switch
-# Prompts for new phase (e.g., "exploit")
+# Client Mode: Prompts for new phase
+# Exam/Lab Mode: Prompts for new Target IP + Phase
 ```
 
 ### 4. Notes / Bookmarks

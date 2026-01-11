@@ -41,6 +41,7 @@ This document outlines the current status of `pentlog` and our plans for future 
     - [x] `pentlog switch` menu for changing phases.
     - [x] Custom shell prompt (PS1) injection.
     - [x] Aesthetic Shell UI (Boxed Banner).
+    - [x] **Flexible Contexts**: Support for both Client Engagements and Exam/Labs (with fast target switching).
 
 ### Analysis & Reporting
 - [x] **Export Engine**
