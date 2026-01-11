@@ -3,7 +3,6 @@ package utils
 import (
 	"fmt"
 	"os"
-	"regexp"
 	"strings"
 	"syscall"
 	"unsafe"
@@ -71,25 +70,107 @@ func ShortenPath(path string) string {
 }
 
 func StripANSI(str string) string {
-	const ansi = "[\u001B\u009B][[\\]()#;?]*(?:(?:(?:[a-zA-Z\\d]*(?:;[a-zA-Z\\d]*)*)?\u0007)|(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PRZcf-ntqry=><~]))"
-	var re = regexp.MustCompile(ansi)
-	stripped := re.ReplaceAllString(str, "")
+	var buffer []rune
+	cursor := 0
 
-	var stack []rune
-	for _, r := range stripped {
-		if r == '\x08' { // Backspace
-			if len(stack) > 0 {
-				stack = stack[:len(stack)-1]
+	// State machine states
+	const (
+		StateNormal = iota
+		StateEscape
+		StateCSI
+	)
+	state := StateNormal
+	var csiArgs []int
+	var currentArg int
+	var hasArg bool
+
+	for _, r := range str {
+		switch state {
+		case StateNormal:
+			if r == '\x1b' {
+				state = StateEscape
+			} else if r == '\x08' { // Backspace
+				if cursor > 0 {
+					cursor--
+				}
+			} else if r == '\r' { // Carriage Return
+				cursor = 0
+			} else if r == '\n' {
+				// We treat newline as append-only in this context
+				buffer = append(buffer, r)
+				cursor = len(buffer)
+			} else if r >= 0x20 || r == '\t' {
+				// Regular character
+				if cursor < len(buffer) {
+					buffer[cursor] = r
+				} else {
+					buffer = append(buffer, r)
+				}
+				cursor++
 			}
-		} else if r == '\r' { // Carriage Return
+		case StateEscape:
+			if r == '[' {
+				state = StateCSI
+				csiArgs = []int{}
+				currentArg = 0
+				hasArg = false
+			} else {
+				state = StateNormal
+			}
+		case StateCSI:
+			if r >= '0' && r <= '9' {
+				currentArg = currentArg*10 + int(r-'0')
+				hasArg = true
+			} else if r == ';' {
+				csiArgs = append(csiArgs, currentArg)
+				currentArg = 0
+				hasArg = false // arg separator
+			} else if r >= 0x40 && r <= 0x7E {
+				// Final byte of CSI
+				if hasArg {
+					csiArgs = append(csiArgs, currentArg)
+				}
 
-			continue
-		} else if r >= 0x20 || r == '\n' || r == '\t' {
-			stack = append(stack, r)
+				// Process recognized commands
+				switch r {
+				case 'K': // Erase in Line
+					mode := 0
+					if len(csiArgs) > 0 {
+						mode = csiArgs[0]
+					}
+					switch mode {
+					case 0: // Erase from cursor to end
+						if cursor < len(buffer) {
+							buffer = buffer[:cursor]
+						}
+					case 1: // Erase from start to cursor
+						for i := 0; i < cursor && i < len(buffer); i++ {
+							buffer[i] = ' '
+						}
+					case 2: // Erase entire line
+						buffer = []rune{}
+						cursor = 0
+					}
+				case 'G': // Cursor Horizontal Absolute
+					col := 1
+					if len(csiArgs) > 0 {
+						col = csiArgs[0]
+					}
+					if col < 1 {
+						col = 1
+					}
+					cursor = col - 1
+					for len(buffer) < cursor {
+						buffer = append(buffer, ' ')
+					}
+				}
+
+				state = StateNormal
+			}
 		}
 	}
 
-	return string(stack)
+	return string(buffer)
 }
 
 func TruncateString(str string, length int) string {

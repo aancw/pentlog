@@ -37,7 +37,7 @@ type Session struct {
 	ModTime     string
 	Size        int64
 	Metadata    SessionMetadata
-	sortKey     time.Time
+	SortKey     time.Time
 }
 
 func ListSessions() ([]Session, error) {
@@ -98,7 +98,7 @@ func ListSessions() ([]Session, error) {
 			if info, err := d.Info(); err == nil {
 				session.ModTime = info.ModTime().Format("2006-01-02 15:04:05")
 				session.Size = info.Size()
-				session.sortKey = info.ModTime()
+				session.SortKey = info.ModTime()
 			}
 
 		case ".json":
@@ -107,7 +107,7 @@ func ListSessions() ([]Session, error) {
 				session.Metadata = meta
 				if ts, err := time.Parse(time.RFC3339, meta.Timestamp); err == nil {
 					session.ModTime = ts.Format("2006-01-02 15:04:05")
-					session.sortKey = ts
+					session.SortKey = ts
 				}
 			}
 		}
@@ -135,7 +135,7 @@ func ListSessions() ([]Session, error) {
 	}
 
 	sort.Slice(sessions, func(i, j int) bool {
-		return sessions[i].sortKey.Before(sessions[j].sortKey)
+		return sessions[i].SortKey.Before(sessions[j].SortKey)
 	})
 
 	for i := range sessions {

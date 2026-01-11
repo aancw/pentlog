@@ -9,6 +9,7 @@ import (
 	"pentlog/pkg/utils"
 	"regexp"
 	"strings"
+	"time"
 )
 
 type Match struct {
@@ -19,27 +20,61 @@ type Match struct {
 	IsNote  bool
 }
 
-func Search(query string, scopeSessions []logs.Session) ([]Match, error) {
-	regex, err := regexp.Compile(query)
-	if err != nil {
-		return nil, fmt.Errorf("invalid regex query: %w", err)
-	}
+type SearchOptions struct {
+	After   time.Time
+	Before  time.Time
+	IsRegex bool
+}
+
+func Search(query string, scopeSessions []logs.Session, opts SearchOptions) ([]Match, error) {
+	var results []Match
 
 	var sessions []logs.Session
-	var errSession error
-
 	if len(scopeSessions) > 0 {
 		sessions = scopeSessions
 	} else {
-		sessions, errSession = logs.ListSessions()
-		if errSession != nil {
-			return nil, fmt.Errorf("failed to list sessions: %w", errSession)
+		all, err := logs.ListSessions()
+		if err != nil {
+			return nil, fmt.Errorf("failed to list sessions: %w", err)
 		}
+		sessions = all
 	}
 
-	var results []Match
+	filteredSessions := []logs.Session{}
+	for _, s := range sessions {
+		if s.Metadata.Timestamp == "" {
 
-	for _, session := range sessions {
+		}
+
+		ts, err := time.Parse(time.RFC3339, s.Metadata.Timestamp)
+		if err != nil {
+			ts = s.SortKey
+		}
+
+		if !opts.After.IsZero() && ts.Before(opts.After) {
+			continue
+		}
+		if !opts.Before.IsZero() && ts.After(opts.Before) {
+			continue
+		}
+		filteredSessions = append(filteredSessions, s)
+	}
+
+	var matcher func(string) bool
+	if opts.IsRegex {
+		regex, err := regexp.Compile(query)
+		if err != nil {
+			return nil, fmt.Errorf("invalid regex query: %w", err)
+		}
+		matcher = func(text string) bool {
+			return regex.MatchString(text)
+		}
+	} else {
+
+		matcher = createBooleanMatcher(query)
+	}
+
+	for _, session := range filteredSessions {
 		if session.Path != "" {
 			f, err := os.Open(session.Path)
 			if err == nil {
@@ -52,15 +87,13 @@ func Search(query string, scopeSessions []logs.Session) ([]Match, error) {
 				var lines []string
 				scanner := bufio.NewScanner(r)
 				for scanner.Scan() {
-					// Strip ANSI codes and terminal control sequences to get clean text
-					// This handles backspaces, colors, and cursor movements
 					cleanText := utils.StripANSI(scanner.Text())
 					lines = append(lines, cleanText)
 				}
 				f.Close()
 
 				for i, line := range lines {
-					if regex.MatchString(line) {
+					if matcher(line) {
 						start := i - 2
 						if start < 0 {
 							start = 0
@@ -86,7 +119,7 @@ func Search(query string, scopeSessions []logs.Session) ([]Match, error) {
 			notes, err := logs.ReadNotes(session.NotesPath)
 			if err == nil {
 				for _, note := range notes {
-					if regex.MatchString(note.Content) {
+					if matcher(note.Content) {
 						results = append(results, Match{
 							Session: session,
 							LineNum: int(note.ByteOffset),
@@ -100,4 +133,52 @@ func Search(query string, scopeSessions []logs.Session) ([]Match, error) {
 	}
 
 	return results, nil
+}
+
+func createBooleanMatcher(query string) func(string) bool {
+	query = strings.Join(strings.Fields(query), " ")
+
+	orGroups := strings.Split(query, " OR ")
+
+	type term struct {
+		val string
+		not bool
+	}
+
+	var parsedGroups [][]term
+
+	for _, group := range orGroups {
+		parts := strings.Fields(group)
+		var groupTerms []term
+		for _, p := range parts {
+			if strings.HasPrefix(p, "-") && len(p) > 1 {
+				groupTerms = append(groupTerms, term{val: strings.ToLower(p[1:]), not: true})
+			} else {
+				groupTerms = append(groupTerms, term{val: strings.ToLower(p), not: false})
+			}
+		}
+		parsedGroups = append(parsedGroups, groupTerms)
+	}
+
+	return func(text string) bool {
+		lowerText := strings.ToLower(text)
+		for _, group := range parsedGroups {
+			matchGroup := true
+			for _, t := range group {
+				contains := strings.Contains(lowerText, t.val)
+				if t.not && contains {
+					matchGroup = false
+					break
+				}
+				if !t.not && !contains {
+					matchGroup = false
+					break
+				}
+			}
+			if matchGroup {
+				return true
+			}
+		}
+		return false
+	}
 }

@@ -10,9 +10,16 @@ import (
 	"pentlog/pkg/search"
 	"pentlog/pkg/utils"
 	"strings"
+	"time"
 
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
+)
+
+var (
+	flagAfter  string
+	flagBefore string
+	flagRegex  bool
 )
 
 var searchCmd = &cobra.Command{
@@ -81,7 +88,42 @@ var searchCmd = &cobra.Command{
 		}
 		scope = finalScope
 
-		query = utils.PromptString("Search Query (Regex)", "")
+		// Interactive Wizard for Filters
+		opts := search.SearchOptions{
+			IsRegex: flagRegex,
+		}
+
+		// If no flags were provided, ask interactively
+		if flagAfter == "" && flagBefore == "" && !flagRegex {
+			configureIdx := utils.SelectItem("Filter by Date Range?", []string{"No", "Yes"})
+			if configureIdx == 1 {
+				flagAfter = utils.PromptString("Start Date (DDMMYYYY)", "")
+				flagBefore = utils.PromptString("End Date (DDMMYYYY)", "")
+			}
+		}
+
+		if flagAfter != "" {
+			t, err := parseDate(flagAfter)
+			if err == nil {
+				opts.After = t
+			} else {
+				fmt.Printf("Warning: Invalid After date format: %v\n", err)
+			}
+		}
+		if flagBefore != "" {
+			t, err := parseDate(flagBefore)
+			if err == nil {
+				opts.Before = t
+			} else {
+				fmt.Printf("Warning: Invalid Before date format: %v\n", err)
+			}
+		}
+
+		if len(args) > 0 {
+			query = strings.Join(args, " ")
+		} else {
+			query = utils.PromptString("Search Query", "")
+		}
 
 		if query == "" {
 			fmt.Println("Error: Search query cannot be empty.")
@@ -89,7 +131,7 @@ var searchCmd = &cobra.Command{
 		}
 
 		fmt.Printf("Searching for %q...\n", query)
-		results, err := search.Search(query, scope)
+		results, err := search.Search(query, scope, opts)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error searching: %v\n", err)
 			os.Exit(1)
@@ -106,6 +148,7 @@ var searchCmd = &cobra.Command{
 			CleanContext   string
 			DisplaySession string
 			DisplayFile    string
+			DisplayTime    string
 			Match          search.Match
 		}
 
@@ -152,6 +195,11 @@ var searchCmd = &cobra.Command{
 			displaySession := utils.TruncateString(sessionStr, safeWidth)
 			displayFile := utils.TruncateString(match.Session.DisplayPath, safeWidth)
 
+			displayTime := match.Session.Metadata.Timestamp
+			if displayTime == "" {
+				displayTime = match.Session.SortKey.Format("2006-01-02 15:04:05")
+			}
+
 			if match.IsNote {
 				label = fmt.Sprintf("[%d] %s [NOTE]: %s", match.Session.ID, match.Session.DisplayPath, content)
 			} else {
@@ -168,6 +216,7 @@ var searchCmd = &cobra.Command{
 				CleanContext:   cleanContext,
 				DisplaySession: displaySession,
 				DisplayFile:    displayFile,
+				DisplayTime:    displayTime,
 				Match:          match,
 			})
 		}
@@ -185,6 +234,7 @@ var searchCmd = &cobra.Command{
 {{ if .CleanContent }}
 --------- Match Details ----------
 {{ "Session:" | faint }}	{{ .DisplaySession }}
+{{ "Timestamp:" | faint }}	{{ .DisplayTime }}
 {{ "File:" | faint }}	{{ .DisplayFile }}
 {{ "Context (5 lines):" | faint }}
 {{ .CleanContext }}
@@ -219,6 +269,21 @@ var searchCmd = &cobra.Command{
 			viewInPager(selected)
 		}
 	},
+}
+
+func parseDate(d string) (time.Time, error) {
+	formats := []string{
+		"02012006",
+		"02-01-2006",
+		"2006-01-02",
+		time.RFC3339,
+	}
+	for _, f := range formats {
+		if t, err := time.Parse(f, d); err == nil {
+			return t, nil
+		}
+	}
+	return time.Time{}, fmt.Errorf("unknown date format")
 }
 
 func viewInPager(m search.Match) {
@@ -277,4 +342,7 @@ func viewInPager(m search.Match) {
 
 func init() {
 	rootCmd.AddCommand(searchCmd)
+	searchCmd.Flags().StringVarP(&flagAfter, "after", "a", "", "Filter logs after date (DDMMYYYY)")
+	searchCmd.Flags().StringVarP(&flagBefore, "before", "b", "", "Filter logs before date (DDMMYYYY)")
+	searchCmd.Flags().BoolVarP(&flagRegex, "regex", "r", false, "Treat query as regex (default: boolean)")
 }
