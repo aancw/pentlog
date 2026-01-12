@@ -13,6 +13,7 @@ const (
 	HashesFileName  = "sha256.txt"
 	LogsDirName     = "logs"
 	ReportsDirName  = "reports"
+	ArchiveDirName  = "archive"
 )
 
 func GetUserPentlogDir() (string, error) {
@@ -69,4 +70,12 @@ func GetReportsDir() (string, error) {
 		return "", err
 	}
 	return filepath.Join(dir, ReportsDirName), nil
+}
+
+func GetArchiveDir() (string, error) {
+	dir, err := GetUserPentlogDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, ArchiveDirName), nil
 }

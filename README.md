@@ -42,6 +42,7 @@ Captures shell activity as high-fidelity terminal logs backed by `ttyrec`.
 | Command | Description |
 | :--- | :--- |
 | `analyze` | Analyze a report with an AI provider to summarize findings. |
+| `archive` | Archive old sessions to save space (Interactive). |
 | `completion` | Generate auto-completion scripts for Zsh and Bash. |
 | `create` | Initialize a new engagement context (Interactive). |
 | `dashboard` | Show an interactive dashboard of your pentest activity. |
@@ -219,6 +220,26 @@ source <(pentlog completion zsh)
 source <(pentlog completion bash)
 ```
 
+### 12. Archive
+Manage disk usage by archiving old or completed sessions.
+```bash
+# Interactive Mode (Recommended)
+pentlog archive
+
+# Archive all 'acme' sessions (Backup mode - Keeps originals)
+pentlog archive acme
+
+# Archive 'acme' sessions older than 30 days and DELETE originals
+pentlog archive acme --days 30 --delete
+
+# Archive specific phase or engagement
+pentlog archive acme -p recon
+pentlog archive acme -e internal-audit
+
+# List archives
+pentlog archive list
+```
+
 ## PentLog Demo
 
 [![asciicast](https://asciinema.org/a/50dfZoej2Gy2oYKCTUWxwpMwb.svg)](https://asciinema.org/a/50dfZoej2Gy2oYKCTUWxwpMwb)
@@ -228,7 +249,9 @@ source <(pentlog completion bash)
 - User Configuration & Context: `~/.pentlog/context.json`
 - Manual Session Logs + Timing + Metadata: `~/.pentlog/logs/<client>/<engagement>/<phase>/manual-<operator>-<timestamp>.{tty,json}`
 - Evidence Hashes: `~/.pentlog/hashes/sha256.txt`
+- Evidence Hashes: `~/.pentlog/hashes/sha256.txt`
 - Export Reports: `~/.pentlog/reports/<client>/`
+- Archives: `~/.pentlog/archive/<client>/`
 
 ## Roadmap
 Check out our [ROADMAP.md](ROADMAP.md) to see what features are currently implemented and what we have planned for the future.

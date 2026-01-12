@@ -10,7 +10,7 @@ import (
 
 var fullReport bool
 
-const Version = "v0.7.0"
+const Version = "v0.8.0"
 
 var rootCmd = &cobra.Command{
 	Use:   "pentlog",
@@ -62,5 +62,6 @@ var versionCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(versionCmd)
+	rootCmd.AddCommand(archiveCmd)
 	rootCmd.PersistentFlags().BoolVar(&fullReport, "full-report", false, "Perform a full analysis without summarization")
 }

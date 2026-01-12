@@ -78,8 +78,9 @@ This document outlines the current status of `pentlog` and our plans for future 
     - [ ] AES-256 encryption for log files.
     - [ ] Secure key management integration.
     - [ ] Password-protected session access.
-- [ ] **Compressed Storage**
-    - [ ] Automatic GZIP/ZSTD compression for archived logs.
+- [x] **Compressed Storage**
+    - [x] Automatic GZIP/ZSTD compression for archived logs.
+    - [x] Granular archiving (Client, Engagement, Phase).
     - [ ] Transparent decompression during search/replay.
 - [ ] **Remote Backup**
     - [ ] Backup to SFTP or S3-compatible storage (AWS, R2, MinIO).
