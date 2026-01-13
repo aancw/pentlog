@@ -50,6 +50,7 @@ This document outlines the current status of `pentlog` and our plans for future 
     - [x] Generate HTML reports with styling.
     - [x] Organize reports by Client directory structure.
     - [x] Interactive preview before saving.
+    - [x] **Clean Exports**: ANSI stripping for Markdown reports.
 - [x] **AI Analysis**
     - [x] Integration with Google Gemini.
     - [x] Integration with Ollama for local LLMs.
@@ -82,6 +83,7 @@ This document outlines the current status of `pentlog` and our plans for future 
 - [x] **Compressed Storage**
     - [x] Automatic GZIP/ZSTD compression for archived logs.
     - [x] Granular archiving (Client, Engagement, Phase).
+    - [x] **Smart Archive**: Auto-include MD/HTML reports and reuse existing ones.
     - [ ] Transparent decompression during search/replay.
 - [ ] **Remote Backup**
     - [ ] Backup to SFTP or S3-compatible storage (AWS, R2, MinIO).

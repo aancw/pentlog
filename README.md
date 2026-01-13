@@ -242,6 +242,8 @@ pentlog archive acme -e internal-audit
 
 # List archives
 pentlog archive list
+
+> **Note**: Archives now automatically include both Markdown and HTML reports. If you've already exported a report, `pentlog archive` will smartly reuse it instead of regenerating it!
 ```
 
 ## PentLog Demo
@@ -253,9 +255,9 @@ pentlog archive list
 - User Configuration & Context: `~/.pentlog/context.json`
 - Manual Session Logs + Timing + Metadata: `~/.pentlog/logs/<client>/<engagement>/<phase>/manual-<operator>-<timestamp>.{tty,json}`
 - Evidence Hashes: `~/.pentlog/hashes/sha256.txt`
-- Evidence Hashes: `~/.pentlog/hashes/sha256.txt`
 - Export Reports: `~/.pentlog/reports/<client>/`
 - Archives: `~/.pentlog/archive/<client>/`
+    - Inside archive: `logs/` (Session data) and `reports/` (Included reports)
 
 ## Roadmap
 Check out our [ROADMAP.md](ROADMAP.md) to see what features are currently implemented and what we have planned for the future.
