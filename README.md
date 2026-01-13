@@ -56,7 +56,7 @@ Captures shell activity as high-fidelity terminal logs backed by `ttyrec`.
 | `setup` | Verify dependencies and prepare local logging. |
 | `shell` | Start a recorded shell with the engagement context loaded. |
 | `status` | Show current tool and engagement status. |
-| `switch` | Switch to a different pentest phase (Interactive). |
+| `switch` | Switch to a different pentest phase (Interactive/History). |
 | `update` | Update pentlog to the latest version automatically. |
 | `vuln` | Manage findings and vulnerabilities.
 
@@ -112,8 +112,12 @@ pentlog shell
 
 ```bash
 pentlog switch
-# Client Mode: Prompts for new phase
-# Exam/Lab Mode: Prompts for new Target IP + Phase
+# Prompts for:
+# - Select from History (Interactive list of recent sessions)
+# - Enter Manual/New (Prompts for Client/Target + Phase)
+
+# Or toggle quickly to the previous session:
+pentlog switch -
 ```
 
 ### 4. Notes / Bookmarks

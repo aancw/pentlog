@@ -22,7 +22,25 @@ var switchCmd = &cobra.Command{
 
 		newPhase := ""
 		if len(args) > 0 {
+			if args[0] == "-" {
+				switchBack()
+				return
+			}
 			newPhase = args[0]
+		}
+
+		if newPhase == "" {
+			choice := utils.SelectItem("Select Action", []string{
+				"Select from History",
+				"Enter Manual/New",
+			})
+
+			if choice == 0 {
+				if listSessions() {
+					return
+				}
+				os.Exit(0)
+			}
 		}
 
 		if newPhase == "" {
@@ -31,7 +49,6 @@ var switchCmd = &cobra.Command{
 				newTarget := utils.PromptString("New Target Host/IP", ctx.Engagement)
 				if newTarget != "" {
 					ctx.Engagement = newTarget
-					// Also update scope to match target
 					ctx.Scope = newTarget
 				}
 			}
@@ -53,25 +70,111 @@ var switchCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		fmt.Printf("\nSwitched to phase: %s\n", ctx.Phase)
-
-		summary := []string{
-			"---------------------------------------------------",
-		}
-
-		if ctx.Type == "Exam/Lab" {
-			summary = append(summary, fmt.Sprintf("Exam/Lab Name: %s", ctx.Client))
-			summary = append(summary, fmt.Sprintf("Target:        %s", ctx.Engagement))
-		} else {
-			summary = append(summary, fmt.Sprintf("Client:     %s", ctx.Client))
-			summary = append(summary, fmt.Sprintf("Engagement: %s", ctx.Engagement))
-			summary = append(summary, fmt.Sprintf("Scope:      %s", ctx.Scope))
-		}
-		summary = append(summary, fmt.Sprintf("Operator:   %s", ctx.Operator))
-		summary = append(summary, fmt.Sprintf("Phase:      %s", ctx.Phase))
-		summary = append(summary, "---------------------------------------------------")
-		utils.PrintCenteredBlock(summary)
+		printSummary(*ctx)
 	},
+}
+
+func switchBack() {
+	history, err := metadata.LoadHistory()
+	if err != nil {
+		fmt.Printf("Error loading history: %v\n", err)
+		os.Exit(1)
+	}
+
+	if len(history) < 2 {
+		fmt.Println("No previous session found.")
+		os.Exit(1)
+	}
+
+	target := history[len(history)-2]
+	target.Timestamp = time.Now().Format(time.RFC3339)
+
+	if err := metadata.Save(target); err != nil {
+		fmt.Printf("Error saving context: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Println("\nSwitched to previous session:")
+	printSummary(target)
+}
+
+func listSessions() bool {
+	history, err := metadata.LoadHistory()
+	if err != nil {
+		fmt.Printf("Error loading history: %v\n", err)
+		return false
+	}
+
+	if len(history) == 0 {
+		fmt.Println("No session history found.")
+		return false
+	}
+
+	type key struct {
+		Type       string
+		Client     string
+		Engagement string
+	}
+	seen := make(map[key]bool)
+	var candidates []metadata.Context
+
+	for i := len(history) - 1; i >= 0; i-- {
+		ctx := history[i]
+		k := key{ctx.Type, ctx.Client, ctx.Engagement}
+		if !seen[k] {
+			seen[k] = true
+			candidates = append(candidates, ctx)
+		}
+	}
+
+	if len(candidates) == 0 {
+		fmt.Println("No history available.")
+		return false
+	}
+
+	var items []string
+	for _, c := range candidates {
+		label := fmt.Sprintf("[%s] %s - %s", c.Type, c.Client, c.Engagement)
+		items = append(items, label)
+	}
+
+	idx := utils.SelectItem("Select Session", items)
+	if idx == -1 {
+		return false
+	}
+
+	selected := candidates[idx]
+	selected.Timestamp = time.Now().Format(time.RFC3339)
+
+	if err := metadata.Save(selected); err != nil {
+		fmt.Printf("Error saving context: %v\n", err)
+		return false
+	}
+
+	fmt.Println("\nSwitched to session:")
+	printSummary(selected)
+	return true
+}
+
+func printSummary(ctx metadata.Context) {
+	fmt.Printf("\nSwitched to phase: %s\n", ctx.Phase)
+
+	summary := []string{
+		"---------------------------------------------------",
+	}
+
+	if ctx.Type == "Exam/Lab" {
+		summary = append(summary, fmt.Sprintf("Exam/Lab Name: %s", ctx.Client))
+		summary = append(summary, fmt.Sprintf("Target:        %s", ctx.Engagement))
+	} else {
+		summary = append(summary, fmt.Sprintf("Client:     %s", ctx.Client))
+		summary = append(summary, fmt.Sprintf("Engagement: %s", ctx.Engagement))
+		summary = append(summary, fmt.Sprintf("Scope:      %s", ctx.Scope))
+	}
+	summary = append(summary, fmt.Sprintf("Operator:   %s", ctx.Operator))
+	summary = append(summary, fmt.Sprintf("Phase:      %s", ctx.Phase))
+	summary = append(summary, "---------------------------------------------------")
+	utils.PrintCenteredBlock(summary)
 }
 
 func init() {

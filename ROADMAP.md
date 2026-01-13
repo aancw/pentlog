@@ -38,7 +38,8 @@ This document outlines the current status of `pentlog` and our plans for future 
     - [x] Interactive menu to select sessions for replay.
 - [x] **Interactive Workflows**
     - [x] `pentlog create` wizard for starting engagements.
-    - [x] `pentlog switch` menu for changing phases.
+    - [x] `pentlog switch` menu with History selection.
+    - [x] `pentlog switch -` for quick previous session toggle.
     - [x] Custom shell prompt (PS1) injection.
     - [x] Aesthetic Shell UI (Boxed Banner).
     - [x] **Flexible Contexts**: Support for both Client Engagements and Exam/Labs (with fast target switching).
