@@ -274,6 +274,13 @@ var exportCmd = &cobra.Command{
 					fmt.Printf("Error saving file: %v\n", err)
 				} else {
 					fmt.Printf("Report saved to %s\n", fullPath)
+
+					prompt := utils.PromptString("Do you want to open the file? (y/N)", "no")
+					if strings.ToLower(prompt) == "y" || strings.ToLower(prompt) == "yes" {
+						if err := utils.OpenFile(fullPath); err != nil {
+							fmt.Printf("Error opening file: %v\n", err)
+						}
+					}
 					return
 				}
 
@@ -390,6 +397,13 @@ var exportCmd = &cobra.Command{
 					fmt.Printf("Error saving file: %v\n", err)
 				} else {
 					fmt.Printf("HTML Report saved to %s\n", fullPath)
+
+					prompt := utils.PromptString("Do you want to open the file? (y/N)", "no")
+					if strings.ToLower(prompt) == "y" || strings.ToLower(prompt) == "yes" {
+						if err := utils.OpenFile(fullPath); err != nil {
+							fmt.Printf("Error opening file: %v\n", err)
+						}
+					}
 					return
 				}
 			}
