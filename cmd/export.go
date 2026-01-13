@@ -28,6 +28,11 @@ var exportCmd = &cobra.Command{
 			return
 		}
 
+		if len(sessions) == 0 {
+			fmt.Println("No sessions found.")
+			return
+		}
+
 		clientMap := make(map[string]bool)
 		for _, s := range sessions {
 			clientMap[s.Metadata.Client] = true
@@ -95,7 +100,21 @@ var exportCmd = &cobra.Command{
 
 		fmt.Printf("Exporting logs for Client: %s, Engagement: %s, Phase: %s...\n", selectedClient, selectedEngagement, selectedPhase)
 
-		report, err := logs.ExportCommands(selectedClient, selectedEngagement, selectedPhase)
+		var finalSessions []logs.Session
+		for _, s := range sessions {
+			if s.Metadata.Client != selectedClient {
+				continue
+			}
+			if selectedEngagement != "" && s.Metadata.Engagement != selectedEngagement {
+				continue
+			}
+			if selectedPhase != "" && strings.TrimSpace(strings.ToLower(s.Metadata.Phase)) != strings.TrimSpace(strings.ToLower(selectedPhase)) {
+				continue
+			}
+			finalSessions = append(finalSessions, s)
+		}
+
+		report, err := logs.GenerateReport(finalSessions, selectedClient)
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
 			os.Exit(1)
@@ -312,7 +331,7 @@ var exportCmd = &cobra.Command{
 
 				fullPath := filepath.Join(reportDir, filename)
 
-				htmlReport, err := logs.ExportCommandsHTML(selectedClient, selectedEngagement, selectedPhase)
+				htmlReport, err := logs.GenerateHTMLReport(finalSessions, selectedClient)
 				if err != nil {
 					fmt.Printf("Error generating HTML: %v\n", err)
 					continue

@@ -15,9 +15,16 @@ func ExportCommands(client, engagement, phase string) (string, error) {
 		return "", err
 	}
 
-	grouped := make(map[string]map[string][]Session)
-	hasData := false
+	filtered := filterSessions(sessions, client, engagement, phase)
+	if len(filtered) == 0 {
+		return "", fmt.Errorf("no sessions found matching criteria")
+	}
 
+	return GenerateReport(filtered, client)
+}
+
+func filterSessions(sessions []Session, client, engagement, phase string) []Session {
+	var filtered []Session
 	for _, s := range sessions {
 		if client != "" && s.Metadata.Client != client {
 			continue
@@ -28,17 +35,17 @@ func ExportCommands(client, engagement, phase string) (string, error) {
 		if phase != "" && strings.TrimSpace(strings.ToLower(s.Metadata.Phase)) != strings.TrimSpace(strings.ToLower(phase)) {
 			continue
 		}
+		filtered = append(filtered, s)
+	}
+	return filtered
+}
 
-		if grouped[s.Metadata.Engagement] == nil {
-			grouped[s.Metadata.Engagement] = make(map[string][]Session)
-		}
-		grouped[s.Metadata.Engagement][s.Metadata.Phase] = append(grouped[s.Metadata.Engagement][s.Metadata.Phase], s)
-		hasData = true
+func GenerateReport(sessions []Session, client string) (string, error) {
+	if len(sessions) == 0 {
+		return "", fmt.Errorf("no sessions to report")
 	}
 
-	if !hasData {
-		return "", fmt.Errorf("no sessions found matching criteria")
-	}
+	grouped := groupSessions(sessions)
 
 	var builder strings.Builder
 	builder.WriteString(fmt.Sprintf("# Report for Client %s\n\n", client))
@@ -65,7 +72,6 @@ func ExportCommands(client, engagement, phase string) (string, error) {
 			builder.WriteString("--------------------\n\n")
 
 			sessList := phases[p]
-			// Sort sessions by ID
 			sort.Slice(sessList, func(i, j int) bool {
 				return sessList[i].ID < sessList[j].ID
 			})
@@ -81,17 +87,21 @@ func ExportCommands(client, engagement, phase string) (string, error) {
 					r = NewTtyReader(f)
 				}
 
-				cleaner := utils.NewCleanReader(r)
-				data, err := io.ReadAll(cleaner)
+				rawData, err := io.ReadAll(r)
 				f.Close()
 
 				if err != nil {
 					continue
 				}
 
+				cleanData := utils.CleanTuiMarkers(rawData)
+				lines := strings.Split(string(cleanData), "\n")
+
 				builder.WriteString(fmt.Sprintf("#### Session %d (%s)\n", s.ID, s.ModTime))
 				builder.WriteString("```bash\n")
-				builder.Write(data)
+				for _, line := range lines {
+					builder.WriteString(utils.RenderPlain(line) + "\n")
+				}
 				builder.WriteString("\n```\n\n")
 			}
 		}
@@ -100,36 +110,36 @@ func ExportCommands(client, engagement, phase string) (string, error) {
 	return builder.String(), nil
 }
 
+func groupSessions(sessions []Session) map[string]map[string][]Session {
+	grouped := make(map[string]map[string][]Session)
+	for _, s := range sessions {
+		if grouped[s.Metadata.Engagement] == nil {
+			grouped[s.Metadata.Engagement] = make(map[string][]Session)
+		}
+		grouped[s.Metadata.Engagement][s.Metadata.Phase] = append(grouped[s.Metadata.Engagement][s.Metadata.Phase], s)
+	}
+	return grouped
+}
+
 func ExportCommandsHTML(client, engagement, phase string) (string, error) {
 	sessions, err := ListSessions()
 	if err != nil {
 		return "", err
 	}
 
-	grouped := make(map[string]map[string][]Session)
-	hasData := false
-
-	for _, s := range sessions {
-		if client != "" && s.Metadata.Client != client {
-			continue
-		}
-		if engagement != "" && s.Metadata.Engagement != engagement {
-			continue
-		}
-		if phase != "" && strings.TrimSpace(strings.ToLower(s.Metadata.Phase)) != strings.TrimSpace(strings.ToLower(phase)) {
-			continue
-		}
-
-		if grouped[s.Metadata.Engagement] == nil {
-			grouped[s.Metadata.Engagement] = make(map[string][]Session)
-		}
-		grouped[s.Metadata.Engagement][s.Metadata.Phase] = append(grouped[s.Metadata.Engagement][s.Metadata.Phase], s)
-		hasData = true
-	}
-
-	if !hasData {
+	filtered := filterSessions(sessions, client, engagement, phase)
+	if len(filtered) == 0 {
 		return "", fmt.Errorf("no sessions found matching criteria")
 	}
+
+	return GenerateHTMLReport(filtered, client)
+}
+
+func GenerateHTMLReport(sessions []Session, client string) (string, error) {
+	if len(sessions) == 0 {
+		return "", fmt.Errorf("no sessions to report")
+	}
+	grouped := groupSessions(sessions)
 
 	var builder strings.Builder
 	builder.WriteString(`<!DOCTYPE html>

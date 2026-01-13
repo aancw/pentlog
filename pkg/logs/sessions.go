@@ -45,6 +45,10 @@ func ListSessions() ([]Session, error) {
 	if err != nil {
 		return nil, err
 	}
+	return ListSessionsFromDir(rootDir)
+}
+
+func ListSessionsFromDir(rootDir string) ([]Session, error) {
 
 	info, err := os.Stat(rootDir)
 	if err != nil {

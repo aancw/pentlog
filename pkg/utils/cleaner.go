@@ -263,6 +263,17 @@ func RenderAnsiHTML(line string) string {
 	return out.String()
 }
 
+func RenderPlain(line string) string {
+	buffer := ParseAnsi(line)
+	var out bytes.Buffer
+
+	for _, cell := range buffer {
+		out.WriteRune(cell.Char)
+	}
+
+	return strings.TrimRight(out.String(), " ")
+}
+
 func getStyleClass(ansi string) string {
 	if ansi == "" || ansi == "\x1b[0m" {
 		return ""

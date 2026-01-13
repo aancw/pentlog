@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"pentlog/pkg/config"
+	"pentlog/pkg/utils"
 	"strings"
 	"time"
 )
@@ -21,10 +22,10 @@ type ArchiveItem struct {
 	ModTime     time.Time
 }
 
-func ArchiveSessions(clientName, engagement, phase string, olderThan time.Duration, deleteOriginals bool) (int, error) {
+func GetSessionsToArchive(clientName, engagement, phase string, olderThan time.Duration) ([]Session, error) {
 	allSessions, err := ListSessions()
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
 	var toArchive []Session
@@ -59,7 +60,18 @@ func ArchiveSessions(clientName, engagement, phase string, olderThan time.Durati
 		}
 		toArchive = append(toArchive, s)
 	}
+	return toArchive, nil
+}
 
+func ArchiveSessions(clientName, engagement, phase string, olderThan time.Duration, deleteOriginals bool) (int, error) {
+	toArchive, err := GetSessionsToArchive(clientName, engagement, phase, olderThan)
+	if err != nil {
+		return 0, err
+	}
+	return ArchiveSessionsFromList(toArchive, clientName, deleteOriginals, nil)
+}
+
+func ArchiveSessionsFromList(toArchive []Session, clientName string, deleteOriginals bool, extraFiles []string) (int, error) {
 	if len(toArchive) == 0 {
 		return 0, nil
 	}
@@ -113,7 +125,15 @@ func ArchiveSessions(clientName, engagement, phase string, olderThan time.Durati
 				continue
 			}
 
-			if err := addFileToTar(tw, fPath, s.DisplayPath); err != nil {
+			logsDir, _ := config.GetLogsDir()
+			var targetPath string
+			if rel, err := filepath.Rel(logsDir, fPath); err == nil && !strings.HasPrefix(rel, "..") {
+				targetPath = filepath.Join("logs", rel)
+			} else {
+				targetPath = filepath.Join("logs", filepath.Base(fPath))
+			}
+
+			if err := addFileToTar(tw, fPath, targetPath); err != nil {
 				os.Remove(archivePath)
 				return 0, fmt.Errorf("failed to add file %s to archive: %w", fPath, err)
 			}
@@ -121,6 +141,21 @@ func ArchiveSessions(clientName, engagement, phase string, olderThan time.Durati
 			if deleteOriginals {
 				filesToDelete = append(filesToDelete, fPath)
 			}
+		}
+	}
+
+	for _, extraFile := range extraFiles {
+		reportsDir, _ := config.GetReportsDir()
+		var targetPath string
+		if rel, err := filepath.Rel(reportsDir, extraFile); err == nil && !strings.HasPrefix(rel, "..") {
+			targetPath = filepath.Join("reports", rel)
+		} else {
+			targetPath = filepath.Join("reports", utils.Slugify(clientName), filepath.Base(extraFile))
+		}
+
+		if err := addFileToTar(tw, extraFile, targetPath); err != nil {
+			os.Remove(archivePath)
+			return 0, fmt.Errorf("failed to add extra file %s to archive: %w", extraFile, err)
 		}
 	}
 
@@ -137,7 +172,7 @@ func ArchiveSessions(clientName, engagement, phase string, olderThan time.Durati
 	return len(toArchive), nil
 }
 
-func addFileToTar(tw *tar.Writer, path string, baseDirHints string) error {
+func addFileToTar(tw *tar.Writer, path string, targetName string) error {
 	file, err := os.Open(path)
 	if err != nil {
 		return err
@@ -154,11 +189,15 @@ func addFileToTar(tw *tar.Writer, path string, baseDirHints string) error {
 		return err
 	}
 
-	logsDir, _ := config.GetLogsDir()
-	if rel, err := filepath.Rel(logsDir, path); err == nil {
-		header.Name = rel
+	if targetName != "" {
+		header.Name = targetName
 	} else {
-		header.Name = filepath.Base(path)
+		logsDir, _ := config.GetLogsDir()
+		if rel, err := filepath.Rel(logsDir, path); err == nil && !strings.HasPrefix(rel, "..") {
+			header.Name = rel
+		} else {
+			header.Name = filepath.Base(path)
+		}
 	}
 
 	if err := tw.WriteHeader(header); err != nil {
@@ -222,4 +261,72 @@ func ListArchives() ([]ArchiveItem, error) {
 	}
 
 	return items, nil
+}
+
+func LoadSessionsFromArchive(archivePath string) ([]Session, string, error) {
+	tempDir, err := os.MkdirTemp("", "pentlog_export_*")
+	if err != nil {
+		return nil, "", err
+	}
+
+	if err := ExtractTarGz(archivePath, tempDir); err != nil {
+		os.RemoveAll(tempDir)
+		return nil, "", err
+	}
+
+	sessions, err := ListSessionsFromDir(tempDir)
+	if err != nil {
+		os.RemoveAll(tempDir)
+		return nil, "", err
+	}
+
+	return sessions, tempDir, nil
+}
+
+func ExtractTarGz(archivePath, destDir string) error {
+	f, err := os.Open(archivePath)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	gzr, err := gzip.NewReader(f)
+	if err != nil {
+		return err
+	}
+	defer gzr.Close()
+
+	tr := tar.NewReader(gzr)
+
+	for {
+		header, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+
+		target := filepath.Join(destDir, header.Name)
+		switch header.Typeflag {
+		case tar.TypeDir:
+			if err := os.MkdirAll(target, 0755); err != nil {
+				return err
+			}
+		case tar.TypeReg:
+			if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
+				return err
+			}
+			outFile, err := os.Create(target)
+			if err != nil {
+				return err
+			}
+			if _, err := io.Copy(outFile, tr); err != nil {
+				outFile.Close()
+				return err
+			}
+			outFile.Close()
+		}
+	}
+	return nil
 }

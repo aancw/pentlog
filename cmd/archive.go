@@ -1,9 +1,10 @@
 package cmd
 
 import (
-	"bufio"
 	"fmt"
 	"os"
+	"path/filepath"
+	"pentlog/pkg/config"
 	"pentlog/pkg/logs"
 	"pentlog/pkg/utils"
 	"strconv"
@@ -20,6 +21,7 @@ var (
 	forceFlag      bool
 	engagementFlag string
 	phaseFlag      string
+	reportFlag     bool
 )
 
 var archiveCmd = &cobra.Command{
@@ -113,21 +115,14 @@ Examples:
 				}
 			}
 
-			reader := bufio.NewReader(os.Stdin)
-			fmt.Print("Archive sessions older than how many days? (default 0 for all): ")
-			input, _ := reader.ReadString('\n')
-			input = strings.TrimSpace(input)
-			if input != "" {
-				if d, err := strconv.Atoi(input); err == nil {
-					days = d
-				} else {
-					fmt.Println("Invalid number, using default (0).")
-				}
+			input := utils.PromptString("Archive sessions older than how many days?", "0")
+			if d, err := strconv.Atoi(input); err == nil {
+				days = d
+			} else {
+				fmt.Println("Invalid number, using default (0).")
 			}
 
-			fmt.Print("Delete original files after archiving? [y/N] (default: No): ")
-			input, _ = reader.ReadString('\n')
-			input = strings.TrimSpace(input)
+			input = utils.PromptString("Delete original files after archiving? [y/N]", "No")
 			if strings.ToLower(input) == "y" || strings.ToLower(input) == "yes" {
 				deleteOrg = true
 			}
@@ -159,17 +154,123 @@ Examples:
 			}
 			fmt.Println(msg)
 
-			reader := bufio.NewReader(os.Stdin)
-			fmt.Print("Continue? [y/N]: ")
-			input, _ := reader.ReadString('\n')
-			if strings.ToLower(strings.TrimSpace(input)) != "y" {
+			input := utils.PromptString("About to archive... Continue? [y/N]", "y")
+			if strings.ToLower(input) != "y" && strings.ToLower(input) != "yes" {
 				fmt.Println("Aborted.")
 				return
 			}
 		}
 
 		olderThan := time.Duration(days) * 24 * time.Hour
-		count, err := logs.ArchiveSessions(clientName, engagement, phase, olderThan, deleteOrg)
+
+		toArchive, err := logs.GetSessionsToArchive(clientName, engagement, phase, olderThan)
+		if err != nil {
+			fmt.Printf("Error finding sessions to archive: %v\n", err)
+			os.Exit(1)
+		}
+
+		if len(toArchive) == 0 {
+			fmt.Println("No sessions matched the criteria to archive.")
+			return
+		}
+
+		var extraFiles []string
+		if reportFlag || (!forceFlag && shouldGenerateReport()) {
+			fmt.Println("Generating archive reports...")
+
+			fileNamePhase := phase
+			if fileNamePhase == "" {
+				fileNamePhase = "all-phases"
+			}
+			fileNameEng := engagement
+			if fileNameEng == "" {
+				fileNameEng = "all-engagements"
+			}
+
+			reportsBaseDir, _ := config.GetReportsDir()
+			clientReportDir := filepath.Join(reportsBaseDir, utils.Slugify(clientName))
+
+			baseName := fmt.Sprintf("%s_%s_%s_report", utils.Slugify(clientName), utils.Slugify(fileNameEng), utils.Slugify(fileNamePhase))
+			expectedMD := filepath.Join(clientReportDir, baseName+".md")
+			expectedHTML := filepath.Join(clientReportDir, baseName+".html")
+
+			generateMD := true
+			if _, err := os.Stat(expectedMD); err == nil {
+				useExisting := true
+				if !forceFlag {
+					p := utils.PromptString(fmt.Sprintf("Found existing MD report (%s). Use it? [Y/n]", filepath.Base(expectedMD)), "Y")
+					if strings.ToLower(p) == "n" || strings.ToLower(p) == "no" {
+						useExisting = false
+					}
+				}
+
+				if useExisting {
+					fmt.Printf("✔ Including existing MD report: %s\n", expectedMD)
+					extraFiles = append(extraFiles, expectedMD)
+					generateMD = false
+				}
+			}
+
+			if generateMD {
+				reportContent, err := logs.GenerateReport(toArchive, clientName)
+				if err != nil {
+					fmt.Printf("Error generating MD report: %v\n", err)
+				} else {
+					tmpFile, err := os.CreateTemp("", fmt.Sprintf("archive_report_%s_*.md", utils.Slugify(clientName)))
+					if err == nil {
+						tmpFile.Write([]byte(reportContent))
+						tmpFile.Close()
+						extraFiles = append(extraFiles, tmpFile.Name())
+						fmt.Printf("✔ Generated temporary MD report for archive.\n")
+					} else {
+						fmt.Printf("Failed to create temp MD report: %v\n", err)
+					}
+				}
+			}
+
+			generateHTML := true
+			if _, err := os.Stat(expectedHTML); err == nil {
+				useExisting := true
+				if !forceFlag {
+					p := utils.PromptString(fmt.Sprintf("Found existing HTML report (%s). Use it? [Y/n]", filepath.Base(expectedHTML)), "Y")
+					if strings.ToLower(p) == "n" || strings.ToLower(p) == "no" {
+						useExisting = false
+					}
+				}
+
+				if useExisting {
+					fmt.Printf("✔ Including existing HTML report: %s\n", expectedHTML)
+					extraFiles = append(extraFiles, expectedHTML)
+					generateHTML = false
+				}
+			}
+
+			if generateHTML {
+				htmlReport, err := logs.GenerateHTMLReport(toArchive, clientName)
+				if err != nil {
+					fmt.Printf("Error generating HTML report: %v\n", err)
+				} else {
+					tmpFile, err := os.CreateTemp("", fmt.Sprintf("archive_report_%s_*.html", utils.Slugify(clientName)))
+					if err == nil {
+						tmpFile.Write([]byte(htmlReport))
+						tmpFile.Close()
+						extraFiles = append(extraFiles, tmpFile.Name())
+						fmt.Printf("✔ Generated temporary HTML report for archive.\n")
+					} else {
+						fmt.Printf("Failed to create temp HTML report: %v\n", err)
+					}
+				}
+			}
+		}
+
+		count, err := logs.ArchiveSessionsFromList(toArchive, clientName, deleteOrg, extraFiles)
+
+		for _, f := range extraFiles {
+			if strings.Contains(f, "archive_report_") && strings.Contains(f, os.TempDir()) {
+				os.Remove(f)
+			}
+		}
+
 		if err != nil {
 			fmt.Printf("Error archiving sessions: %v\n", err)
 			os.Exit(1)
@@ -177,6 +278,12 @@ Examples:
 
 		fmt.Printf("Successfully archived %d sessions.\n", count)
 	},
+}
+
+func shouldGenerateReport() bool {
+	input := utils.PromptString("Generate report for these sessions before archiving? [y/N]", "No")
+	input = strings.TrimSpace(strings.ToLower(input))
+	return input == "y" || input == "yes"
 }
 
 var archiveListCmd = &cobra.Command{
@@ -211,6 +318,7 @@ func init() {
 	archiveCmd.PersistentFlags().BoolVarP(&forceFlag, "force", "y", false, "Skip confirmation")
 	archiveCmd.PersistentFlags().StringVarP(&engagementFlag, "engagement", "e", "", "Filter by Engagement name")
 	archiveCmd.PersistentFlags().StringVarP(&phaseFlag, "phase", "p", "", "Filter by Phase name")
+	archiveCmd.PersistentFlags().BoolVar(&reportFlag, "report", false, "Auto-generate report before archiving")
 
 	archiveCmd.AddCommand(archiveListCmd)
 	rootCmd.AddCommand(archiveCmd)
