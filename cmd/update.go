@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"pentlog/pkg/utils"
 	"runtime"
 	"strings"
 
@@ -40,6 +41,13 @@ var updateCmd = &cobra.Command{
 		tagName := release.GetTagName()
 		fmt.Printf("Latest version: %s\n", tagName)
 		fmt.Printf("Current version: %s\n", Version)
+
+		prompt := utils.PromptString("Do you want to read changelog? (y/N)", "no")
+		if strings.ToLower(prompt) == "y" || strings.ToLower(prompt) == "yes" {
+			fmt.Println("\n--- Changelog ---")
+			fmt.Println(release.GetBody())
+			fmt.Println("-----------------")
+		}
 
 		if tagName == Version {
 			fmt.Println("You are already using the latest version.")
