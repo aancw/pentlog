@@ -100,7 +100,7 @@ var createCmd = &cobra.Command{
 		summary = append(summary, "---------------------------------------------------")
 		utils.PrintCenteredBlock(summary)
 		fmt.Println("To start recording, run:")
-		fmt.Println("  ./pentlog shell")
+		fmt.Println(" pentlog shell")
 	},
 }
 
