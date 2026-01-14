@@ -4,8 +4,49 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/charmbracelet/huh"
 	"github.com/manifoldco/promptui"
 )
+
+func PromptSelect(label string, options []string) string {
+	var selected string
+
+	form := huh.NewForm(
+		huh.NewGroup(
+			huh.NewSelect[string]().
+				Title(label).
+				Options(huh.NewOptions(options...)...).
+				Value(&selected),
+		),
+	)
+
+	err := form.Run()
+	if err != nil {
+		return ""
+	}
+	return selected
+}
+
+func PromptSelectWithDefault(label string, options []string, defaultValue string) string {
+	var selected string
+
+	form := huh.NewForm(
+		huh.NewGroup(
+			huh.NewSelect[string]().
+				Title(label).
+				Options(huh.NewOptions(options...)...).
+				Value(&selected).
+				Value(&selected),
+		),
+	)
+	selected = defaultValue
+
+	err := form.Run()
+	if err != nil {
+		return ""
+	}
+	return selected
+}
 
 func PromptString(label string, defaultValue string) string {
 	displayLabel := label

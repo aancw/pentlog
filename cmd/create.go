@@ -25,7 +25,7 @@ var createCmd = &cobra.Command{
 	Aliases: []string{"init"},
 	Run: func(cmd *cobra.Command, args []string) {
 		if createType == "" {
-			createType = utils.PromptString("Context Type (Client/Exam/Lab)", "Client")
+			createType = utils.PromptSelect("Context Type", []string{"Client", "Exam/Lab"})
 		}
 
 		if createType == "Exam/Lab" || createType == "Exam" || createType == "Lab" {
