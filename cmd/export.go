@@ -127,7 +127,7 @@ var exportCmd = &cobra.Command{
 				fmt.Printf("Error getting pentlog directory: %v\n", err)
 				os.Exit(1)
 			}
-			aiConfigPath := filepath.Join(confDir, "ai.yml")
+			aiConfigPath := filepath.Join(confDir, "ai.yaml")
 
 			if _, err := os.Stat(aiConfigPath); os.IsNotExist(err) {
 				idx := utils.SelectItem("AI config not found. Create one?", []string{"Yes", "No"})
