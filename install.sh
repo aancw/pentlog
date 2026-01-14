@@ -77,7 +77,7 @@ TMP_DIR=$(mktemp -d)
 trap 'rm -rf "$TMP_DIR"' EXIT
 
 # Download binary
-curl -L -sS -o "$TMP_DIR/pentlog" "$DOWNLOAD_URL"
+curl -L --progress-bar -o "$TMP_DIR/pentlog" "$DOWNLOAD_URL"
 
 # Make executable
 chmod +x "$TMP_DIR/pentlog"

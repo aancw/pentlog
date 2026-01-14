@@ -98,14 +98,17 @@ var updateCmd = &cobra.Command{
 		}
 		defer os.Remove(tmpFile.Name())
 
+		counter := &WriteCounter{Total: uint64(resp.ContentLength)}
+
 		if rc != nil {
-			_, err = io.Copy(tmpFile, rc)
+			_, err = io.Copy(tmpFile, io.TeeReader(rc, counter))
 			if err != nil {
-				fmt.Printf("Error writing to temp file: %v\n", err)
+				fmt.Printf("\nError writing to temp file: %v\n", err)
 				tmpFile.Close()
 				return
 			}
 		}
+		fmt.Println()
 		tmpFile.Close()
 
 		if err := os.Chmod(tmpFile.Name(), 0755); err != nil {
@@ -125,4 +128,25 @@ var updateCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(updateCmd)
+}
+
+type WriteCounter struct {
+	Total   uint64
+	Current uint64
+}
+
+func (wc *WriteCounter) Write(p []byte) (int, error) {
+	n := len(p)
+	wc.Current += uint64(n)
+	wc.PrintProgress()
+	return n, nil
+}
+
+func (wc *WriteCounter) PrintProgress() {
+	if wc.Total == 0 {
+		fmt.Printf("\rDownloading... %s", utils.FormatBytes(int64(wc.Current)))
+	} else {
+		percent := float64(wc.Current) * 100 / float64(wc.Total)
+		fmt.Printf("\rDownloading... %.2f%% (%s / %s)", percent, utils.FormatBytes(int64(wc.Current)), utils.FormatBytes(int64(wc.Total)))
+	}
 }
