@@ -25,10 +25,27 @@ var createCmd = &cobra.Command{
 	Aliases: []string{"init"},
 	Run: func(cmd *cobra.Command, args []string) {
 		if createType == "" {
-			createType = utils.PromptSelect("Context Type", []string{"Client", "Exam/Lab"})
+			createType = utils.PromptSelect("Context Type", []string{"Client", "Exam/Lab", "Log Only"})
 		}
 
-		if createType == "Exam/Lab" || createType == "Exam" || createType == "Lab" {
+		if createType == "Log Only" {
+			// Log Only Mode - Minimal Interaction
+			if createClient == "" {
+				createClient = utils.PromptString("Project Name", "QuickLog")
+			}
+			if createEngagement == "" {
+				createEngagement = "Session"
+			}
+			if createScope == "" {
+				createScope = "N/A"
+			}
+			if createOperator == "" {
+				createOperator = os.Getenv("USER")
+			}
+			if createPhase == "" {
+				createPhase = "N/A"
+			}
+		} else if createType == "Exam/Lab" || createType == "Exam" || createType == "Lab" {
 			// Normalize to Exam/Lab
 			createType = "Exam/Lab"
 
@@ -40,7 +57,14 @@ var createCmd = &cobra.Command{
 			}
 			// Scope is optional or same as Target in Exam, but let's keep it consistent or auto-fill
 			if createScope == "" {
-				createScope = createEngagement // Auto-fill scope with target
+				createScope = createEngagement
+			}
+
+			if createOperator == "" {
+				createOperator = utils.PromptString("Operator", os.Getenv("USER"))
+			}
+			if createPhase == "" {
+				createPhase = utils.PromptString("Phase", "recon")
 			}
 		} else {
 			// Client Mode (Default)
@@ -53,13 +77,13 @@ var createCmd = &cobra.Command{
 			if createScope == "" {
 				createScope = utils.PromptString("Scope (CIDR/URL)", "")
 			}
-		}
 
-		if createOperator == "" {
-			createOperator = utils.PromptString("Operator", os.Getenv("USER"))
-		}
-		if createPhase == "" {
-			createPhase = utils.PromptString("Phase", "recon")
+			if createOperator == "" {
+				createOperator = utils.PromptString("Operator", os.Getenv("USER"))
+			}
+			if createPhase == "" {
+				createPhase = utils.PromptString("Phase", "recon")
+			}
 		}
 
 		if createClient == "" || createEngagement == "" || createOperator == "" {

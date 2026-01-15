@@ -36,12 +36,22 @@ var shellCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		sessionDir := filepath.Join(
-			logDir,
-			utils.Slugify(ctx.Client),
-			utils.Slugify(ctx.Engagement),
-			utils.Slugify(ctx.Phase),
-		)
+		var sessionDir string
+		if ctx.Type == "Log Only" {
+			// Flatten structure for Log Only mode: logs/<ProjectName>/
+			sessionDir = filepath.Join(
+				logDir,
+				utils.Slugify(ctx.Client),
+			)
+		} else {
+			// Default structure: logs/<Client>/<Engagement>/<Phase>/
+			sessionDir = filepath.Join(
+				logDir,
+				utils.Slugify(ctx.Client),
+				utils.Slugify(ctx.Engagement),
+				utils.Slugify(ctx.Phase),
+			)
+		}
 
 		if err := os.MkdirAll(sessionDir, 0700); err != nil {
 			fmt.Fprintf(os.Stderr, "Error creating session dir: %v\n", err)
