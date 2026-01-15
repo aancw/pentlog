@@ -172,6 +172,8 @@ func GenerateHTMLReport(sessions []Session, client string) (string, error) {
             word-wrap: break-word;
             font-size: 14px;
             line-height: 1.5;
+            max-height: 600px;
+            overflow-y: auto;
         }
         .ai-content {
             white-space: normal;
