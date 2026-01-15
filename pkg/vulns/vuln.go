@@ -110,6 +110,10 @@ func (m *Manager) Save(vuln Vuln) error {
 }
 
 func (m *Manager) List() ([]Vuln, error) {
+	if m.Engagement == "" {
+		return m.listAllEngagements()
+	}
+
 	path, err := m.GetVulnsFile()
 	if err != nil {
 		return nil, err
@@ -119,6 +123,46 @@ func (m *Manager) List() ([]Vuln, error) {
 		return []Vuln{}, nil
 	}
 
+	return m.readVulnsFromFile(path)
+}
+
+func (m *Manager) listAllEngagements() ([]Vuln, error) {
+	baseDir, err := config.GetUserPentlogDir()
+	if err != nil {
+		return nil, err
+	}
+	clientDir := filepath.Join(baseDir, "vulns", m.Client)
+
+	entries, err := os.ReadDir(clientDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return []Vuln{}, nil
+		}
+		return nil, err
+	}
+
+	var allVulns []Vuln
+	for _, entry := range entries {
+		if entry.IsDir() {
+			engagementPath := filepath.Join(clientDir, entry.Name(), "vulns.json")
+			if _, err := os.Stat(engagementPath); err == nil {
+				vulns, err := m.readVulnsFromFile(engagementPath)
+				if err != nil {
+					continue
+				}
+				allVulns = append(allVulns, vulns...)
+			}
+		}
+	}
+
+	sort.Slice(allVulns, func(i, j int) bool {
+		return allVulns[i].CreatedAt.After(allVulns[j].CreatedAt)
+	})
+
+	return allVulns, nil
+}
+
+func (m *Manager) readVulnsFromFile(path string) ([]Vuln, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
