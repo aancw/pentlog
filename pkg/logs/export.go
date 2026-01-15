@@ -203,6 +203,22 @@ func GenerateHTMLReport(sessions []Session, client string) (string, error) {
         .ansi-bright-magenta { color: #d670d6; }
         .ansi-bright-cyan { color: #29b8db; }
         .ansi-bright-white { color: #ffffff; }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e1e1e; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #444; 
+            border-radius: 5px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555; 
+        }
     </style>
 </head>
 <body>
