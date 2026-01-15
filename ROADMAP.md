@@ -43,6 +43,7 @@ This document outlines the current status of `pentlog` and our plans for future 
     - [x] Custom shell prompt (PS1) injection.
     - [x] Aesthetic Shell UI (Boxed Banner).
     - [x] **Flexible Contexts**: Support for both Client Engagements and Exam/Labs (with fast target switching).
+    - [x] **Log Only Mode**: Quick-start logging with minimized metadata and simplified path structure.
 
 ### Analysis & Reporting
 - [x] **Export Engine**

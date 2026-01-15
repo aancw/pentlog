@@ -88,15 +88,18 @@ pentlog setup
 > This ensures that the logging directory structure and dependencies are correctly initialized.
  
 ### 1. Initialize Engagement (Interactive)
-The `create` command supports two modes:
+The `create` command supports three modes:
 
 - **Client Mode**: Best for professional engagements. Tracks Client, Engagement, Scope, etc.
 - **Exam/Lab Mode**: Optimized for CTFs and Certifications (OSCP, PNPT, etc.). Tracks Exam Name and Target IP.
+- **Log Only Mode**: Minimal setup. Just asks for a Project Name and starts logging immediately to a simplified path.
 
 ```bash
 pentlog create
-# Prompts for: Context Type (Client vs Exam/Lab)
-# Then prompts for relevant details based on selection.
+# Prompts for: Context Type
+# - Client Mode: Full metadata (Client, Engagement, Scope, Phase)
+# - Exam/Lab Mode: Exam Name, Target IP
+# - Log Only: Project Name (Defaults to "QuickLog")
 ```
 
 ### 2. Enter Shell
