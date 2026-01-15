@@ -25,20 +25,33 @@ func Summarize(text string, analyzer AIAnalyzer) (string, error) {
 	return finalSummary, nil
 }
 
-// chunkText splits a log file into chunks, where each chunk is a command and its output.
+// chunkText splits a log file into chunks based on a character limit,
+// ensuring that splits happen at line boundaries.
+// chunkText splits a log file into chunks based on a character limit,
+// ensuring that splits happen at line boundaries.
 func chunkText(text string) []string {
+	const maxChunkSize = 4000
 	var chunks []string
 	var currentChunk strings.Builder
-	lines := strings.Split(text, "\n")
+
+	// SplitAfter keeps the delimiter in the substring, which helps preserve exact content
+	lines := strings.SplitAfter(text, "\n")
 
 	for _, line := range lines {
-		if isCommandPrompt(line) {
-			if currentChunk.Len() > 0 {
-				chunks = append(chunks, currentChunk.String())
-				currentChunk.Reset()
-			}
+		// Skip empty strings that result from splitting strings ending with the delimiter
+		if len(line) == 0 {
+			continue
 		}
-		currentChunk.WriteString(line + "\n")
+
+		lineLength := len(line)
+
+		// If adding this line would exceed the limit, and we have content, finalize the current chunk
+		if currentChunk.Len()+lineLength > maxChunkSize && currentChunk.Len() > 0 {
+			chunks = append(chunks, currentChunk.String())
+			currentChunk.Reset()
+		}
+
+		currentChunk.WriteString(line)
 	}
 
 	if currentChunk.Len() > 0 {
@@ -46,10 +59,4 @@ func chunkText(text string) []string {
 	}
 
 	return chunks
-}
-
-// isCommandPrompt checks if a line is a command prompt.
-// This is a simple implementation and can be improved.
-func isCommandPrompt(line string) bool {
-	return strings.HasPrefix(line, "$ ")
 }
