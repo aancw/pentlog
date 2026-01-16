@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [v0.10.0] - 2026-01-17
 ### Added
 - **Password Protection**: Added AES-256 encryption support for archives via `--password` flag or interactive prompt.
 - **SQLite Backend**: Migrated session metadata to a local SQLite database for O(1) performance and robustness.
