@@ -166,6 +166,8 @@ func archiveZip(toArchive []Session, extraFiles []string, clientArchiveDir, time
 			}
 
 			if err := addFile(fPath, targetPath); err != nil {
+				zw.Close()   // Flush and close ZIP writer
+				file.Close() // Close file handle
 				os.Remove(archivePath)
 				return 0, fmt.Errorf("failed to add file %s to archive: %w", fPath, err)
 			}
@@ -186,6 +188,8 @@ func archiveZip(toArchive []Session, extraFiles []string, clientArchiveDir, time
 		}
 
 		if err := addFile(extraFile, targetPath); err != nil {
+			zw.Close()   // Flush and close ZIP writer
+			file.Close() // Close file handle
 			os.Remove(archivePath)
 			return 0, fmt.Errorf("failed to add extra file %s to archive: %w", extraFile, err)
 		}

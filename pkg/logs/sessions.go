@@ -117,6 +117,12 @@ func ListSessionsPaginated(limit, offset int) ([]Session, error) {
 			s.ModTime = timestamp
 		}
 
+		// Verify session file exists on disk for evidence integrity
+		if _, err := os.Stat(s.Path); os.IsNotExist(err) {
+			fmt.Fprintf(os.Stderr, "WARNING: Session %d references missing file: %s\n", id, s.Path)
+			// Continue to list session even if file is missing for visibility
+		}
+
 		sessions = append(sessions, s)
 	}
 

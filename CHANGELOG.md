@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+### Improved
+- **Error Handling**: Added warnings to stderr when session files are missing for evidence integrity visibility
+- **Archive Reliability**: Fixed incomplete cleanup on archive failures by properly closing resources before removing partial files
+
 ## [v0.10.0] - 2026-01-17
 ### Added
 - **Password Protection**: Added AES-256 encryption support for archives via `--password` flag or interactive prompt.

@@ -18,6 +18,7 @@ This document outlines the current status of `pentlog` and our plans for future 
 - [x] **Data Integrity**
     - [x] Generate SHA256 hashes for all logs (`pentlog freeze`).
     - [x] Verify evidence chain-of-custody.
+    - [x] Warn on missing session files during listing.
 - [x] **Notes & Bookmarks**
     - [x] Add real-time notes via `pentlog note add`.
     - [x] List notes interactively with `pentlog note list`.
