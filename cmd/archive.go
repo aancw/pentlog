@@ -140,6 +140,11 @@ Examples:
 				p := utils.PromptString("Do you want to password protect this archive? [y/N]", "No")
 				if strings.ToLower(p) == "y" || strings.ToLower(p) == "yes" {
 					passwordFlag = utils.PromptPassword("Enter Archive Password: ")
+					confirm := utils.PromptPassword("Confirm Password: ")
+					if passwordFlag != confirm {
+						fmt.Println("Passwords don't match. Archive will not be password protected.")
+						passwordFlag = ""
+					}
 				}
 			}
 

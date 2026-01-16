@@ -183,6 +183,8 @@ func startRecording(c *exec.Cmd, env []string, ctx metadata.Context) error {
 	utils.PrintBox("Active Session", summary)
 
 	fmt.Println()
+	fmt.Println("⚠️  WARNING: All input (including passwords) is logged.")
+	fmt.Println()
 	utils.PrintCenteredBlock([]string{"Type 'exit' or Ctrl+D to stop recording."})
 
 	if err := c.Run(); err != nil {

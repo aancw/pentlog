@@ -90,6 +90,10 @@ GOOS=linux GOARCH=amd64 go build -o pentlog main.go
 pentlog setup
 ```
 
+### Security Note
+
+**Password-Protected Archives**: When using `pentlog archive --password`, prefer interactive mode (without the flag) to prompt for password entry. This prevents passwords from being stored in shell history.
+
 ## Usage
 
 Detailed guides are available in our **[Wiki](https://github.com/aancw/pentlog/wiki)** or locally in [`WIKI.md`](WIKI.md).

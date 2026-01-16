@@ -264,8 +264,3 @@ func LoadSessionsFromArchive(archivePath string) ([]Session, string, error) {
 	// Not implemented for ZIP yet as part of this task
 	return nil, "", fmt.Errorf("feature not available for this archive format yet")
 }
-
-// Deprecated: ExtractTarGz functionality removed in favor of Zip default
-func ExtractTarGz(archivePath, destDir string) error {
-	return fmt.Errorf("function deprecated and removed")
-}

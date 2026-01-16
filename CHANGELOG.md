@@ -7,6 +7,14 @@ All notable changes to this project will be documented in this file.
 - **Error Handling**: Added warnings to stderr when session files are missing for evidence integrity visibility
 - **Archive Reliability**: Fixed incomplete cleanup on archive failures by properly closing resources before removing partial files
 
+### Changed
+- **Code Modernization**: Replaced deprecated `ioutil.ReadFile` with `os.ReadFile` (Go 1.16+)
+- **API Cleanup**: Removed deprecated `ExtractTarGz` function stub
+
+### Security
+- **Password Security**: Added password confirmation for archive encryption to prevent typos
+- **User Awareness**: Added warning banner in shell about password logging
+
 ## [v0.10.0] - 2026-01-17
 ### Added
 - **Password Protection**: Added AES-256 encryption support for archives via `--password` flag or interactive prompt.
