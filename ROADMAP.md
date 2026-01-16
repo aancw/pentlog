@@ -77,12 +77,12 @@ This document outlines the current status of `pentlog` and our plans for future 
 ## 🚀 Future Roadmap
 
 ### Security & Storage
-- [ ] **Encryption at Rest**
-    - [ ] AES-256 encryption for log files.
+- [x] **Encryption at Rest**
+    - [x] AES-256 encryption for log files (Archives).
     - [ ] Secure key management integration.
-    - [ ] Password-protected session access.
+    - [x] Password-protected session access (Archives).
 - [x] **Compressed Storage**
-    - [x] Automatic GZIP/ZSTD compression for archived logs.
+    - [x] Automatic ZIP compression for archived logs.
     - [x] Granular archiving (Client, Engagement, Phase).
     - [x] **Smart Archive**: Auto-include MD/HTML reports and reuse existing ones.
     - [ ] Transparent decompression during search/replay.

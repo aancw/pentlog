@@ -4,11 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 ### Added
+- **Password Protection**: Added AES-256 encryption support for archives via `--password` flag or interactive prompt.
 - **SQLite Backend**: Migrated session metadata to a local SQLite database for O(1) performance and robustness.
 - **Log Only Mode**: Added a new mode for quick logging without complex metadata (`pentlog create` -> Log Only).
 - **Security Hardening**: Enforced `0600` permissions on the local database file.
 - **Robustness**: Added automatic "Legacy JSON" migration logic.
 - **Documentation**: Refactored detailed guides into [WIKI.md](WIKI.md) and simplified `README.md`.
+
+### Changed
+- **Archive Format**: Switched default archive format from `tar.gz` to `zip` for better compatibility and encryption support.
 
 ### Fixed
 - **AI**: Improved robustness of AI summarizer for ttyrec files using length-based chunking.
