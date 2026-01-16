@@ -1,9 +1,9 @@
-# pentlog
+# PentLog
 
-![GitHub release (latest by date)](https://img.shields.io/github/v/release/aancw/pentlog)
-![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/aancw/pentlog)
-![GitHub all releases](https://img.shields.io/github/downloads/aancw/pentlog/total)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+![Version](https://img.shields.io/github/v/release/aancw/pentlog?style=for-the-badge)
+![Go Version](https://img.shields.io/github/go-mod/go-version/aancw/pentlog?style=for-the-badge)
+![Downloads](https://img.shields.io/github/downloads/aancw/pentlog/total?style=for-the-badge&color=blue)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 Evidence-First Pentest Logging Tool.
 Captures shell activity as high-fidelity terminal logs backed by `ttyrec`.
@@ -25,7 +25,9 @@ Captures shell activity as high-fidelity terminal logs backed by `ttyrec`.
 - [📝 License](#license)
 
 
-## Features
+## Why PentLog?
+
+Traditional logging (`script`, `tmux`) isn't built for professional engagements. PentLog fills the gap:
 
 - **No Root Required**: Start recorded shells as a normal user; logs land in your home directory.
 - **Context-Aware**: Tracks metadata and stamps every log. Flexible support for **Client Engagements** and **Exam/Labs** (OSCP, HTB, etc.).
@@ -37,7 +39,10 @@ Captures shell activity as high-fidelity terminal logs backed by `ttyrec`.
 - **AI Analysis**: Analyze your reports with AI to get a summary of the findings.
 - **Shell Completion**: Generate and install shell completion scripts for bash and zsh.
 
-## Command Reference
+> Used by professionals for **OSCP**, **HTB**, and **Real-World Engagements**.
+
+<details>
+<summary><strong>Command Reference</strong> (Click to expand)</summary>
 
 | Command | Description |
 | :--- | :--- |
@@ -59,6 +64,8 @@ Captures shell activity as high-fidelity terminal logs backed by `ttyrec`.
 | `switch` | Switch to a different pentest phase (Interactive/History). |
 | `update` | Update pentlog to the latest version automatically. |
 | `vuln` | Manage findings and vulnerabilities.
+
+</details>
 
 
 ## Installation
@@ -85,22 +92,27 @@ pentlog setup
 
 ## Usage
 
-For detailed usage instructions, including advanced features and workflows, please refer to the [**GitHub Wiki**](https://github.com/aancw/pentlog/wiki) or the local [**WIKI.md**](WIKI.md).
+Detailed guides are available in our **[Wiki](https://github.com/aancw/pentlog/wiki)** or locally in [`WIKI.md`](WIKI.md).
+
+*   [**User Guide**](WIKI.md#user-guide): Deep dive into `switch`, `notes`, `freeze`, and more.
+*   [**Modes**](WIKI.md#core-concepts): Learn about Client Mode vs. Exam/Lab Mode.
+*   [**AI Analysis**](WIKI.md#ai-analysis): How to configure and use the AI summarizer.
 
 ### Quick Start
 
 1.  **Initialize**: `pentlog create`
 2.  **Start Shell**: `pentlog shell`
 3.  **Search Logs**: `pentlog search`
+
 Check out our [ROADMAP.md](ROADMAP.md) to see what features are currently implemented and what we have planned for the future.
 
 ## Changelog
 
-See [CHANGELOG.md](CHANGELOG.md) for version history.
+See [CHANGELOG.md](CHANGELOG.md) for a full list of changes.
 
 ## Contributing
 
-Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct, and the process for submitting pull requests to us.
+Contributions are welcome! Checking out [ROADMAP.md](ROADMAP.md) for planned features and read [CONTRIBUTING.md](CONTRIBUTING.md) to get started.
 
 ## Acknowledgements
 
