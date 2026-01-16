@@ -24,6 +24,8 @@ type SearchOptions struct {
 	After   time.Time
 	Before  time.Time
 	IsRegex bool
+	Limit   int
+	Offset  int
 }
 
 func Search(query string, scopeSessions []logs.Session, opts SearchOptions) ([]Match, error) {
@@ -74,7 +76,13 @@ func Search(query string, scopeSessions []logs.Session, opts SearchOptions) ([]M
 		matcher = createBooleanMatcher(query)
 	}
 
+	matchCount := 0
 	for _, session := range filteredSessions {
+		// Stop early if we have enough results (optimization)
+		if opts.Limit > 0 && len(results) >= opts.Limit {
+			break
+		}
+
 		if session.Path != "" {
 			f, err := os.Open(session.Path)
 			if err == nil {
@@ -94,6 +102,11 @@ func Search(query string, scopeSessions []logs.Session, opts SearchOptions) ([]M
 
 				for i, line := range lines {
 					if matcher(line) {
+						if matchCount < opts.Offset {
+							matchCount++
+							continue
+						}
+
 						start := i - 2
 						if start < 0 {
 							start = 0
@@ -110,9 +123,18 @@ func Search(query string, scopeSessions []logs.Session, opts SearchOptions) ([]M
 							Context: lines[start:end],
 							IsNote:  false,
 						})
+						matchCount++
+
+						if opts.Limit > 0 && len(results) >= opts.Limit {
+							break
+						}
 					}
 				}
 			}
+		}
+
+		if opts.Limit > 0 && len(results) >= opts.Limit {
+			break
 		}
 
 		if session.NotesPath != "" {
@@ -120,12 +142,22 @@ func Search(query string, scopeSessions []logs.Session, opts SearchOptions) ([]M
 			if err == nil {
 				for _, note := range notes {
 					if matcher(note.Content) {
+						if matchCount < opts.Offset {
+							matchCount++
+							continue
+						}
+
 						results = append(results, Match{
 							Session: session,
 							LineNum: int(note.ByteOffset),
 							Content: fmt.Sprintf("[%s] %s", note.Timestamp, note.Content),
 							IsNote:  true,
 						})
+						matchCount++
+
+						if opts.Limit > 0 && len(results) >= opts.Limit {
+							break
+						}
 					}
 				}
 			}

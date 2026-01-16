@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/manifoldco/promptui"
+	"github.com/mattn/go-runewidth"
 	"github.com/spf13/cobra"
 )
 
@@ -130,17 +131,9 @@ var searchCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		fmt.Printf("Searching for %q...\n", query)
-		results, err := search.Search(query, scope, opts)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error searching: %v\n", err)
-			os.Exit(1)
-		}
-
-		if len(results) == 0 {
-			fmt.Println("No matches found.")
-			return
-		}
+		// Pagination setup
+		offset := 0
+		limit := 10
 
 		type item struct {
 			Label          string
@@ -150,80 +143,12 @@ var searchCmd = &cobra.Command{
 			DisplayFile    string
 			DisplayTime    string
 			Match          search.Match
+			IsControl      bool
+			FullDetails    string
 		}
 
-		var items []item
-		width := utils.GetTerminalWidth()
-		safeWidth := width - 2
-		if safeWidth < 20 {
-			safeWidth = 20
-		}
-
-		maxLabelWidth := width - 10
-		if maxLabelWidth < 20 {
-			maxLabelWidth = 20
-		}
-
-		for _, match := range results {
-			label := ""
-			content := utils.StripANSI(match.Content)
-
-			var contextLines []string
-			if len(match.Context) > 0 {
-				for _, line := range match.Context {
-					stripped := utils.StripANSI(line)
-					truncated := utils.TruncateString(stripped, safeWidth)
-					contextLines = append(contextLines, truncated)
-				}
-			} else {
-				stripped := utils.StripANSI(content)
-				contextLines = []string{utils.TruncateString(stripped, safeWidth)}
-			}
-
-			const forcedHeight = 5
-			if len(contextLines) < forcedHeight {
-				for i := len(contextLines); i < forcedHeight; i++ {
-					contextLines = append(contextLines, "")
-				}
-			} else if len(contextLines) > forcedHeight {
-				contextLines = contextLines[:forcedHeight]
-			}
-
-			cleanContext := strings.Join(contextLines, "\n")
-
-			sessionStr := fmt.Sprintf("%s / %s", match.Session.Metadata.Client, match.Session.Metadata.Engagement)
-			displaySession := utils.TruncateString(sessionStr, safeWidth)
-			displayFile := utils.TruncateString(match.Session.DisplayPath, safeWidth)
-
-			displayTime := match.Session.Metadata.Timestamp
-			if displayTime == "" {
-				displayTime = match.Session.SortKey.Format("2006-01-02 15:04:05")
-			}
-
-			if match.IsNote {
-				label = fmt.Sprintf("[%d] %s [NOTE]: %s", match.Session.ID, match.Session.DisplayPath, content)
-			} else {
-				label = fmt.Sprintf("[%d] %s:%d: %s", match.Session.ID, match.Session.DisplayPath, match.LineNum, content)
-			}
-
-			if len(label) > maxLabelWidth {
-				label = utils.TruncateString(label, maxLabelWidth-3) + "..."
-			}
-
-			items = append(items, item{
-				Label:          label,
-				CleanContent:   content,
-				CleanContext:   cleanContext,
-				DisplaySession: displaySession,
-				DisplayFile:    displayFile,
-				DisplayTime:    displayTime,
-				Match:          match,
-			})
-		}
-
-		items = append(items, item{
-			Label: "Exit Search",
-		})
+		var allContentItems []item
+		moreAvailable := true
 
 		templates := &promptui.SelectTemplates{
 			Label:    "{{ . }}",
@@ -231,42 +156,229 @@ var searchCmd = &cobra.Command{
 			Inactive: "  {{ .Label }}",
 			Selected: "\U000025B6 Match: {{ .Label | cyan }}",
 			Details: `
-{{ if .CleanContent }}
---------- Match Details ----------
-{{ "Session:" | faint }}	{{ .DisplaySession }}
-{{ "Timestamp:" | faint }}	{{ .DisplayTime }}
-{{ "File:" | faint }}	{{ .DisplayFile }}
-{{ "Context (5 lines):" | faint }}
-{{ .CleanContext }}
+{{ if .FullDetails }}
+{{ .FullDetails }}
 {{ end }}`,
 		}
 
-		// Persistent Search Loop
+		// Initial Fetch
 		for {
+			opts.Limit = limit
+			opts.Offset = offset
+
+			if moreAvailable {
+				fmt.Printf("Fetching results (Offset: %d)...\n", offset)
+				results, err := search.Search(query, scope, opts)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Error searching: %v\n", err)
+					os.Exit(1)
+				}
+
+				if len(results) == 0 && offset == 0 {
+					fmt.Println("No matches found.")
+					return
+				}
+
+				if len(results) < limit {
+					moreAvailable = false
+				} else {
+					moreAvailable = true
+				}
+
+				if len(results) > 0 {
+					// Transform results to items and append
+					width := utils.GetTerminalWidth()
+					safeWidth := width - 2
+					if safeWidth < 20 {
+						safeWidth = 20
+					}
+					maxLabelWidth := width - 10
+					if maxLabelWidth < 20 {
+						maxLabelWidth = 20
+					}
+
+					for _, match := range results {
+						label := ""
+						content := utils.StripANSI(match.Content)
+
+						var contextLines []string
+						if len(match.Context) > 0 {
+							for _, line := range match.Context {
+								stripped := utils.StripANSI(line)
+								truncated := utils.TruncateString(stripped, safeWidth)
+								contextLines = append(contextLines, truncated)
+							}
+						} else {
+							stripped := utils.StripANSI(content)
+							contextLines = []string{utils.TruncateString(stripped, safeWidth)}
+						}
+
+						const forcedHeight = 5
+						if len(contextLines) < forcedHeight {
+							for i := len(contextLines); i < forcedHeight; i++ {
+								contextLines = append(contextLines, "")
+							}
+						} else if len(contextLines) > forcedHeight {
+							contextLines = contextLines[:forcedHeight]
+						}
+
+						cleanContext := strings.Join(contextLines, "\n")
+
+						sessionStr := fmt.Sprintf("%s / %s", match.Session.Metadata.Client, match.Session.Metadata.Engagement)
+						displaySession := utils.TruncateString(sessionStr, safeWidth)
+						displayFile := utils.TruncateString(match.Session.DisplayPath, safeWidth)
+
+						displayTime := match.Session.Metadata.Timestamp
+						if displayTime == "" {
+							displayTime = match.Session.SortKey.Format("2006-01-02 15:04:05")
+						}
+
+						// Build Full Boxed Details
+						// We need a fixed width for the box content to align right border
+						// Using safeWidth as the outer width
+						boxInnerWidth := safeWidth - 4 // │_..._│
+						if boxInnerWidth < 10 {
+							boxInnerWidth = 10
+						}
+
+						makeLine := func(label, value string) string {
+							// "Match Details" box style
+							// │ Session:    Value...   │
+							// Label takes e.g. 12 chars
+							// Value takes rest
+
+							// Visual width check
+							labelDecor := label + ":"
+							labelWidth := runewidth.StringWidth(labelDecor)
+							targetLabelWidth := 12
+
+							paddedLabel := labelDecor
+							if labelWidth < targetLabelWidth {
+								paddedLabel += strings.Repeat(" ", targetLabelWidth-labelWidth)
+							}
+
+							// Full line content: "Label:      Value"
+							contentLimit := boxInnerWidth - targetLabelWidth - 1 // -1 for space
+
+							valWidth := runewidth.StringWidth(value)
+							displayValue := value
+							if valWidth > contentLimit {
+								displayValue = runewidth.Truncate(value, contentLimit, "...")
+							}
+
+							fullContent := fmt.Sprintf("%s %s", paddedLabel, displayValue)
+							return "│ " + runewidth.FillRight(fullContent, boxInnerWidth) + " │"
+						}
+
+						// Header
+						// ┌─ Match Details ──────┐
+						headerLabel := " Match Details "
+
+						msgWidth := boxInnerWidth + 2 // The text area width including spaces inside borders
+
+						topBorder := "┌─" + headerLabel + strings.Repeat("─", msgWidth-len(headerLabel)-1) + "┐"
+						sepBorder := "├─ Context " + strings.Repeat("─", msgWidth-10) + "┤"
+						botBorder := "└" + strings.Repeat("─", msgWidth) + "┘"
+
+						fullDetails := topBorder + "\n"
+						fullDetails += makeLine("Session", displaySession) + "\n"
+						fullDetails += makeLine("Timestamp", displayTime) + "\n"
+						fullDetails += makeLine("File", displayFile) + "\n"
+						fullDetails += sepBorder + "\n"
+
+						// Re-process context lines to fit box
+						for _, line := range contextLines {
+							cleanL := strings.ReplaceAll(line, "\t", "    ")
+							// Use runewidth to truncate
+							if runewidth.StringWidth(cleanL) > boxInnerWidth {
+								cleanL = runewidth.Truncate(cleanL, boxInnerWidth, "...")
+							}
+							fullDetails += "│ " + runewidth.FillRight(cleanL, boxInnerWidth) + " │\n"
+						}
+						fullDetails += botBorder
+
+						if match.IsNote {
+							label = fmt.Sprintf("[%d] %s [NOTE]: %s", match.Session.ID, match.Session.DisplayPath, content)
+						} else {
+							label = fmt.Sprintf("[%d] %s:%d: %s", match.Session.ID, match.Session.DisplayPath, match.LineNum, content)
+						}
+
+						if len(label) > maxLabelWidth {
+							label = utils.TruncateString(label, maxLabelWidth-3) + "..."
+						}
+
+						allContentItems = append(allContentItems, item{
+							Label:          label,
+							CleanContent:   content,
+							CleanContext:   cleanContext,
+							DisplaySession: displaySession,
+							DisplayFile:    displayFile,
+							DisplayTime:    displayTime,
+							Match:          match,
+							FullDetails:    fullDetails,
+						})
+					}
+				} else if offset > 0 {
+					fmt.Println("No more results.")
+					moreAvailable = false
+				}
+			}
+
+			// Build Display List
+			var displayItems []item
+			displayItems = append(displayItems, allContentItems...)
+
+			if moreAvailable {
+				displayItems = append(displayItems, item{
+					Label:     "--- Load More Results ---",
+					IsControl: true,
+				})
+			}
+
+			displayItems = append(displayItems, item{
+				Label:     "Exit Search",
+				IsControl: true,
+			})
+
+			// Interaction Loop
 			prompt := promptui.Select{
-				Label:     fmt.Sprintf("Found %d matches. Select to view context (Esc/Ctrl+C to exit):", len(results)),
-				Items:     items,
+				Label:     fmt.Sprintf("Showing %d matches. Select to view context (Esc/Ctrl+C to exit):", len(allContentItems)),
+				Items:     displayItems,
 				Templates: templates,
 				Size:      10,
+				CursorPos: len(allContentItems) - limit, // Try to position cursor at start of new batch
 				Searcher: func(input string, index int) bool {
-					return strings.Contains(strings.ToLower(items[index].Label), strings.ToLower(input))
+					return strings.Contains(strings.ToLower(displayItems[index].Label), strings.ToLower(input))
 				},
+			}
+
+			// Safety check for cursor pos
+			if prompt.CursorPos < 0 {
+				prompt.CursorPos = 0
 			}
 
 			i, _, err := prompt.Run()
 			if err != nil {
 				if err == promptui.ErrInterrupt {
-					break
+					break // Exit entire search
 				}
 				continue
 			}
 
-			if i == len(items)-1 {
-				break
+			selectedItem := displayItems[i]
+
+			if selectedItem.Label == "Exit Search" {
+				return
 			}
 
-			selected := items[i].Match
-			viewInPager(selected)
+			if selectedItem.Label == "--- Load More Results ---" {
+				offset += limit
+				continue // Loop back to fetch
+			}
+
+			// It's a match item
+			viewInPager(selectedItem.Match)
+			// Loop back to show list again (no fetch needed unless we add logic to optimized usage)
 		}
 	},
 }

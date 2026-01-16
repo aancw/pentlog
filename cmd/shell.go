@@ -36,23 +36,7 @@ var shellCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		var sessionDir string
-		if ctx.Type == "Log Only" {
-			// Flatten structure for Log Only mode: logs/<ProjectName>/
-			sessionDir = filepath.Join(
-				logDir,
-				utils.Slugify(ctx.Client),
-			)
-		} else {
-			// Default structure: logs/<Client>/<Engagement>/<Phase>/
-			sessionDir = filepath.Join(
-				logDir,
-				utils.Slugify(ctx.Client),
-				utils.Slugify(ctx.Engagement),
-				utils.Slugify(ctx.Phase),
-			)
-		}
-
+		sessionDir := getSessionDir(logDir, *ctx)
 		if err := os.MkdirAll(sessionDir, 0700); err != nil {
 			fmt.Fprintf(os.Stderr, "Error creating session dir: %v\n", err)
 			os.Exit(1)
@@ -81,117 +65,136 @@ var shellCmd = &cobra.Command{
 			fmt.Fprintf(os.Stderr, "Warning: Failed to add session to DB: %v\n", err)
 		}
 
+		newEnv, tempDir, err := prepareShellEnv(*ctx, sessionDir, metaFilePath, logFilePath)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error preparing shell environment: %v\n", err)
+			os.Exit(1)
+		}
+		if tempDir != "" {
+			defer os.RemoveAll(tempDir)
+		}
+
 		recorder := system.NewRecorder()
 		c, err := recorder.BuildCommand("", logFilePath)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error creating recorder command: %v\n", err)
 			os.Exit(1)
 		}
-		c.Stdin = os.Stdin
-		c.Stdout = os.Stdout
-		c.Stderr = os.Stderr
 
-		shell := os.Getenv("SHELL")
-		if shell == "" {
-			shell = "/bin/sh"
-		}
-		baseShell := filepath.Base(shell)
-
-		tempDir, err := os.MkdirTemp("", "pentlog-shell-*")
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: Could not create temp dir for shell config: %v\n", err)
-		} else {
-			defer os.RemoveAll(tempDir)
+		if err := startRecording(c, newEnv, *ctx); err != nil {
+			fmt.Fprintf(os.Stderr, "Error running recorder: %v\n", err)
+			return
 		}
 
-		newEnv := os.Environ()
-
-		newEnv = append(newEnv, fmt.Sprintf("PENTLOG_CLIENT=%s", ctx.Client))
-		newEnv = append(newEnv, fmt.Sprintf("PENTLOG_ENGAGEMENT=%s", ctx.Engagement))
-		newEnv = append(newEnv, fmt.Sprintf("PENTLOG_SCOPE=%s", ctx.Scope))
-		newEnv = append(newEnv, fmt.Sprintf("PENTLOG_OPERATOR=%s", ctx.Operator))
-		newEnv = append(newEnv, fmt.Sprintf("PENTLOG_PHASE=%s", ctx.Phase))
-		newEnv = append(newEnv, fmt.Sprintf("PENTLOG_SESSION_DIR=%s", sessionDir))
-		newEnv = append(newEnv, fmt.Sprintf("PENTLOG_SESSION_METADATA_PATH=%s", metaFilePath))
-		newEnv = append(newEnv, fmt.Sprintf("PENTLOG_SESSION_LOG_PATH=%s", logFilePath))
-
-		promptSegment := fmt.Sprintf("(pentlog:%s/%s)", ctx.Client, ctx.Phase)
-
-		if baseShell == "zsh" && tempDir != "" {
-			zshrcPath := filepath.Join(tempDir, ".zshrc")
-
-			userZshrc := filepath.Join(os.Getenv("HOME"), ".zshrc")
-			zshContent := ""
-			if _, err := os.Stat(userZshrc); err == nil {
-				zshContent += fmt.Sprintf("source %s\n", userZshrc)
-			}
-
-			zshContent += "\n# Pentlog Prompt Injection\n"
-			zshContent += "setopt TRANSIENT_RPROMPT\n"
-			zshContent += fmt.Sprintf("RPROMPT=\"%%F{cyan}%s%%f $RPROMPT\"\n", promptSegment)
-
-			if err := os.WriteFile(zshrcPath, []byte(zshContent), 0644); err != nil {
-				fmt.Fprintf(os.Stderr, "Warning: Could not write .zshrc: %v\n", err)
-			} else {
-				newEnv = append(newEnv, fmt.Sprintf("ZDOTDIR=%s", tempDir))
-			}
-		} else {
-
-			if baseShell == "bash" && tempDir != "" {
-				bashrcPath := filepath.Join(tempDir, ".bashrc")
-				userBashrc := filepath.Join(os.Getenv("HOME"), ".bashrc")
-				bashContent := ""
-				if _, err := os.Stat(userBashrc); err == nil {
-					bashContent += fmt.Sprintf("source %s\n", userBashrc)
-				}
-				bashContent += fmt.Sprintf("\nPS1=\"\\[\\033[0;36m\\]%s\\[\\033[0m\\] $PS1\"\n", promptSegment)
-
-				if err := os.WriteFile(bashrcPath, []byte(bashContent), 0644); err != nil {
-					fmt.Fprintf(os.Stderr, "Warning: Could not write .bashrc: %v\n", err)
-				} else {
-
-					newEnv = append(newEnv, fmt.Sprintf("PS1=\\[\\033[0;36m\\]%s\\[\\033[0m\\] $PS1", promptSegment))
-				}
-			}
-		}
-
-		c.Stdin = os.Stdin
-		c.Stdout = os.Stdout
-		c.Stderr = os.Stderr
-		c.Env = newEnv
-
-		fmt.Println()
-		fmt.Print(Banner)
-
-		summary := []string{}
-		if ctx.Type == "Exam/Lab" {
-			summary = append(summary, fmt.Sprintf("Exam/Lab Name: %s", ctx.Client))
-			summary = append(summary, fmt.Sprintf("Target:        %s", ctx.Engagement))
-		} else {
-			summary = append(summary, fmt.Sprintf("Client:     %s", ctx.Client))
-			summary = append(summary, fmt.Sprintf("Engagement: %s", ctx.Engagement))
-			summary = append(summary, fmt.Sprintf("Scope:      %s", ctx.Scope))
-		}
-		summary = append(summary, fmt.Sprintf("Operator:   %s", ctx.Operator))
-		summary = append(summary, fmt.Sprintf("Phase:      %s", ctx.Phase))
-		utils.PrintBox("Active Session", summary)
-
-		fmt.Println()
-		utils.PrintCenteredBlock([]string{"Type 'exit' or Ctrl+D to stop recording."})
-
-		if err := c.Run(); err != nil {
-			if exitError, ok := err.(*exec.ExitError); ok {
-				if exitError.ExitCode() != 0 {
-					fmt.Println("\nLeaving pentlog shell session.")
-					return
-				}
-			} else {
-				fmt.Fprintf(os.Stderr, "Error running recorder: %v\n", err)
-				return
-			}
-		}
 		fmt.Println("\nLeaving pentlog shell session.")
 	},
+}
+
+func getSessionDir(logDir string, ctx metadata.Context) string {
+	if ctx.Type == "Log Only" {
+		return filepath.Join(logDir, utils.Slugify(ctx.Client))
+	}
+	return filepath.Join(
+		logDir,
+		utils.Slugify(ctx.Client),
+		utils.Slugify(ctx.Engagement),
+		utils.Slugify(ctx.Phase),
+	)
+}
+
+func prepareShellEnv(ctx metadata.Context, sessionDir, metaFilePath, logFilePath string) ([]string, string, error) {
+	tempDir, err := os.MkdirTemp("", "pentlog-shell-*")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: Could not create temp dir for shell config: %v\n", err)
+	}
+
+	newEnv := os.Environ()
+	newEnv = append(newEnv, fmt.Sprintf("PENTLOG_CLIENT=%s", ctx.Client))
+	newEnv = append(newEnv, fmt.Sprintf("PENTLOG_ENGAGEMENT=%s", ctx.Engagement))
+	newEnv = append(newEnv, fmt.Sprintf("PENTLOG_SCOPE=%s", ctx.Scope))
+	newEnv = append(newEnv, fmt.Sprintf("PENTLOG_OPERATOR=%s", ctx.Operator))
+	newEnv = append(newEnv, fmt.Sprintf("PENTLOG_PHASE=%s", ctx.Phase))
+	newEnv = append(newEnv, fmt.Sprintf("PENTLOG_SESSION_DIR=%s", sessionDir))
+	newEnv = append(newEnv, fmt.Sprintf("PENTLOG_SESSION_METADATA_PATH=%s", metaFilePath))
+	newEnv = append(newEnv, fmt.Sprintf("PENTLOG_SESSION_LOG_PATH=%s", logFilePath))
+
+	promptSegment := fmt.Sprintf("(pentlog:%s/%s)", ctx.Client, ctx.Phase)
+	shell := os.Getenv("SHELL")
+	if shell == "" {
+		shell = "/bin/sh"
+	}
+	baseShell := filepath.Base(shell)
+
+	if baseShell == "zsh" && tempDir != "" {
+		zshrcPath := filepath.Join(tempDir, ".zshrc")
+		userZshrc := filepath.Join(os.Getenv("HOME"), ".zshrc")
+		zshContent := ""
+		if _, err := os.Stat(userZshrc); err == nil {
+			zshContent += fmt.Sprintf("source %s\n", userZshrc)
+		}
+		zshContent += "\n# Pentlog Prompt Injection\n"
+		zshContent += "setopt TRANSIENT_RPROMPT\n"
+		zshContent += fmt.Sprintf("RPROMPT=\"%%F{cyan}%s%%f $RPROMPT\"\n", promptSegment)
+
+		if err := os.WriteFile(zshrcPath, []byte(zshContent), 0644); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: Could not write .zshrc: %v\n", err)
+		} else {
+			newEnv = append(newEnv, fmt.Sprintf("ZDOTDIR=%s", tempDir))
+		}
+	} else if baseShell == "bash" && tempDir != "" {
+		bashrcPath := filepath.Join(tempDir, ".bashrc")
+		userBashrc := filepath.Join(os.Getenv("HOME"), ".bashrc")
+		bashContent := ""
+		if _, err := os.Stat(userBashrc); err == nil {
+			bashContent += fmt.Sprintf("source %s\n", userBashrc)
+		}
+		bashContent += fmt.Sprintf("\nPS1=\"\\[\\033[0;36m\\]%s\\[\\033[0m\\] $PS1\"\n", promptSegment)
+
+		if err := os.WriteFile(bashrcPath, []byte(bashContent), 0644); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: Could not write .bashrc: %v\n", err)
+		} else {
+			newEnv = append(newEnv, fmt.Sprintf("PS1=\\[\\033[0;36m\\]%s\\[\\033[0m\\] $PS1", promptSegment))
+		}
+	}
+
+	return newEnv, tempDir, nil
+}
+
+func startRecording(c *exec.Cmd, env []string, ctx metadata.Context) error {
+	c.Stdin = os.Stdin
+	c.Stdout = os.Stdout
+	c.Stderr = os.Stderr
+	c.Env = env
+
+	fmt.Println()
+	fmt.Print(Banner)
+
+	summary := []string{}
+	if ctx.Type == "Exam/Lab" {
+		summary = append(summary, fmt.Sprintf("Exam/Lab Name: %s", ctx.Client))
+		summary = append(summary, fmt.Sprintf("Target:        %s", ctx.Engagement))
+	} else {
+		summary = append(summary, fmt.Sprintf("Client:     %s", ctx.Client))
+		summary = append(summary, fmt.Sprintf("Engagement: %s", ctx.Engagement))
+		summary = append(summary, fmt.Sprintf("Scope:      %s", ctx.Scope))
+	}
+	summary = append(summary, fmt.Sprintf("Operator:   %s", ctx.Operator))
+	summary = append(summary, fmt.Sprintf("Phase:      %s", ctx.Phase))
+	utils.PrintBox("Active Session", summary)
+
+	fmt.Println()
+	utils.PrintCenteredBlock([]string{"Type 'exit' or Ctrl+D to stop recording."})
+
+	if err := c.Run(); err != nil {
+		if exitError, ok := err.(*exec.ExitError); ok {
+			if exitError.ExitCode() != 0 {
+				fmt.Println("\nLeaving pentlog shell session.")
+				return nil // Expected exit
+			}
+		}
+		return err
+	}
+	return nil
 }
 
 func init() {

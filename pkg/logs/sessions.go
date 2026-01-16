@@ -43,6 +43,12 @@ type Session struct {
 }
 
 func ListSessions() ([]Session, error) {
+	// Wrapper for backward compatibility, currently fetching all (limit=0 means no limit in our logic, or we can pass -1)
+	// Passing -1 as limit to fetch all
+	return ListSessionsPaginated(-1, 0)
+}
+
+func ListSessionsPaginated(limit, offset int) ([]Session, error) {
 	database, err := db.GetDB()
 	if err != nil {
 		return nil, err
@@ -60,7 +66,15 @@ func ListSessions() ([]Session, error) {
 		}
 	}
 
-	rows, err := database.Query("SELECT id, client, engagement, scope, operator, phase, timestamp, filename, relative_path, size FROM sessions ORDER BY timestamp ASC")
+	query := "SELECT id, client, engagement, scope, operator, phase, timestamp, filename, relative_path, size FROM sessions ORDER BY timestamp DESC"
+	var args []interface{}
+
+	if limit >= 0 {
+		query += " LIMIT ? OFFSET ?"
+		args = append(args, limit, offset)
+	}
+
+	rows, err := database.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
