@@ -71,6 +71,20 @@ func PromptString(label string, defaultValue string) string {
 	return result
 }
 
+func PromptPassword(label string) string {
+	prompt := promptui.Prompt{
+		Label: label,
+		Mask:  '*',
+	}
+
+	result, err := prompt.Run()
+	if err != nil {
+		return ""
+	}
+
+	return strings.TrimSpace(result)
+}
+
 func SelectItem(label string, items []string) int {
 	prompt := promptui.Select{
 		Label: label,

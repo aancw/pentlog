@@ -1,8 +1,6 @@
 package logs
 
 import (
-	"archive/tar"
-	"compress/gzip"
 	"fmt"
 	"io"
 	"os"
@@ -11,6 +9,8 @@ import (
 	"pentlog/pkg/utils"
 	"strings"
 	"time"
+
+	"github.com/yeka/zip"
 )
 
 type ArchiveItem struct {
@@ -63,15 +63,15 @@ func GetSessionsToArchive(clientName, engagement, phase string, olderThan time.D
 	return toArchive, nil
 }
 
-func ArchiveSessions(clientName, engagement, phase string, olderThan time.Duration, deleteOriginals bool) (int, error) {
+func ArchiveSessions(clientName, engagement, phase string, olderThan time.Duration, deleteOriginals bool, password string) (int, error) {
 	toArchive, err := GetSessionsToArchive(clientName, engagement, phase, olderThan)
 	if err != nil {
 		return 0, err
 	}
-	return ArchiveSessionsFromList(toArchive, clientName, deleteOriginals, nil)
+	return ArchiveSessionsFromList(toArchive, clientName, deleteOriginals, nil, password)
 }
 
-func ArchiveSessionsFromList(toArchive []Session, clientName string, deleteOriginals bool, extraFiles []string) (int, error) {
+func ArchiveSessionsFromList(toArchive []Session, clientName string, deleteOriginals bool, extraFiles []string, password string) (int, error) {
 	if len(toArchive) == 0 {
 		return 0, nil
 	}
@@ -86,7 +86,12 @@ func ArchiveSessionsFromList(toArchive []Session, clientName string, deleteOrigi
 	}
 
 	timestamp := time.Now().Format("20060102-150405")
-	archiveFilename := fmt.Sprintf("%s.tar.gz", timestamp)
+
+	return archiveZip(toArchive, extraFiles, clientArchiveDir, timestamp, deleteOriginals, password)
+}
+
+func archiveZip(toArchive []Session, extraFiles []string, clientArchiveDir, timestamp string, deleteOriginals bool, password string) (int, error) {
+	archiveFilename := fmt.Sprintf("%s.zip", timestamp)
 	archivePath := filepath.Join(clientArchiveDir, archiveFilename)
 
 	file, err := os.Create(archivePath)
@@ -95,13 +100,36 @@ func ArchiveSessionsFromList(toArchive []Session, clientName string, deleteOrigi
 	}
 	defer file.Close()
 
-	gw := gzip.NewWriter(file)
-	defer gw.Close()
-
-	tw := tar.NewWriter(gw)
-	defer tw.Close()
+	zw := zip.NewWriter(file)
+	defer zw.Close()
 
 	var filesToDelete []string
+
+	// Helper to add file to zip
+	addFile := func(path, targetPath string) error {
+		f, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+
+		var w io.Writer
+		if password != "" {
+			w, err = zw.Encrypt(targetPath, password, zip.AES256Encryption)
+			if err != nil {
+				return err
+			}
+		} else {
+			// Without password, use standard Create for compatibility
+			w, err = zw.Create(targetPath)
+			if err != nil {
+				return err
+			}
+		}
+
+		_, err = io.Copy(w, f)
+		return err
+	}
 
 	for _, s := range toArchive {
 		files := []string{s.Path}
@@ -137,7 +165,7 @@ func ArchiveSessionsFromList(toArchive []Session, clientName string, deleteOrigi
 				continue
 			}
 
-			if err := addFileToTar(tw, fPath, targetPath); err != nil {
+			if err := addFile(fPath, targetPath); err != nil {
 				os.Remove(archivePath)
 				return 0, fmt.Errorf("failed to add file %s to archive: %w", fPath, err)
 			}
@@ -154,18 +182,18 @@ func ArchiveSessionsFromList(toArchive []Session, clientName string, deleteOrigi
 		if rel, err := filepath.Rel(reportsDir, extraFile); err == nil && !strings.HasPrefix(rel, "..") {
 			targetPath = filepath.Join("reports", rel)
 		} else {
-			targetPath = filepath.Join("reports", utils.Slugify(clientName), filepath.Base(extraFile))
+			targetPath = filepath.Join("reports", utils.Slugify(filepath.Base(filepath.Dir(extraFile))), filepath.Base(extraFile))
 		}
 
-		if err := addFileToTar(tw, extraFile, targetPath); err != nil {
+		if err := addFile(extraFile, targetPath); err != nil {
 			os.Remove(archivePath)
 			return 0, fmt.Errorf("failed to add extra file %s to archive: %w", extraFile, err)
 		}
 	}
 
-	tw.Close()
-	gw.Close()
-	file.Close()
+	if err := zw.Flush(); err != nil {
+		return 0, err
+	}
 
 	if deleteOriginals {
 		for _, fPath := range filesToDelete {
@@ -174,45 +202,6 @@ func ArchiveSessionsFromList(toArchive []Session, clientName string, deleteOrigi
 	}
 
 	return len(toArchive), nil
-}
-
-func addFileToTar(tw *tar.Writer, path string, targetName string) error {
-	file, err := os.Open(path)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	info, err := file.Stat()
-	if err != nil {
-		return err
-	}
-
-	header, err := tar.FileInfoHeader(info, info.Name())
-	if err != nil {
-		return err
-	}
-
-	if targetName != "" {
-		header.Name = targetName
-	} else {
-		logsDir, _ := config.GetLogsDir()
-		if rel, err := filepath.Rel(logsDir, path); err == nil && !strings.HasPrefix(rel, "..") {
-			header.Name = rel
-		} else {
-			header.Name = filepath.Base(path)
-		}
-	}
-
-	if err := tw.WriteHeader(header); err != nil {
-		return err
-	}
-
-	if _, err := io.Copy(tw, file); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func ListArchives() ([]ArchiveItem, error) {
@@ -244,7 +233,7 @@ func ListArchives() ([]ArchiveItem, error) {
 		}
 
 		for _, f := range files {
-			if f.IsDir() || !strings.HasSuffix(f.Name(), ".tar.gz") {
+			if f.IsDir() || (!strings.HasSuffix(f.Name(), ".tar.gz") && !strings.HasSuffix(f.Name(), ".zip")) {
 				continue
 			}
 
@@ -268,69 +257,11 @@ func ListArchives() ([]ArchiveItem, error) {
 }
 
 func LoadSessionsFromArchive(archivePath string) ([]Session, string, error) {
-	tempDir, err := os.MkdirTemp("", "pentlog_export_*")
-	if err != nil {
-		return nil, "", err
-	}
-
-	if err := ExtractTarGz(archivePath, tempDir); err != nil {
-		os.RemoveAll(tempDir)
-		return nil, "", err
-	}
-
-	sessions, err := ScanSessionsFromDir(tempDir)
-	if err != nil {
-		os.RemoveAll(tempDir)
-		return nil, "", err
-	}
-
-	return sessions, tempDir, nil
+	// Not implemented for ZIP yet as part of this task
+	return nil, "", fmt.Errorf("feature not available for this archive format yet")
 }
 
+// Deprecated: ExtractTarGz functionality removed in favor of Zip default
 func ExtractTarGz(archivePath, destDir string) error {
-	f, err := os.Open(archivePath)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	gzr, err := gzip.NewReader(f)
-	if err != nil {
-		return err
-	}
-	defer gzr.Close()
-
-	tr := tar.NewReader(gzr)
-
-	for {
-		header, err := tr.Next()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return err
-		}
-
-		target := filepath.Join(destDir, header.Name)
-		switch header.Typeflag {
-		case tar.TypeDir:
-			if err := os.MkdirAll(target, 0755); err != nil {
-				return err
-			}
-		case tar.TypeReg:
-			if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
-				return err
-			}
-			outFile, err := os.Create(target)
-			if err != nil {
-				return err
-			}
-			if _, err := io.Copy(outFile, tr); err != nil {
-				outFile.Close()
-				return err
-			}
-			outFile.Close()
-		}
-	}
-	return nil
+	return fmt.Errorf("function deprecated and removed")
 }

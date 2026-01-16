@@ -22,6 +22,7 @@ var (
 	engagementFlag string
 	phaseFlag      string
 	reportFlag     bool
+	passwordFlag   string
 )
 
 var archiveCmd = &cobra.Command{
@@ -135,6 +136,13 @@ Examples:
 		}
 
 		if !forceFlag {
+			if passwordFlag == "" {
+				p := utils.PromptString("Do you want to password protect this archive? [y/N]", "No")
+				if strings.ToLower(p) == "y" || strings.ToLower(p) == "yes" {
+					passwordFlag = utils.PromptPassword("Enter Archive Password: ")
+				}
+			}
+
 			msg := fmt.Sprintf("About to archive sessions for client '%s'", clientName)
 			if engagement != "" {
 				msg += fmt.Sprintf(", engagement '%s'", engagement)
@@ -151,6 +159,11 @@ Examples:
 				msg += ". Original files will be DELETED."
 			} else {
 				msg += ". Original files will be KEPT."
+			}
+			if passwordFlag != "" {
+				msg += " Archive will be PASSWORD PROTECTED (Zip)."
+			} else {
+				msg += " Archive will be created as Zip."
 			}
 			fmt.Println(msg)
 
@@ -263,7 +276,7 @@ Examples:
 			}
 		}
 
-		count, err := logs.ArchiveSessionsFromList(toArchive, clientName, deleteOrg, extraFiles)
+		count, err := logs.ArchiveSessionsFromList(toArchive, clientName, deleteOrg, extraFiles, passwordFlag)
 
 		for _, f := range extraFiles {
 			if strings.Contains(f, "archive_report_") && strings.Contains(f, os.TempDir()) {
@@ -319,6 +332,7 @@ func init() {
 	archiveCmd.PersistentFlags().StringVarP(&engagementFlag, "engagement", "e", "", "Filter by Engagement name")
 	archiveCmd.PersistentFlags().StringVarP(&phaseFlag, "phase", "p", "", "Filter by Phase name")
 	archiveCmd.PersistentFlags().BoolVar(&reportFlag, "report", false, "Auto-generate report before archiving")
+	archiveCmd.PersistentFlags().StringVarP(&passwordFlag, "password", "P", "", "Password for encrypted zip archive")
 
 	archiveCmd.AddCommand(archiveListCmd)
 	rootCmd.AddCommand(archiveCmd)
