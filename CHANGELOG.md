@@ -14,6 +14,11 @@ All notable changes to this project will be documented in this file.
 ### Changed
 - **Archive Format**: Switched default archive format from `tar.gz` to `zip` for better compatibility and encryption support.
 
+### Performance & UX
+- **Refactoring**: Split monolithic `shell` command logic for better maintainability.
+- **Pagination**: Implemented efficient pagination for both session listing and search results.
+- **Search UX**: Added "Infinite Scroll" and Dashboard-style result boxes with fixed alignment for wide characters.
+
 ### Fixed
 - **AI**: Improved robustness of AI summarizer for ttyrec files using length-based chunking.
 
