@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"pentlog/pkg/db"
 	"strings"
 	"testing"
 	"time"
@@ -22,6 +23,7 @@ func TestArchiveSessions(t *testing.T) {
 
 	os.Setenv("PENTLOG_TEST_HOME", tmpDir)
 	defer os.Unsetenv("PENTLOG_TEST_HOME")
+	defer db.CloseDB()
 
 	// Setup data
 	logsDir := filepath.Join(tmpDir, ".pentlog", "logs")
@@ -88,6 +90,11 @@ func TestArchiveSessions(t *testing.T) {
 
 	timingFile2 := filepath.Join(clientDir, baseName2+".timing")
 	os.WriteFile(timingFile2, []byte("timing data 2"), 0644)
+
+	// Force sync because we added files manually and ListSessions cache might be active
+	if err := SyncSessions(); err != nil {
+		t.Fatalf("SyncSessions failed: %v", err)
+	}
 
 	// Archive ONLY the new one if possible... but currently filtering is by client/time.
 	// The first session is still there. So archive will pick up BOTH sessions now if we run again.
@@ -180,6 +187,7 @@ func TestArchiveSessionFiltering(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 	os.Setenv("PENTLOG_TEST_HOME", tmpDir)
 	defer os.Unsetenv("PENTLOG_TEST_HOME")
+	defer db.CloseDB()
 
 	clientDir := filepath.Join(tmpDir, ".pentlog", "logs", "filterclient", "eng", "recon")
 	os.MkdirAll(clientDir, 0755)

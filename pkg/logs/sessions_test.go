@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"pentlog/pkg/db"
 	"sort"
 	"testing"
 	"time"
@@ -21,6 +22,7 @@ func TestListSessions(t *testing.T) {
 	// Set environment variable to force config to use tmpDir
 	os.Setenv("PENTLOG_TEST_HOME", tmpDir)
 	defer os.Unsetenv("PENTLOG_TEST_HOME")
+	defer db.CloseDB()
 
 	// Create expected structure
 	// .pentlog/logs/client/engagement/phase/

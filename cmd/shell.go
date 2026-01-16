@@ -77,6 +77,10 @@ var shellCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
+		if err := logs.AddSessionToDB(meta, logFilePath); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: Failed to add session to DB: %v\n", err)
+		}
+
 		recorder := system.NewRecorder()
 		c, err := recorder.BuildCommand("", logFilePath)
 		if err != nil {

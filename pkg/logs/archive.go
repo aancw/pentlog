@@ -133,6 +133,10 @@ func ArchiveSessionsFromList(toArchive []Session, clientName string, deleteOrigi
 				targetPath = filepath.Join("logs", filepath.Base(fPath))
 			}
 
+			if _, err := os.Stat(fPath); os.IsNotExist(err) {
+				continue
+			}
+
 			if err := addFileToTar(tw, fPath, targetPath); err != nil {
 				os.Remove(archivePath)
 				return 0, fmt.Errorf("failed to add file %s to archive: %w", fPath, err)
@@ -274,7 +278,7 @@ func LoadSessionsFromArchive(archivePath string) ([]Session, string, error) {
 		return nil, "", err
 	}
 
-	sessions, err := ListSessionsFromDir(tempDir)
+	sessions, err := ScanSessionsFromDir(tempDir)
 	if err != nil {
 		os.RemoveAll(tempDir)
 		return nil, "", err
