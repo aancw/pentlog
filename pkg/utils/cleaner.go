@@ -95,6 +95,14 @@ func ParseAnsi(line string) []Cell {
 			remainder := string(runes[i:])
 
 			if loc := reOscSeq.FindStringIndex(remainder); loc != nil {
+				// Validate OSC doesn't contain shell metacharacters
+				oscContent := remainder[loc[0]:loc[1]]
+				if strings.ContainsAny(oscContent, "`;$()") {
+					// Skip potentially malicious OSC sequence
+					i += loc[1] // Skip the entire sequence
+					continue
+				}
+
 				i += loc[1]
 				continue
 			}

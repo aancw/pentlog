@@ -16,6 +16,7 @@ All notable changes to this project will be documented in this file.
 - **User Awareness**: Added warning banner in shell about password logging
 - **File Permissions**: Enforced `0600` permissions for sensitive AI config files (API keys)
 - **Cross-Platform**: Fixed `SUDO_USER` home directory resolution for macOS compatibility
+- **Input Sanitization**: Enhanced OSC sequence validation to block potential shell metacharacter injection
 
 ## [v0.10.0] - 2026-01-17
 ### Added
