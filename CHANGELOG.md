@@ -3,6 +3,14 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+### Added
+- **Timeline Extraction**: New `pentlog timeline` command to extract chronological command timeline from session recordings
+  - Interactive viewer with human-readable display
+  - JSON export option with proper escape handling
+  - Character-level parsing handles backspaces, cursor movements, and typing artifacts
+  - Continuous loop mode (returns to menu after viewing)
+  - Accurate command extraction with context label removal
+
 ### Improved
 - **Error Handling**: Added warnings to stderr when session files are missing for evidence integrity visibility
 - **Archive Reliability**: Fixed incomplete cleanup on archive failures by properly closing resources before removing partial files

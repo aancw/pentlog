@@ -92,6 +92,10 @@ This document outlines the current status of `pentlog` and our plans for future 
     - [ ] Backup to SFTP or S3-compatible storage (AWS, R2, MinIO).
 
 ### Advanced Analysis & Export
+- [x] **Command Timeline**
+    - [x] Extract chronological timeline from session recordings
+    - [x] Interactive viewer with human-readable display
+    - [x] JSON export with accurate timestamps
 - [ ] **Export to Visuals**
     - [ ] Export session to GIF (via `ttygif`).
     - [ ] Export to MP4/WebM.
