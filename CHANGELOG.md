@@ -14,6 +14,8 @@ All notable changes to this project will be documented in this file.
 ### Security
 - **Password Security**: Added password confirmation for archive encryption to prevent typos
 - **User Awareness**: Added warning banner in shell about password logging
+- **File Permissions**: Enforced `0600` permissions for sensitive AI config files (API keys)
+- **Cross-Platform**: Fixed `SUDO_USER` home directory resolution for macOS compatibility
 
 ## [v0.10.0] - 2026-01-17
 ### Added

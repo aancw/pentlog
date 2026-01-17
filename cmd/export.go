@@ -148,7 +148,7 @@ var exportCmd = &cobra.Command{
 					return
 				}
 
-				if err := os.WriteFile(aiConfigPath, []byte(content), 0644); err != nil {
+				if err := os.WriteFile(aiConfigPath, []byte(content), 0600); err != nil {
 					fmt.Printf("Error creating config file: %v\n", err)
 					os.Exit(1)
 				}

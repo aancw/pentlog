@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"os/user"
 	"path/filepath"
 )
 
@@ -22,7 +23,10 @@ func GetUserPentlogDir() (string, error) {
 	}
 
 	if sudoUser := os.Getenv("SUDO_USER"); sudoUser != "" && os.Geteuid() == 0 {
-		return filepath.Join("/home", sudoUser, PentlogDirName), nil
+		u, err := user.Lookup(sudoUser)
+		if err == nil {
+			return filepath.Join(u.HomeDir, PentlogDirName), nil
+		}
 	}
 
 	home, err := os.UserHomeDir()
