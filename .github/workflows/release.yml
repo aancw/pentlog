@@ -11,6 +11,17 @@ permissions:
 jobs:
   build-and-release:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: darwin
+            goarch: amd64
+          - goos: darwin
+            goarch: arm64
+          - goos: linux
+            goarch: amd64
+          - goos: linux
+            goarch: arm64
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -20,20 +31,11 @@ jobs:
         with:
           go-version: '1.24'
 
-      - name: Build Darwin AMD64
-        run: GOOS=darwin GOARCH=amd64 go build -o pentlog-darwin-amd64 .
-
-      - name: Build Darwin ARM64
-        run: GOOS=darwin GOARCH=arm64 go build -o pentlog-darwin-arm64 .
-
-      - name: Build Linux AMD64
-        run: GOOS=linux GOARCH=amd64 go build -o pentlog-linux-amd64 .
+      - name: Build
+        run: GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o pentlog-${{ matrix.goos }}-${{ matrix.goarch }} .
 
       - name: Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: |
-            pentlog-darwin-amd64
-            pentlog-darwin-arm64
-            pentlog-linux-amd64
+          files: pentlog-${{ matrix.goos }}-${{ matrix.goarch }}

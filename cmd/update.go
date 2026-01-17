@@ -54,15 +54,7 @@ var updateCmd = &cobra.Command{
 			return
 		}
 
-		assetNamePrefix := fmt.Sprintf("pentlog-%s-%s", runtime.GOOS, runtime.GOARCH)
-		var targetAsset *github.ReleaseAsset
-
-		for _, asset := range release.Assets {
-			if strings.HasPrefix(asset.GetName(), assetNamePrefix) {
-				targetAsset = asset
-				break
-			}
-		}
+		targetAsset := findCompatibleAsset(release.Assets, runtime.GOOS, runtime.GOARCH)
 
 		if targetAsset == nil {
 			fmt.Printf("No compatible asset found for %s/%s\n", runtime.GOOS, runtime.GOARCH)
@@ -149,4 +141,15 @@ func (wc *WriteCounter) PrintProgress() {
 		percent := float64(wc.Current) * 100 / float64(wc.Total)
 		fmt.Printf("\rDownloading... %.2f%% (%s / %s)", percent, utils.FormatBytes(int64(wc.Current)), utils.FormatBytes(int64(wc.Total)))
 	}
+}
+
+func findCompatibleAsset(assets []*github.ReleaseAsset, goos, goarch string) *github.ReleaseAsset {
+	targetName := fmt.Sprintf("pentlog-%s-%s", goos, goarch)
+
+	for _, asset := range assets {
+		if asset.GetName() == targetName {
+			return asset
+		}
+	}
+	return nil
 }
