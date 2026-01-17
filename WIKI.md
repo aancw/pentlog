@@ -74,7 +74,21 @@ pentlog search
 pentlog export
 ```
 
-### 6. Replay
+### 6. Timeline Analysis
+Analyze a terminal session recording and extract a chronological timeline of commands executed and their outputs.
+
+```bash
+# Interactive Viewer (Recommended)
+# - Select from recent sessions
+# - View commands in human-readable format (Loop mode)
+# - Export to JSON option
+pentlog timeline
+
+# Direct JSON Export
+pentlog timeline <session_id> -o output.json
+```
+
+### 7. Replay
 Replay recorded sessions with full fidelity.
 
 ```bash
@@ -85,21 +99,21 @@ pentlog replay
 pentlog replay 1 -s 2.0
 ```
 
-### 7. Integrity
+### 8. Integrity
 Generate SHA256 hashes of all logs for evidence integrity.
 
 ```bash
 pentlog freeze
 ```
 
-### 8. Dashboard
+### 9. Dashboard
 View an interactive executive summary of your engagement logic, including evidence size, recent findings, and statistical breakdowns.
 
 ```bash
 pentlog dashboard
 ```
 
-### 9. Versioning & Updates
+### 10. Versioning & Updates
 Keep your tool up to date.
 
 ```bash
