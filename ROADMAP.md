@@ -94,7 +94,10 @@ This document outlines the current status of `pentlog` and our plans for future 
 ### Advanced Analysis & Export
 - [x] **Command Timeline**
     - [x] Extract chronological timeline from session recordings
-    - [x] Interactive viewer with human-readable display
+    - [x] Interactive browser with command list and detail views
+    - [x] Boxed detail display with command/output separation
+    - [x] Search within timeline
+    - [x] View full output in pager
     - [x] JSON export with accurate timestamps
 - [ ] **Export to Visuals**
     - [ ] Export session to GIF (via `ttygif`).
