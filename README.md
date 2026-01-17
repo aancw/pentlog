@@ -62,7 +62,7 @@ Traditional logging (`script`, `tmux`) isn't built for professional engagements.
 | `shell` | Start a recorded shell with the engagement context loaded. |
 | `status` | Show current tool and engagement status. |
 | `switch` | Switch to a different pentest phase (Interactive/History). |
-| `timeline` | Extract chronological timeline of commands from session recordings. |
+| `timeline` | Interactive browser for command timeline extraction from sessions. |
 | `update` | Update pentlog to the latest version automatically. |
 | `vuln` | Manage findings and vulnerabilities.
 

@@ -1,13 +1,18 @@
 package cmd
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"os"
+	"os/exec"
 	"pentlog/pkg/logs"
 	"pentlog/pkg/utils"
 	"strconv"
 	"strings"
 
+	"github.com/manifoldco/promptui"
+	"github.com/mattn/go-runewidth"
 	"github.com/spf13/cobra"
 )
 
@@ -88,7 +93,6 @@ If no session ID is provided, an interactive session selector will be displayed.
 			return
 		}
 
-		// If output file specified, export as JSON
 		if outputFile != "" {
 			jsonOutput, err := timeline.ToJSON()
 			if err != nil {
@@ -105,44 +109,7 @@ If no session ID is provided, an interactive session selector will be displayed.
 			return
 		}
 
-		// Interactive mode: keep looping until user exits with Ctrl+C
-		for {
-			options := []string{
-				"View timeline (human-readable)",
-				"Export as JSON",
-			}
-
-			choice := utils.SelectItem("What would you like to do?", options)
-			if choice < 0 {
-				return
-			}
-
-			if choice == 0 {
-				displayTimeline(timeline)
-			} else {
-				fmt.Print("Enter output filename: ")
-				var filename string
-				fmt.Scanln(&filename)
-
-				if filename == "" {
-					filename = "timeline.json"
-				}
-
-				jsonOutput, err := timeline.ToJSON()
-				if err != nil {
-					fmt.Printf("Error generating JSON: %v\n", err)
-					continue
-				}
-
-				err = os.WriteFile(filename, []byte(jsonOutput), 0644)
-				if err != nil {
-					fmt.Printf("Error writing file: %v\n", err)
-					continue
-				}
-
-				fmt.Printf("\n✅ Timeline exported to %s\n\n", filename)
-			}
-		}
+		displayInteractiveTimeline(timeline, session)
 	},
 }
 
@@ -151,28 +118,239 @@ func init() {
 	rootCmd.AddCommand(timelineCmd)
 }
 
-func displayTimeline(timeline *logs.Timeline) {
-	fmt.Printf("\n%s\n", strings.Repeat("=", 80))
-	fmt.Printf("COMMAND TIMELINE (%d commands)\n", len(timeline.Commands))
-	fmt.Printf("%s\n\n", strings.Repeat("=", 80))
+type timelineItem struct {
+	Label       string
+	Index       int
+	Command     logs.CommandExecution
+	FullDetails string
+	IsControl   bool
+}
 
-	for i, cmd := range timeline.Commands {
-		fmt.Printf("[%d] %s\n", i+1, cmd.Timestamp)
-		fmt.Printf("Command: %s\n", cmd.Command)
-
-		if cmd.Output != "" {
-			fmt.Println("\nOutput:")
-			fmt.Printf("%s\n", strings.Repeat("-", 80))
-			fmt.Println(cmd.Output)
-			fmt.Printf("%s\n", strings.Repeat("-", 80))
-		} else {
-			fmt.Println("Output: (none)")
-		}
-
-		fmt.Println()
+func displayInteractiveTimeline(timeline *logs.Timeline, session *logs.Session) {
+	width := utils.GetTerminalWidth()
+	safeWidth := width - 2
+	if safeWidth < 40 {
+		safeWidth = 40
 	}
 
-	fmt.Printf("%s\n", strings.Repeat("=", 80))
-	fmt.Println("\nPress Enter to continue...")
+	var items []timelineItem
+
+	for i, cmd := range timeline.Commands {
+		cmdPreview := cmd.Command
+		if len(cmdPreview) > 60 {
+			cmdPreview = cmdPreview[:57] + "..."
+		}
+
+		label := fmt.Sprintf("[%d] %s - %s", i+1, cmd.Timestamp, cmdPreview)
+
+		details := buildCommandDetails(cmd, i+1, safeWidth)
+
+		items = append(items, timelineItem{
+			Label:       label,
+			Index:       i,
+			Command:     cmd,
+			FullDetails: details,
+			IsControl:   false,
+		})
+	}
+
+	items = append(items, timelineItem{
+		Label:     "Export Timeline as JSON",
+		IsControl: true,
+	})
+
+	items = append(items, timelineItem{
+		Label:     "Exit",
+		IsControl: true,
+	})
+
+	templates := &promptui.SelectTemplates{
+		Label:    "{{ . }}",
+		Active:   "\U000025B6 {{ .Label | cyan }}",
+		Inactive: "  {{ .Label }}",
+		Selected: "\U000025B6 Command: {{ .Label | cyan }}",
+		Details: `
+{{ if .FullDetails }}
+{{ .FullDetails }}
+{{ end }}`,
+	}
+
+	for {
+		prompt := promptui.Select{
+			Label:     fmt.Sprintf("Timeline: %d commands (Use arrow keys, / to search, Esc to exit)", len(timeline.Commands)),
+			Items:     items,
+			Templates: templates,
+			Size:      15,
+			Searcher: func(input string, index int) bool {
+				return strings.Contains(strings.ToLower(items[index].Label), strings.ToLower(input))
+			},
+		}
+
+		idx, _, err := prompt.Run()
+		if err != nil {
+			if err == promptui.ErrInterrupt {
+				return
+			}
+			continue
+		}
+
+		selectedItem := items[idx]
+
+		if selectedItem.Label == "Exit" {
+			return
+		}
+
+		if selectedItem.Label == "Export Timeline as JSON" {
+			exportTimeline(timeline)
+			continue
+		}
+
+		showCommandActions(selectedItem.Command, session)
+	}
+}
+
+func buildCommandDetails(cmd logs.CommandExecution, cmdNum int, width int) string {
+	boxInnerWidth := width - 4
+	if boxInnerWidth < 20 {
+		boxInnerWidth = 20
+	}
+
+	makeLine := func(label, value string) string {
+		labelDecor := label + ":"
+		labelWidth := runewidth.StringWidth(labelDecor)
+		targetLabelWidth := 12
+
+		paddedLabel := labelDecor
+		if labelWidth < targetLabelWidth {
+			paddedLabel += strings.Repeat(" ", targetLabelWidth-labelWidth)
+		}
+
+		contentLimit := boxInnerWidth - targetLabelWidth - 1
+		valWidth := runewidth.StringWidth(value)
+		displayValue := value
+		if valWidth > contentLimit {
+			displayValue = runewidth.Truncate(value, contentLimit, "...")
+		}
+
+		fullContent := fmt.Sprintf("%s %s", paddedLabel, displayValue)
+		return "│ " + runewidth.FillRight(fullContent, boxInnerWidth) + " │"
+	}
+
+	msgWidth := boxInnerWidth + 2
+	headerLabel := fmt.Sprintf(" Command #%d ", cmdNum)
+	topBorder := "┌─" + headerLabel + strings.Repeat("─", msgWidth-len(headerLabel)-1) + "┐"
+	sepBorder := "├─ Output " + strings.Repeat("─", msgWidth-9) + "┤"
+	botBorder := "└" + strings.Repeat("─", msgWidth) + "┘"
+
+	var result strings.Builder
+	result.WriteString(topBorder + "\n")
+	result.WriteString(makeLine("Timestamp", cmd.Timestamp) + "\n")
+	result.WriteString(makeLine("Command", cmd.Command) + "\n")
+	result.WriteString(sepBorder + "\n")
+
+	if cmd.Output != "" {
+		outputLines := strings.Split(cmd.Output, "\n")
+		displayLines := outputLines
+		if len(displayLines) > 10 {
+			displayLines = outputLines[:10]
+		}
+
+		for _, line := range displayLines {
+			cleanL := strings.ReplaceAll(line, "\t", "    ")
+			if runewidth.StringWidth(cleanL) > boxInnerWidth {
+				cleanL = runewidth.Truncate(cleanL, boxInnerWidth, "...")
+			}
+			result.WriteString("│ " + runewidth.FillRight(cleanL, boxInnerWidth) + " │\n")
+		}
+
+		if len(outputLines) > 10 {
+			moreMsg := fmt.Sprintf("... (%d more lines)", len(outputLines)-10)
+			result.WriteString("│ " + runewidth.FillRight(moreMsg, boxInnerWidth) + " │\n")
+		}
+	} else {
+		result.WriteString("│ " + runewidth.FillRight("(no output)", boxInnerWidth) + " │\n")
+	}
+
+	result.WriteString(botBorder)
+
+	return result.String()
+}
+
+func showCommandActions(cmd logs.CommandExecution, session *logs.Session) {
+	options := []string{
+		"View full output in pager",
+		"Back to command list",
+	}
+
+	choice := utils.SelectItem("What would you like to do?", options)
+	if choice < 0 || choice == 1 {
+		return
+	}
+
+	if choice == 0 {
+		viewCommandInPager(cmd, session)
+	}
+}
+
+func viewCommandInPager(cmd logs.CommandExecution, session *logs.Session) {
+	pager := os.Getenv("PAGER")
+	if pager == "" {
+		pager = "less"
+	}
+
+	var execCmd *exec.Cmd
+	if strings.Contains(pager, "less") {
+		execCmd = exec.Command("less", "-R")
+	} else {
+		execCmd = exec.Command(pager)
+	}
+
+	r, w := io.Pipe()
+	execCmd.Stdin = r
+	execCmd.Stdout = os.Stdout
+	execCmd.Stderr = os.Stderr
+
+	go func() {
+		defer w.Close()
+		fmt.Fprintf(w, "Command: %s\n", cmd.Command)
+		fmt.Fprintf(w, "Timestamp: %s\n", cmd.Timestamp)
+		fmt.Fprintf(w, "%s\n\n", strings.Repeat("=", 80))
+		if cmd.Output != "" {
+			fmt.Fprintf(w, "%s\n", cmd.Output)
+		} else {
+			fmt.Fprintf(w, "(no output)\n")
+		}
+	}()
+
+	if err := execCmd.Run(); err != nil {
+		fmt.Printf("Error opening pager: %v\n", err)
+		fmt.Println("Press Enter to continue...")
+		bufio.NewReader(os.Stdin).ReadBytes('\n')
+	}
+}
+
+func exportTimeline(timeline *logs.Timeline) {
+	fmt.Print("Enter output filename (default: timeline.json): ")
+	var filename string
+	fmt.Scanln(&filename)
+
+	if filename == "" {
+		filename = "timeline.json"
+	}
+
+	jsonOutput, err := timeline.ToJSON()
+	if err != nil {
+		fmt.Printf("Error generating JSON: %v\n", err)
+		return
+	}
+
+	err = os.WriteFile(filename, []byte(jsonOutput), 0644)
+	if err != nil {
+		fmt.Printf("Error writing file: %v\n", err)
+		return
+	}
+
+	fmt.Printf("\n✅ Timeline exported to %s\n\n", filename)
+	fmt.Println("Press Enter to continue...")
 	fmt.Scanln()
 }

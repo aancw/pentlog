@@ -4,12 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 ### Added
-- **Timeline Extraction**: New `pentlog timeline` command to extract chronological command timeline from session recordings
-  - Interactive viewer with human-readable display
-  - JSON export option with proper escape handling
-  - Character-level parsing handles backspaces, cursor movements, and typing artifacts
-  - Continuous loop mode (returns to menu after viewing)
-  - Accurate command extraction with context label removal
+- **Interactive Timeline Browser**: Enhanced `pentlog timeline` command with interactive interface
+  - Browse commands in scrollable list with timestamps
+  - Boxed detail view separating command metadata from output
+  - Search functionality within timeline (press `/`)
+  - View full output in pager (less)
+  - Smart output truncation with preview (first 10 lines)
+  - Export timeline as JSON
+  - Consistent UX with search view pattern
 
 ### Improved
 - **Error Handling**: Added warnings to stderr when session files are missing for evidence integrity visibility
