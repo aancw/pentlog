@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"pentlog/pkg/logs"
 	"pentlog/pkg/utils"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -126,6 +127,13 @@ type timelineItem struct {
 	IsControl   bool
 }
 
+// stripANSI removes ANSI escape sequences from a string
+// This is critical for performance when using runewidth functions
+func stripANSI(str string) string {
+	ansiRegex := regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]|\x1b\][^\a]*\a|\x1b[=>]|\x1b\?[0-9]+[hl]`)
+	return ansiRegex.ReplaceAllString(str, "")
+}
+
 func displayInteractiveTimeline(timeline *logs.Timeline, session *logs.Session) {
 	width := utils.GetTerminalWidth()
 	safeWidth := width - 2
@@ -143,14 +151,11 @@ func displayInteractiveTimeline(timeline *logs.Timeline, session *logs.Session) 
 
 		label := fmt.Sprintf("[%d] %s - %s", i+1, cmd.Timestamp, cmdPreview)
 
-		details := buildCommandDetails(cmd, i+1, safeWidth)
-
 		items = append(items, timelineItem{
-			Label:       label,
-			Index:       i,
-			Command:     cmd,
-			FullDetails: details,
-			IsControl:   false,
+			Label:     label,
+			Index:     i,
+			Command:   cmd,
+			IsControl: false,
 		})
 	}
 
@@ -175,6 +180,8 @@ func displayInteractiveTimeline(timeline *logs.Timeline, session *logs.Session) 
 {{ end }}`,
 	}
 
+	// Loop to allow viewing multiple commands
+	// Terminal is cleared between iterations to prevent promptui state corruption
 	for {
 		prompt := promptui.Select{
 			Label:     fmt.Sprintf("Timeline: %d commands (Use arrow keys, / to search, Esc to exit)", len(timeline.Commands)),
@@ -188,10 +195,7 @@ func displayInteractiveTimeline(timeline *logs.Timeline, session *logs.Session) 
 
 		idx, _, err := prompt.Run()
 		if err != nil {
-			if err == promptui.ErrInterrupt {
-				return
-			}
-			continue
+			return
 		}
 
 		selectedItem := items[idx]
@@ -202,10 +206,13 @@ func displayInteractiveTimeline(timeline *logs.Timeline, session *logs.Session) 
 
 		if selectedItem.Label == "Export Timeline as JSON" {
 			exportTimeline(timeline)
-			continue
+			return
 		}
 
 		showCommandActions(selectedItem.Command, session)
+
+		// Clear terminal completely to reset promptui state
+		fmt.Print("\033[2J\033[H")
 	}
 }
 
@@ -249,14 +256,22 @@ func buildCommandDetails(cmd logs.CommandExecution, cmdNum int, width int) strin
 	result.WriteString(sepBorder + "\n")
 
 	if cmd.Output != "" {
-		outputLines := strings.Split(cmd.Output, "\n")
+		// Limit output size to prevent hangs on very large outputs
+		output := cmd.Output
+		if len(output) > 5000 {
+			output = output[:5000] + "\n... (output truncated for display)"
+		}
+
+		outputLines := strings.Split(output, "\n")
 		displayLines := outputLines
 		if len(displayLines) > 10 {
 			displayLines = outputLines[:10]
 		}
 
 		for _, line := range displayLines {
-			cleanL := strings.ReplaceAll(line, "\t", "    ")
+			// Strip ANSI codes BEFORE calling runewidth functions
+			// runewidth is extremely slow with ANSI escape sequences
+			cleanL := stripANSI(strings.ReplaceAll(line, "\t", "    "))
 			if runewidth.StringWidth(cleanL) > boxInnerWidth {
 				cleanL = runewidth.Truncate(cleanL, boxInnerWidth, "...")
 			}
@@ -330,10 +345,16 @@ func viewCommandInPager(cmd logs.CommandExecution, session *logs.Session) {
 }
 
 func exportTimeline(timeline *logs.Timeline) {
-	fmt.Print("Enter output filename (default: timeline.json): ")
-	var filename string
-	fmt.Scanln(&filename)
+	reader := bufio.NewReader(os.Stdin)
 
+	fmt.Print("Enter output filename (default: timeline.json): ")
+	filename, err := reader.ReadString('\n')
+	if err != nil {
+		fmt.Printf("Error reading input: %v\n", err)
+		return
+	}
+
+	filename = strings.TrimSpace(filename)
 	if filename == "" {
 		filename = "timeline.json"
 	}
@@ -352,5 +373,5 @@ func exportTimeline(timeline *logs.Timeline) {
 
 	fmt.Printf("\n✅ Timeline exported to %s\n\n", filename)
 	fmt.Println("Press Enter to continue...")
-	fmt.Scanln()
+	reader.ReadString('\n')
 }
