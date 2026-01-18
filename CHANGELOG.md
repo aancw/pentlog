@@ -3,6 +3,8 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+
+## [v0.11.0] - 2026-01-19
 ### Added
 - **Interactive Timeline Browser**: Enhanced `pentlog timeline` command with interactive interface
   - Browse commands in scrollable list with timestamps
@@ -12,10 +14,15 @@ All notable changes to this project will be documented in this file.
   - Smart output truncation with preview (first 10 lines)
   - Export timeline as JSON
   - Consistent UX with search view pattern
+- **Timeline Preview Panel**: Restored post-selection preview display
+  - Shows command details (timestamp, command, output excerpt)
+  - Displays inline before action menu
+  - No input blocking or hang issues
 
 ### Improved
 - **Error Handling**: Added warnings to stderr when session files are missing for evidence integrity visibility
 - **Archive Reliability**: Fixed incomplete cleanup on archive failures by properly closing resources before removing partial files
+- **Timeline UX**: Updated prompt to indicate "Enter to view details" for better user guidance
 
 ### Changed
 - **Code Modernization**: Replaced deprecated `ioutil.ReadFile` with `os.ReadFile` (Go 1.16+)
@@ -33,10 +40,6 @@ All notable changes to this project will be documented in this file.
   - Removed Details template that was causing rendering hangs on every keystroke
   - Added terminal clearing between loop iterations to prevent promptui state corruption
   - All functionality now works reliably: navigation, selection, exit, export, and pager view
-  - **Restored Preview Panel**: Displays command details inline after selection (no input blocking)
-    - Shows timestamp, command, and output excerpt (first 10 lines)
-    - User prompt updated to indicate "Enter to view details"
-    - Preview displays before action menu for immediate inspection
 
 ## [v0.10.0] - 2026-01-17
 ### Added
