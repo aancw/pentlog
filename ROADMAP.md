@@ -99,6 +99,8 @@ This document outlines the current status of `pentlog` and our plans for future 
     - [x] Search within timeline
     - [x] View full output in pager
     - [x] JSON export with accurate timestamps
+    - [x] Fixed critical hang issue (removed Details template, added terminal clearing)
+    - [ ] Restore preview panel with performance optimizations
 - [ ] **Export to Visuals**
     - [ ] Export session to GIF (via `ttygif`).
     - [ ] Export to MP4/WebM.
@@ -118,3 +120,9 @@ This document outlines the current status of `pentlog` and our plans for future 
     - [ ] Hook system for log events.
     - [ ] Passive scanner plugin API.
     - [ ] Third-party metadata injection.
+
+### Bastion Mode
+- [ ] **Unified Access Logging**
+    - [ ] Record SSH logins (Bastion Shell).
+    - [ ] Record `su` actions.
+    - [ ] Record `sudo` actions.

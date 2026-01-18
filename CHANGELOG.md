@@ -28,6 +28,12 @@ All notable changes to this project will be documented in this file.
 - **Cross-Platform**: Fixed `SUDO_USER` home directory resolution for macOS compatibility
 - **Input Sanitization**: Enhanced OSC sequence validation to block potential shell metacharacter injection
 
+### Fixed
+- **Timeline Hang**: Resolved critical hang issue in `pentlog timeline` where UI became unresponsive
+  - Removed Details template that was causing rendering hangs
+  - Added terminal clearing between loop iterations to prevent promptui state corruption
+  - All functionality now works reliably: navigation, selection, exit, export, and pager view
+
 ## [v0.10.0] - 2026-01-17
 ### Added
 - **Password Protection**: Added AES-256 encryption support for archives via `--password` flag or interactive prompt.
