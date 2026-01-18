@@ -151,11 +151,16 @@ func displayInteractiveTimeline(timeline *logs.Timeline, session *logs.Session) 
 
 		label := fmt.Sprintf("[%d] %s - %s", i+1, cmd.Timestamp, cmdPreview)
 
+		// Pre-compute FullDetails to avoid re-rendering on each keystroke
+		// This is the critical optimization that prevents hangs
+		fullDetails := buildCommandDetails(cmd, i+1, safeWidth)
+
 		items = append(items, timelineItem{
-			Label:     label,
-			Index:     i,
-			Command:   cmd,
-			IsControl: false,
+			Label:       label,
+			Index:       i,
+			Command:     cmd,
+			FullDetails: fullDetails,
+			IsControl:   false,
 		})
 	}
 
@@ -174,17 +179,13 @@ func displayInteractiveTimeline(timeline *logs.Timeline, session *logs.Session) 
 		Active:   "\U000025B6 {{ .Label | cyan }}",
 		Inactive: "  {{ .Label }}",
 		Selected: "\U000025B6 Command: {{ .Label | cyan }}",
-		Details: `
-{{ if .FullDetails }}
-{{ .FullDetails }}
-{{ end }}`,
 	}
 
 	// Loop to allow viewing multiple commands
 	// Terminal is cleared between iterations to prevent promptui state corruption
 	for {
 		prompt := promptui.Select{
-			Label:     fmt.Sprintf("Timeline: %d commands (Use arrow keys, / to search, Esc to exit)", len(timeline.Commands)),
+			Label:     fmt.Sprintf("Timeline: %d commands (Use arrow keys, / to search, Enter to view details, Esc to exit)", len(timeline.Commands)),
 			Items:     items,
 			Templates: templates,
 			Size:      15,
@@ -207,6 +208,13 @@ func displayInteractiveTimeline(timeline *logs.Timeline, session *logs.Session) 
 		if selectedItem.Label == "Export Timeline as JSON" {
 			exportTimeline(timeline)
 			return
+		}
+
+		// Show preview inline before action menu
+		if selectedItem.FullDetails != "" {
+			fmt.Println()
+			fmt.Println(selectedItem.FullDetails)
+			fmt.Println()
 		}
 
 		showCommandActions(selectedItem.Command, session)

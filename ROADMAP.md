@@ -100,7 +100,7 @@ This document outlines the current status of `pentlog` and our plans for future 
     - [x] View full output in pager
     - [x] JSON export with accurate timestamps
     - [x] Fixed critical hang issue (removed Details template, added terminal clearing)
-    - [ ] Restore preview panel with performance optimizations
+    - [x] Restored preview panel (post-selection display with no hang)
 - [ ] **Export to Visuals**
     - [ ] Export session to GIF (via `ttygif`).
     - [ ] Export to MP4/WebM.

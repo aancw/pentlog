@@ -36,3 +36,12 @@ go.work.sum
 pentlog
 pentlog*
 sample_data
+
+# Markdown files (allow only specific ones)
+*.md
+!README.md
+!CHANGELOG.md
+!CONTRIBUTING.md
+!ROADMAP.md
+!WIKI.md
+!.github/**/*.md

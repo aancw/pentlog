@@ -30,9 +30,13 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 - **Timeline Hang**: Resolved critical hang issue in `pentlog timeline` where UI became unresponsive
-  - Removed Details template that was causing rendering hangs
+  - Removed Details template that was causing rendering hangs on every keystroke
   - Added terminal clearing between loop iterations to prevent promptui state corruption
   - All functionality now works reliably: navigation, selection, exit, export, and pager view
+  - **Restored Preview Panel**: Displays command details inline after selection (no input blocking)
+    - Shows timestamp, command, and output excerpt (first 10 lines)
+    - User prompt updated to indicate "Enter to view details"
+    - Preview displays before action menu for immediate inspection
 
 ## [v0.10.0] - 2026-01-17
 ### Added
