@@ -12,8 +12,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/manifoldco/promptui"
-	"github.com/mattn/go-runewidth"
+	"github.com/charmbracelet/bubbles/textinput"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 )
 
@@ -23,11 +24,71 @@ var (
 	flagRegex  bool
 )
 
+type searchModel struct {
+	textInput        textinput.Model
+	results          []search.Match
+	filteredSessions []logs.Session
+	searchOpts       search.SearchOptions
+	cursor           int
+	scrollOffset     int
+	loading          bool
+	err              error
+	debounceTimer    *time.Timer
+	lastQuery        string
+	selectedMatch    *search.Match
+	styles           struct {
+		header   lipgloss.Style
+		help     lipgloss.Style
+		selected lipgloss.Style
+		normal   lipgloss.Style
+	}
+}
+
+type tickMsg time.Time
+
+type searchResultsMsg struct {
+	results []search.Match
+	err     error
+}
+
+func newSearchModel(scope []logs.Session, opts search.SearchOptions) searchModel {
+	ti := textinput.New()
+	ti.Placeholder = "Type to search..."
+	ti.Focus()
+	ti.CharLimit = 256
+	ti.Width = 50
+
+	m := searchModel{
+		textInput:        ti,
+		results:          []search.Match{},
+		filteredSessions: scope,
+		searchOpts:       opts,
+		cursor:           0,
+		loading:          false,
+	}
+
+	m.styles.header = lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#00ff00"))
+
+	m.styles.help = lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#666666")).
+		Italic(true)
+
+	m.styles.selected = lipgloss.NewStyle().
+		Background(lipgloss.Color("#0066cc")).
+		Foreground(lipgloss.Color("#ffffff"))
+
+	m.styles.normal = lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#cccccc"))
+
+	return m
+}
+
 var searchCmd = &cobra.Command{
 	Use:   "search",
 	Short: "Search command history across all sessions (supports Regex)",
 	Run: func(cmd *cobra.Command, args []string) {
-		query := ""
 		var scope []logs.Session
 
 		allSessions, err := logs.ListSessions()
@@ -89,12 +150,10 @@ var searchCmd = &cobra.Command{
 		}
 		scope = finalScope
 
-		// Interactive Wizard for Filters
 		opts := search.SearchOptions{
 			IsRegex: flagRegex,
 		}
 
-		// If no flags were provided, ask interactively
 		if flagAfter == "" && flagBefore == "" && !flagRegex {
 			configureIdx := utils.SelectItem("Filter by Date Range?", []string{"No", "Yes"})
 			if configureIdx == 1 {
@@ -121,266 +180,245 @@ var searchCmd = &cobra.Command{
 		}
 
 		if len(args) > 0 {
-			query = strings.Join(args, " ")
-		} else {
-			query = utils.PromptString("Search Query", "")
+			opts.Limit = 50
 		}
 
-		if query == "" {
-			fmt.Println("Error: Search query cannot be empty.")
+		model := newSearchModel(scope, opts)
+		if len(args) > 0 {
+			initialQuery := strings.Join(args, " ")
+			model.textInput.SetValue(initialQuery)
+			model = model.handleSearch()
+		}
+
+		p := tea.NewProgram(model)
+		finalModel, err := p.Run()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error running search UI: %v\n", err)
 			os.Exit(1)
 		}
 
-		// Pagination setup
-		offset := 0
-		limit := 10
-
-		type item struct {
-			Label          string
-			CleanContent   string
-			CleanContext   string
-			DisplaySession string
-			DisplayFile    string
-			DisplayTime    string
-			Match          search.Match
-			IsControl      bool
-			FullDetails    string
-		}
-
-		var allContentItems []item
-		moreAvailable := true
-
-		templates := &promptui.SelectTemplates{
-			Label:    "{{ . }}",
-			Active:   "\U000025B6 {{ .Label | cyan }}",
-			Inactive: "  {{ .Label }}",
-			Selected: "\U000025B6 Match: {{ .Label | cyan }}",
-			Details: `
-{{ if .FullDetails }}
-{{ .FullDetails }}
-{{ end }}`,
-		}
-
-		// Initial Fetch
-		for {
-			opts.Limit = limit
-			opts.Offset = offset
-
-			if moreAvailable {
-				fmt.Printf("Fetching results (Offset: %d)...\n", offset)
-				results, err := search.Search(query, scope, opts)
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "Error searching: %v\n", err)
-					os.Exit(1)
-				}
-
-				if len(results) == 0 && offset == 0 {
-					fmt.Println("No matches found.")
-					return
-				}
-
-				if len(results) < limit {
-					moreAvailable = false
-				} else {
-					moreAvailable = true
-				}
-
-				if len(results) > 0 {
-					// Transform results to items and append
-					width := utils.GetTerminalWidth()
-					safeWidth := width - 2
-					if safeWidth < 20 {
-						safeWidth = 20
-					}
-					maxLabelWidth := width - 10
-					if maxLabelWidth < 20 {
-						maxLabelWidth = 20
-					}
-
-					for _, match := range results {
-						label := ""
-						content := utils.StripANSI(match.Content)
-
-						var contextLines []string
-						if len(match.Context) > 0 {
-							for _, line := range match.Context {
-								stripped := utils.StripANSI(line)
-								truncated := utils.TruncateString(stripped, safeWidth)
-								contextLines = append(contextLines, truncated)
-							}
-						} else {
-							stripped := utils.StripANSI(content)
-							contextLines = []string{utils.TruncateString(stripped, safeWidth)}
-						}
-
-						const forcedHeight = 5
-						if len(contextLines) < forcedHeight {
-							for i := len(contextLines); i < forcedHeight; i++ {
-								contextLines = append(contextLines, "")
-							}
-						} else if len(contextLines) > forcedHeight {
-							contextLines = contextLines[:forcedHeight]
-						}
-
-						cleanContext := strings.Join(contextLines, "\n")
-
-						sessionStr := fmt.Sprintf("%s / %s", match.Session.Metadata.Client, match.Session.Metadata.Engagement)
-						displaySession := utils.TruncateString(sessionStr, safeWidth)
-						displayFile := utils.TruncateString(match.Session.DisplayPath, safeWidth)
-
-						displayTime := match.Session.Metadata.Timestamp
-						if displayTime == "" {
-							displayTime = match.Session.SortKey.Format("2006-01-02 15:04:05")
-						}
-
-						// Build Full Boxed Details
-						// We need a fixed width for the box content to align right border
-						// Using safeWidth as the outer width
-						boxInnerWidth := safeWidth - 4 // │_..._│
-						if boxInnerWidth < 10 {
-							boxInnerWidth = 10
-						}
-
-						makeLine := func(label, value string) string {
-							// "Match Details" box style
-							// │ Session:    Value...   │
-							// Label takes e.g. 12 chars
-							// Value takes rest
-
-							// Visual width check
-							labelDecor := label + ":"
-							labelWidth := runewidth.StringWidth(labelDecor)
-							targetLabelWidth := 12
-
-							paddedLabel := labelDecor
-							if labelWidth < targetLabelWidth {
-								paddedLabel += strings.Repeat(" ", targetLabelWidth-labelWidth)
-							}
-
-							// Full line content: "Label:      Value"
-							contentLimit := boxInnerWidth - targetLabelWidth - 1 // -1 for space
-
-							valWidth := runewidth.StringWidth(value)
-							displayValue := value
-							if valWidth > contentLimit {
-								displayValue = runewidth.Truncate(value, contentLimit, "...")
-							}
-
-							fullContent := fmt.Sprintf("%s %s", paddedLabel, displayValue)
-							return "│ " + runewidth.FillRight(fullContent, boxInnerWidth) + " │"
-						}
-
-						// Header
-						// ┌─ Match Details ──────┐
-						headerLabel := " Match Details "
-
-						msgWidth := boxInnerWidth + 2 // The text area width including spaces inside borders
-
-						topBorder := "┌─" + headerLabel + strings.Repeat("─", msgWidth-len(headerLabel)-1) + "┐"
-						sepBorder := "├─ Context " + strings.Repeat("─", msgWidth-10) + "┤"
-						botBorder := "└" + strings.Repeat("─", msgWidth) + "┘"
-
-						fullDetails := topBorder + "\n"
-						fullDetails += makeLine("Session", displaySession) + "\n"
-						fullDetails += makeLine("Timestamp", displayTime) + "\n"
-						fullDetails += makeLine("File", displayFile) + "\n"
-						fullDetails += sepBorder + "\n"
-
-						// Re-process context lines to fit box
-						for _, line := range contextLines {
-							cleanL := strings.ReplaceAll(line, "\t", "    ")
-							// Use runewidth to truncate
-							if runewidth.StringWidth(cleanL) > boxInnerWidth {
-								cleanL = runewidth.Truncate(cleanL, boxInnerWidth, "...")
-							}
-							fullDetails += "│ " + runewidth.FillRight(cleanL, boxInnerWidth) + " │\n"
-						}
-						fullDetails += botBorder
-
-						if match.IsNote {
-							label = fmt.Sprintf("[%d] %s [NOTE]: %s", match.Session.ID, match.Session.DisplayPath, content)
-						} else {
-							label = fmt.Sprintf("[%d] %s:%d: %s", match.Session.ID, match.Session.DisplayPath, match.LineNum, content)
-						}
-
-						if len(label) > maxLabelWidth {
-							label = utils.TruncateString(label, maxLabelWidth-3) + "..."
-						}
-
-						allContentItems = append(allContentItems, item{
-							Label:          label,
-							CleanContent:   content,
-							CleanContext:   cleanContext,
-							DisplaySession: displaySession,
-							DisplayFile:    displayFile,
-							DisplayTime:    displayTime,
-							Match:          match,
-							FullDetails:    fullDetails,
-						})
-					}
-				} else if offset > 0 {
-					fmt.Println("No more results.")
-					moreAvailable = false
-				}
+		if m, ok := finalModel.(searchModel); ok {
+			if m.err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %v\n", m.err)
+				os.Exit(1)
 			}
-
-			// Build Display List
-			var displayItems []item
-			displayItems = append(displayItems, allContentItems...)
-
-			if moreAvailable {
-				displayItems = append(displayItems, item{
-					Label:     "--- Load More Results ---",
-					IsControl: true,
-				})
+			if m.selectedMatch != nil {
+				viewInPager(*m.selectedMatch)
 			}
-
-			displayItems = append(displayItems, item{
-				Label:     "Exit Search",
-				IsControl: true,
-			})
-
-			// Interaction Loop
-			prompt := promptui.Select{
-				Label:     fmt.Sprintf("Showing %d matches. Select to view context (Esc/Ctrl+C to exit):", len(allContentItems)),
-				Items:     displayItems,
-				Templates: templates,
-				Size:      10,
-				CursorPos: len(allContentItems) - limit, // Try to position cursor at start of new batch
-				Searcher: func(input string, index int) bool {
-					return strings.Contains(strings.ToLower(displayItems[index].Label), strings.ToLower(input))
-				},
-			}
-
-			// Safety check for cursor pos
-			if prompt.CursorPos < 0 {
-				prompt.CursorPos = 0
-			}
-
-			i, _, err := prompt.Run()
-			if err != nil {
-				if err == promptui.ErrInterrupt {
-					break // Exit entire search
-				}
-				continue
-			}
-
-			selectedItem := displayItems[i]
-
-			if selectedItem.Label == "Exit Search" {
-				return
-			}
-
-			if selectedItem.Label == "--- Load More Results ---" {
-				offset += limit
-				continue // Loop back to fetch
-			}
-
-			// It's a match item
-			viewInPager(selectedItem.Match)
-			// Loop back to show list again (no fetch needed unless we add logic to optimized usage)
 		}
 	},
+}
+
+func (m searchModel) Init() tea.Cmd {
+	return nil
+}
+
+func (m searchModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.Type {
+		case tea.KeyCtrlC, tea.KeyEsc:
+			return m, tea.Quit
+
+		case tea.KeyEnter:
+			if len(m.results) > 0 && m.cursor >= 0 && m.cursor < len(m.results) {
+				m.selectedMatch = &m.results[m.cursor]
+				return m, tea.Quit
+			}
+
+		case tea.KeyUp:
+			if m.cursor > 0 {
+				m.cursor--
+				(&m).updateScrollOffset()
+			}
+
+		case tea.KeyDown:
+			if m.cursor < len(m.results)-1 {
+				m.cursor++
+				(&m).updateScrollOffset()
+			}
+
+		case tea.KeyHome:
+			m.cursor = 0
+			m.scrollOffset = 0
+
+		case tea.KeyEnd:
+			if len(m.results) > 0 {
+				m.cursor = len(m.results) - 1
+				(&m).updateScrollOffset()
+			}
+		}
+
+		var cmd tea.Cmd
+		m.textInput, cmd = m.textInput.Update(msg)
+
+		if m.debounceTimer != nil {
+			m.debounceTimer.Stop()
+		}
+
+		m.debounceTimer = time.AfterFunc(300*time.Millisecond, func() {
+		})
+
+		query := m.textInput.Value()
+		if query != m.lastQuery {
+			m.lastQuery = query
+			m.cursor = 0
+			if query == "" {
+				m.results = []search.Match{}
+				return m, nil
+			}
+			return m, m.searchCmd(query)
+		}
+
+		return m, cmd
+
+	case searchResultsMsg:
+		if msg.err != nil {
+			m.err = msg.err
+		}
+		m.results = msg.results
+		m.loading = false
+		m.cursor = 0
+		m.scrollOffset = 0
+		if m.cursor >= len(m.results) && len(m.results) > 0 {
+			m.cursor = len(m.results) - 1
+		}
+		return m, nil
+	}
+
+	return m, nil
+}
+
+func (m searchModel) View() string {
+	if m.err != nil {
+		return fmt.Sprintf("Error: %v\n", m.err)
+	}
+
+	width := utils.GetTerminalWidth()
+	if width < 40 {
+		width = 40
+	}
+
+	searchBox := fmt.Sprintf("Query: %s", m.textInput.View())
+
+	statusMsg := ""
+	if m.loading {
+		statusMsg = "(searching...)"
+	} else {
+		if len(m.results) > 0 {
+			statusMsg = fmt.Sprintf("Found %d matches | Result %d/%d", len(m.results), m.cursor+1, len(m.results))
+		} else {
+			statusMsg = fmt.Sprintf("Found %d matches", len(m.results))
+		}
+	}
+
+	var resultLines []string
+	const viewportSize = 10
+
+	endIdx := m.scrollOffset + viewportSize
+	if endIdx > len(m.results) {
+		endIdx = len(m.results)
+	}
+
+	if m.scrollOffset > 0 {
+		resultLines = append(resultLines, m.styles.help.Render("  ▲ ... (scroll up)"))
+	}
+
+	for i := m.scrollOffset; i < endIdx; i++ {
+		match := m.results[i]
+		content := utils.StripANSI(match.Content)
+		if len(content) > width-10 {
+			content = content[:width-10] + "..."
+		}
+
+		label := ""
+		if match.IsNote {
+			label = fmt.Sprintf("[NOTE] %s: %s", match.Session.DisplayPath, content)
+		} else {
+			label = fmt.Sprintf("[%d] %s: %s", match.LineNum, match.Session.DisplayPath, content)
+		}
+
+		if i == m.cursor {
+			resultLines = append(resultLines, m.styles.selected.Render("  > "+label))
+		} else {
+			resultLines = append(resultLines, "    "+label)
+		}
+	}
+
+	if endIdx < len(m.results) {
+		resultLines = append(resultLines, m.styles.help.Render("  ▼ ... (scroll down)"))
+	}
+
+	resultView := strings.Join(resultLines, "\n")
+	if resultView == "" && m.lastQuery != "" && !m.loading {
+		resultView = "  (no matches)"
+	}
+
+	helpText := m.styles.help.Render("↑↓: navigate  Enter: open  ESC/Ctrl+C: quit | Home/End: jump")
+
+	output := fmt.Sprintf("%s\n%s\n\n%s\n\n%s",
+		searchBox,
+		statusMsg,
+		resultView,
+		helpText,
+	)
+
+	return output
+}
+
+func (m *searchModel) updateScrollOffset() {
+	const viewportSize = 10
+
+	if m.cursor < m.scrollOffset {
+		m.scrollOffset = m.cursor
+	}
+
+	if m.cursor >= m.scrollOffset+viewportSize {
+		m.scrollOffset = m.cursor - viewportSize + 1
+	}
+
+	if m.scrollOffset < 0 {
+		m.scrollOffset = 0
+	}
+	maxScroll := len(m.results) - viewportSize
+	if maxScroll < 0 {
+		maxScroll = 0
+	}
+	if m.scrollOffset > maxScroll {
+		m.scrollOffset = maxScroll
+	}
+}
+
+func (m searchModel) handleSearch() searchModel {
+	query := m.textInput.Value()
+	if query == "" {
+		m.results = []search.Match{}
+		return m
+	}
+
+	m.loading = true
+	results, err := search.Search(query, m.filteredSessions, m.searchOpts)
+	m.loading = false
+
+	if err != nil {
+		m.err = err
+		return m
+	}
+
+	m.results = results
+	m.cursor = 0
+	return m
+}
+
+func (m searchModel) searchCmd(query string) tea.Cmd {
+	return func() tea.Msg {
+		if query == "" {
+			return searchResultsMsg{results: []search.Match{}, err: nil}
+		}
+
+		results, err := search.Search(query, m.filteredSessions, m.searchOpts)
+		return searchResultsMsg{results: results, err: err}
+	}
 }
 
 func parseDate(d string) (time.Time, error) {
