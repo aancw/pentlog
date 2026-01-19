@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pentlog Export Report</title>
+    <style>
+        {{.CSS}}
+    </style>
+</head>
+<body>
+    <h1>Report for Client: {{.Client}}</h1>
+
+    {{if .Findings}}
+    <h2>Findings & Vulnerabilities</h2>
+    <table border="1" style="width:100%; border-collapse: collapse; border: 1px solid #444; margin-top: 20px;">
+        <thead>
+            <tr style="background-color: #252526; color: #dcdcaa;">
+                <th style="padding: 10px; border: 1px solid #444;">ID</th>
+                <th style="padding: 10px; border: 1px solid #444;">Severity</th>
+                <th style="padding: 10px; border: 1px solid #444;">Title</th>
+                <th style="padding: 10px; border: 1px solid #444;">Phase</th>
+                <th style="padding: 10px; border: 1px solid #444;">Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range .Findings}}
+            <tr>
+                <td style="padding: 10px; border: 1px solid #444;">{{.ID}}</td>
+                <td style="padding: 10px; border: 1px solid #444; color: {{.SeverityColor}}; font-weight: bold;">{{.Severity}}</td>
+                <td style="padding: 10px; border: 1px solid #444;">{{.Title}}</td>
+                <td style="padding: 10px; border: 1px solid #444;">{{.Phase}}</td>
+                <td style="padding: 10px; border: 1px solid #444;">{{.Status}}</td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+    <hr style='border-color: #444; margin-top: 40px;'/>
+    {{end}}
+
+    {{if .AIAnalysis}}
+    <div class="session">
+        <h2>AI Analysis</h2>
+        <div class="ai-content">
+            {{.AIAnalysis}}
+        </div>
+    </div>
+    <hr style='border-color: #444; margin-top: 40px;'/>
+    {{end}}
+
+    {{range .Engagements}}
+    <h2>Engagement: {{.Name}}</h2>
+        {{range .Phases}}
+        <h3>Phase: {{.Name}}</h3>
+            {{range .Sessions}}
+            <div class="session">
+                <h4>Session {{.ID}} ({{.ModTime}})</h4>
+                <div class="log-content">{{.Content}}</div>
+            </div>
+            {{end}}
+        {{end}}
+    {{end}}
+</body>
+</html>
