@@ -98,10 +98,27 @@ echo ""
 echo "✅ pentlog installed successfully to $INSTALL_DIR/pentlog"
 echo ""
 
+# Check dependencies
+echo "Checking system dependencies..."
+if command -v ttyrec >/dev/null 2>&1; then
+    echo "  - ttyrec: OK"
+else
+    echo "  - ttyrec: MISSING (Required for recording)"
+    echo "    ℹ️  Run 'pentlog setup' after installation to auto-install this."
+fi
+
+if command -v ttyplay >/dev/null 2>&1; then
+    echo "  - ttyplay: OK"
+else
+    echo "  - ttyplay: MISSING (Recommended for replay)"
+    echo "    ℹ️  Run 'pentlog setup' after installation to auto-install this."
+fi
+
 # Check if INSTALL_DIR is in PATH
 if echo ":$PATH:" | grep -Fq ":$INSTALL_DIR:"; then
+    echo ""
     echo "Get started:"
-    echo "  pentlog setup    # Initialize configuration"
+    echo "  pentlog setup    # Initialize configuration & install dependencies"
     echo "  pentlog create   # Start an engagement"
 else
     echo "⚠️  Warning: $INSTALL_DIR is not in your PATH."

@@ -5,8 +5,8 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"pentlog/pkg/deps"
 	"pentlog/pkg/logs"
-	"pentlog/pkg/system"
 	"pentlog/pkg/utils"
 	"strconv"
 	"syscall"
@@ -20,9 +20,10 @@ var replayCmd = &cobra.Command{
 	Use:   "replay [id]",
 	Short: "Replay a session (Interactive)",
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := system.CheckReplayDependencies(); err != nil {
-			fmt.Printf("Warning: %v\n", err)
-			fmt.Println("Replay might fail or be limited.")
+		dm := deps.NewManager()
+		if ok, _ := dm.Check("ttyplay"); !ok {
+			fmt.Println("Error: 'ttyplay' is missing. Please run 'pentlog setup' or install it manually to replay sessions.")
+			os.Exit(1)
 		}
 
 		var id int

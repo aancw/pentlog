@@ -2,8 +2,8 @@ package cmd
 
 import (
 	"fmt"
+	"pentlog/pkg/deps"
 	"pentlog/pkg/metadata"
-	"pentlog/pkg/system"
 	"pentlog/pkg/utils"
 
 	"github.com/spf13/cobra"
@@ -14,6 +14,25 @@ var statusCmd = &cobra.Command{
 	Short: "Show current tool and engagement status",
 	Run: func(cmd *cobra.Command, args []string) {
 		lines := []string{}
+
+		depManager := deps.NewManager()
+		depLines := []string{}
+		allDepsOK := true
+
+		for _, dep := range depManager.Dependencies {
+			ok, path := depManager.Check(dep.Name)
+			if !ok {
+				allDepsOK = false
+				depLines = append(depLines, fmt.Sprintf("%-10s : MISSING", dep.Name))
+			} else {
+				depLines = append(depLines, fmt.Sprintf("%-10s : OK (%s)", dep.Name, path))
+			}
+		}
+
+		if showDepsOnly {
+			utils.PrintBox("Dependency Check", depLines)
+			return
+		}
 
 		ctx, err := metadata.Load()
 		if err != nil {
@@ -34,16 +53,19 @@ var statusCmd = &cobra.Command{
 
 		lines = append(lines, "")
 
-		if err := system.CheckDependencies(); err != nil {
-			lines = append(lines, fmt.Sprintf("Dependencies: MISSING (%v)", err))
+		if allDepsOK {
+			lines = append(lines, "Dependencies: OK")
 		} else {
-			lines = append(lines, "Dependencies: OK (ttyrec, ttyplay)")
+			lines = append(lines, "Dependencies: ISSUES FOUND (use --dependencies for details)")
 		}
 
 		utils.PrintBox("Pentlog Status", lines)
 	},
 }
 
+var showDepsOnly bool
+
 func init() {
 	rootCmd.AddCommand(statusCmd)
+	statusCmd.Flags().BoolVar(&showDepsOnly, "dependencies", false, "Show detailed dependency health")
 }

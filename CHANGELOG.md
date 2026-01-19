@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+### Added
+- **Dependency Management**: Smart dependency handling
+  - Auto-installation support for `ttyrec` and `ttyplay` on macOS/Linux
+  - Detailed health check via `pentlog status --dependencies`
+  - Graceful degradation (tool warns but continues if optional deps are missing)
+  - Updated `install.sh` to verify system requirements immediately
 
 ## [v0.11.0] - 2026-01-19
 ### Added

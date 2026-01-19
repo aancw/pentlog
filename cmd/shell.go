@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"pentlog/pkg/deps"
 	"pentlog/pkg/logs"
 	"pentlog/pkg/metadata"
 	"pentlog/pkg/system"
@@ -21,6 +22,12 @@ var shellCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		if os.Getenv("PENTLOG_SESSION_LOG_PATH") != "" {
 			fmt.Fprintln(os.Stderr, "Error: You are already in a pentlog shell session.")
+			os.Exit(1)
+		}
+
+		dm := deps.NewManager()
+		if ok, _ := dm.Check("ttyrec"); !ok {
+			fmt.Fprintln(os.Stderr, "Error: 'ttyrec' is missing. Please run 'pentlog setup' or install it manually to record sessions.")
 			os.Exit(1)
 		}
 

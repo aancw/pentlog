@@ -70,30 +70,46 @@ Traditional logging (`script`, `tmux`) isn't built for professional engagements.
 
 
 ## Installation
-
-### Quick Install (Linux & macOS)
-
-```bash
-curl -sSf https://raw.githubusercontent.com/aancw/pentlog/main/install.sh | sh
-```
-
-### Build from Source
-
-```bash
-# Build on Linux
-go build -o pentlog main.go
-
-# Cross-compile on Mac for Linux
-GOOS=linux GOARCH=amd64 go build -o pentlog main.go
-
-# Initial setup (checks deps, creates ~/.pentlog/logs)
-# ⚠️ REQUIRED before first use!
-pentlog setup
-```
-
-### Security Note
-
-**Password-Protected Archives**: When using `pentlog archive --password`, prefer interactive mode (without the flag) to prompt for password entry. This prevents passwords from being stored in shell history.
+ 
+ ### Quick Install (Linux & macOS)
+ 
+ ```bash
+ curl -sSf https://raw.githubusercontent.com/aancw/pentlog/main/install.sh | sh
+ ```
+ 
+ ### Build from Source
+ 
+ ```bash
+ # Build on Linux
+ go build -o pentlog main.go
+ 
+ # Cross-compile on Mac for Linux
+ GOOS=linux GOARCH=amd64 go build -o pentlog main.go
+ ```
+ 
+ ### System Dependencies
+ 
+ PentLog requires `ttyrec` to function. `ttyplay` is optional but recommended for session replay.
+ 
+ **Automatic Setup**: `pentlog setup` can auto-install dependencies on supported systems (macOS, Ubuntu/Debian, Fedora, Alpine).
+ 
+ **Manual Installation**:
+ - **macOS**: `brew install ttyrec`
+ - **Ubuntu/Debian/WSL**: `sudo apt install ttyrec`
+ - **Fedora**: `sudo dnf install ttyrec`
+ - **Alpine**: `sudo apk add ttyrec`
+ 
+ Note: On some systems, `ttyplay` is included with `ttyrec` package.
+ 
+ ```bash
+ # Initial setup (checks deps, creates ~/.pentlog/logs)
+ # ⚠️ REQUIRED before first use!
+ pentlog setup
+ ```
+ 
+ ### Security Note
+ 
+ **Password-Protected Archives**: When using `pentlog archive --password`, prefer interactive mode (without the flag) to prompt for password entry. This prevents passwords from being stored in shell history.
 
 ## Usage
 

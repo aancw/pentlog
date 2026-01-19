@@ -15,6 +15,7 @@ This document outlines the current status of `pentlog` and our plans for future 
     - [x] Timestamp every log entry.
     - [x] Global Setup Validation.
     - [x] Migration: `script` to `ttyrec` backend.
+    - [x] **Dependency Management**: Auto-installation of `ttyrec`/`ttyplay` and graceful degradation.
 - [x] **Data Integrity**
     - [x] Generate SHA256 hashes for all logs (`pentlog freeze`).
     - [x] Verify evidence chain-of-custody.
