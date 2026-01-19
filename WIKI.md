@@ -62,11 +62,15 @@ pentlog note list
 All commands function interactively.
 
 ```bash
-# Search logs and notes (Interactive Loop)
-# - Select Client -> Engagement -> Query
-# - View results in a color-perfect pager (less)
-# - Jump straight to interesting lines of code
+# Search logs and notes (Live incremental search TUI)
+# - Select Client -> Engagement
+# - Type query to see results live (10 visible, scroll to all matches)
+# - ↑↓ Navigate, Enter to open in pager, Home/End to jump
+# - Shows "Result X/Y" counter for current position
 pentlog search
+
+# Search with query from command line
+pentlog search "vulnerability" --regex --after 15012026
 
 # Export a report (Interactive Menu)
 # - Select Phase

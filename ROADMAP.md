@@ -34,8 +34,12 @@ This document outlines the current status of `pentlog` and our plans for future 
     - [x] List recent findings.
 - [x] **Unified Search**
     - [x] Interactive search across all logs and notes (`pentlog search`).
+    - [x] **Live Incremental Search** with Bubble Tea TUI.
+    - [x] Scrollable viewport (10 results visible, navigate all matches).
+    - [x] Smart scroll tracking keeps cursor always visible.
+    - [x] Result counter showing current position (Result X/Y).
     - [x] Color-perfect pager integration (less).
-    - [x] direct jump to relevant lines in the pager.
+    - [x] Direct jump to relevant lines in the pager.
 - [x] **Replay Engine**
     - [x] Replay sessions with faithful timing (`pentlog replay`).
     - [x] Interactive menu to select sessions for replay.

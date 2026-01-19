@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 ### Added
+- **Incremental Search with Bubble Tea**: Refactored `pentlog search` command with modern TUI
+  - Live search results as you type (background task execution)
+  - Scrollable viewport showing 10 results at a time, navigate all matches
+  - Smart scroll tracking keeps cursor always visible in viewport
+  - Result counter showing current position (e.g., "Result 5/139")
+  - Keyboard controls: ↑↓ navigate, Enter to open in pager, Home/End to jump
+  - Prevents UI freezing with async search execution
+  - Streamlined UI: query input, status bar, scrollable results, help footer
 - **Dependency Management**: Smart dependency handling
   - Auto-installation support for `ttyrec` and `ttyplay` on macOS/Linux
   - Detailed health check via `pentlog status --dependencies`
