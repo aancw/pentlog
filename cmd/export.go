@@ -331,84 +331,28 @@ var exportCmd = &cobra.Command{
 
 				fullPath := filepath.Join(reportDir, filename)
 
-				htmlReport, err := logs.GenerateHTMLReport(finalSessions, selectedClient)
-				if err != nil {
-					fmt.Printf("Error generating HTML: %v\n", err)
-					continue
-				}
-
-				if analyze && analysisResult != "" {
-					analysisHTML := markdown.ToHTML([]byte(analysisResult), nil, nil)
-
-					analysisBlock := "<div class=\"session\">"
-					analysisBlock += "    <h2>AI Analysis</h2>"
-					analysisBlock += "    <div class=\"ai-content\">"
-					analysisBlock += string(analysisHTML)
-					analysisBlock += "    </div>"
-					analysisBlock += "</div><hr style='border-color: #444; margin-top: 40px;'/>"
-
-					if idx := strings.Index(htmlReport, "</h1>"); idx != -1 {
-						htmlReport = htmlReport[:idx+5] + analysisBlock + htmlReport[idx+5:]
-					}
-				}
-
-				// --- Findings (Top of Report HTML) ---
+				// --- Findings and Analysis ---
+				var filteredFindings []vulns.Vuln
 				manager := vulns.NewManager(selectedClient, selectedEngagement)
 				findingsList, err := manager.List()
-				if err == nil && len(findingsList) > 0 {
-					filteredFindings := []vulns.Vuln{}
+				if err == nil {
 					for _, f := range findingsList {
 						if selectedPhase != "" && !strings.EqualFold(f.Phase, selectedPhase) {
 							continue
 						}
 						filteredFindings = append(filteredFindings, f)
 					}
+				}
 
-					if len(filteredFindings) > 0 {
-						var sb strings.Builder
-						sb.WriteString("\n    <h2>Findings & Vulnerabilities</h2>\n")
-						sb.WriteString(`    <table border="1" style="width:100%; border-collapse: collapse; border: 1px solid #444; margin-top: 20px;">`)
-						sb.WriteString(`<thead><tr style="background-color: #252526; color: #dcdcaa;">
-<th style="padding: 10px; border: 1px solid #444;">ID</th>
-<th style="padding: 10px; border: 1px solid #444;">Severity</th>
-<th style="padding: 10px; border: 1px solid #444;">Title</th>
-<th style="padding: 10px; border: 1px solid #444;">Phase</th>
-<th style="padding: 10px; border: 1px solid #444;">Status</th>
-</tr></thead><tbody>`)
+				var analysisHTML string
+				if analyze && analysisResult != "" {
+					analysisHTML = string(markdown.ToHTML([]byte(analysisResult), nil, nil))
+				}
 
-						for _, f := range filteredFindings {
-							sevColor := "#d4d4d4"
-							switch f.Severity {
-							case vulns.SeverityCritical:
-								sevColor = "#ff0000"
-							case vulns.SeverityHigh:
-								sevColor = "#ff5500"
-							case vulns.SeverityMedium:
-								sevColor = "#ffaa00"
-							case vulns.SeverityLow:
-								sevColor = "#ffff00"
-							case vulns.SeverityInfo:
-								sevColor = "#00ffff"
-							}
-							phaseDisplay := f.Phase
-							if phaseDisplay == "" {
-								phaseDisplay = "-"
-							}
-
-							sb.WriteString(fmt.Sprintf(`<tr>
-<td style="padding: 10px; border: 1px solid #444;">%s</td>
-<td style="padding: 10px; border: 1px solid #444; color: %s; font-weight: bold;">%s</td>
-<td style="padding: 10px; border: 1px solid #444;">%s</td>
-<td style="padding: 10px; border: 1px solid #444;">%s</td>
-<td style="padding: 10px; border: 1px solid #444;">%s</td>
-</tr>`, f.ID, sevColor, f.Severity, f.Title, phaseDisplay, f.Status))
-						}
-						sb.WriteString("</tbody></table>\n\n<hr style='border-color: #444; margin-top: 40px;'/>\n")
-
-						if idx := strings.Index(htmlReport, "</h1>"); idx != -1 {
-							htmlReport = htmlReport[:idx+5] + sb.String() + htmlReport[idx+5:]
-						}
-					}
+				htmlReport, err := logs.GenerateHTMLReport(finalSessions, selectedClient, filteredFindings, analysisHTML)
+				if err != nil {
+					fmt.Printf("Error generating HTML: %v\n", err)
+					continue
 				}
 				// ----------------------------
 

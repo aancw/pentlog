@@ -7,14 +7,16 @@ import (
 )
 
 const (
-	PentlogDirName  = ".pentlog"
-	ContextFileName = "context.json"
-	HashesDirName   = "hashes"
-	ExtractsDirName = "extracts"
-	HashesFileName  = "sha256.txt"
-	LogsDirName     = "logs"
-	ReportsDirName  = "reports"
-	ArchiveDirName  = "archive"
+	PentlogDirName   = ".pentlog"
+	ContextFileName  = "context.json"
+	HashesDirName    = "hashes"
+	ExtractsDirName  = "extracts"
+	HashesFileName   = "sha256.txt"
+	LogsDirName      = "logs"
+	ReportsDirName   = "reports"
+	ReportName       = "reports"
+	ArchiveDirName   = "archive"
+	TemplatesDirName = "templates"
 )
 
 func GetUserPentlogDir() (string, error) {
@@ -82,4 +84,12 @@ func GetArchiveDir() (string, error) {
 		return "", err
 	}
 	return filepath.Join(dir, ArchiveDirName), nil
+}
+
+func GetTemplatesDir() (string, error) {
+	dir, err := GetUserPentlogDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, TemplatesDirName), nil
 }

@@ -191,4 +191,5 @@ pentlog archive list
 *   **Manual Session Logs**: `~/.pentlog/logs/<client>/<engagement>/<phase>/manual-<operator>-<timestamp>.{tty,json}`
 *   **Evidence Hashes**: `~/.pentlog/hashes/sha256.txt`
 *   **Export Reports**: `~/.pentlog/reports/<client>/`
+*   **Templates**: `~/.pentlog/templates/`
 *   **Archives**: `~/.pentlog/archive/<client>/`

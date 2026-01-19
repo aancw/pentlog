@@ -3,7 +3,11 @@ package cmd
 import (
 	"bufio"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
+	"path/filepath"
+	"pentlog/pkg/config"
 	"pentlog/pkg/deps"
 	"pentlog/pkg/system"
 	"strings"
@@ -57,8 +61,59 @@ var setupCmd = &cobra.Command{
 		}
 		fmt.Printf("OK (%s)\n", logDir)
 
+		fmt.Print("Downloading default templates... ")
+		templatesDir, err := config.GetTemplatesDir()
+		if err != nil {
+			fmt.Printf("FAIL\n%v\n", err)
+		} else {
+			if err := os.MkdirAll(templatesDir, 0755); err != nil {
+				fmt.Printf("FAIL (mkdir)\n%v\n", err)
+			} else {
+				baseURL := "https://raw.githubusercontent.com/aancw/pentlog/main/assets/templates/"
+				files := []string{"report.html", "report.css"}
+				success := true
+
+				for _, file := range files {
+					destPath := filepath.Join(templatesDir, file)
+					if _, err := os.Stat(destPath); os.IsNotExist(err) {
+						url := baseURL + file
+						if err := downloadFile(url, destPath); err != nil {
+							fmt.Printf("\n    FAIL (download %s): %v", file, err)
+							success = false
+						}
+					}
+				}
+				if success {
+					fmt.Printf("OK (%s)\n", templatesDir)
+				} else {
+					fmt.Println("\n    (Some templates failed to download. Check your internet connection.)")
+				}
+			}
+		}
+
 		fmt.Println("Setup complete. Run 'pentlog create' to initialize a new session.")
 	},
+}
+
+func downloadFile(url, dest string) error {
+	resp, err := http.Get(url)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("bad status: %s", resp.Status)
+	}
+
+	out, err := os.Create(dest)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	_, err = io.Copy(out, resp.Body)
+	return err
 }
 
 func init() {

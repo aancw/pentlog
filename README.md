@@ -34,7 +34,7 @@ Traditional logging (`script`, `tmux`) isn't built for professional engagements.
 - **Terminal-Perfect Logs**: Built-in **Virtual Terminal Emulator** guarantees that what you see in the search viewer matches exactly what you saw in your shell—preserving colors, handling overwrites/edits/redraws correctly, and eliminating ghost text.
 - **Interactive Workflows**: Seamlessly create engagements, switch phases, and search logs using intuitive TUI menus.
 - **Replayable**: Timing files enable faithful playback via `ttyplay`.
-- **Export Friendly**: Export structured Markdown reports for any phase with an interactive preview/save menu.
+- **Export Friendly**: Export structured Markdown and **customizable HTML** reports for any phase with an interactive preview/save menu.
 - **Integrity Ready**: Freeze command hashes every log for evidence packaging.
 - **AI Analysis**: Analyze your reports with AI to get a summary of the findings.
 - **Shell Completion**: Generate and install shell completion scripts for bash and zsh.

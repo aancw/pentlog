@@ -109,7 +109,7 @@ This document outlines the current status of `pentlog` and our plans for future 
 - [ ] **Export to Visuals**
     - [ ] Export session to GIF (via `ttygif`).
     - [ ] Export to MP4/WebM.
-- [ ] **Custom Report Templates**
+- [x] **Custom Report Templates** (External HTML/CSS support)
     - [ ] Jinja2/Go template engine support.
     - [ ] User-defined export formats.
 - [ ] **Advanced Search Syntax**
