@@ -17,6 +17,21 @@ All notable changes to this project will be documented in this file.
   - Detailed health check via `pentlog status --dependencies`
   - Graceful degradation (tool warns but continues if optional deps are missing)
   - Updated `install.sh` to verify system requirements immediately
+- **GIF Export (EXPERIMENTAL)**: Convert sessions to animated GIFs using `ttygif`
+  - ⚠️ **WARNING**: This feature is experimental and not recommended for production use
+  - Known issues: ImageMagick policy restrictions, memory exhaustion on large files
+  - Temporary PNG files use `~/.pentlog/reports/tmp/` instead of `/tmp` (keeps files organized)
+  - Final GIF output saved to `~/.pentlog/reports/` (consistent with Markdown/HTML exports)
+  - Set `TMPDIR` environment variable to ensure ImageMagick uses pentlog's temp directory
+  - Troubleshooting guide included for ImageMagick policy and memory issues
+
+### Known Issues
+- **GIF Feature (Experimental)**: 
+  - May fail on medium/large TTY files due to ImageMagick memory/policy restrictions
+  - Requires graphical terminal (X11/Wayland) - does not work in headless environments
+  - For large sessions, use `-s 10` flag to increase speed and reduce file size
+  - ImageMagick policy may need to be modified: `sudo nano /etc/ImageMagick-6/policy.xml`
+  - Increase memory limit: `export MAGICK_MEMORY_LIMIT=2GB`
 
 ## [v0.12.0] - 2026-01-20
 ### Added

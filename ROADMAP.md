@@ -111,7 +111,12 @@ This document outlines the current status of `pentlog` and our plans for future 
     - [x] Fixed critical hang issue (removed Details template, added terminal clearing)
     - [x] Restored preview panel (post-selection display with no hang)
 - [ ] **Export to Visuals**
-    - [ ] Export session to GIF (via `ttygif`).
+    - [x] Export session to GIF (via `ttygif`) - **EXPERIMENTAL, NOT PRODUCTION READY**
+      - ⚠️ Known issues: ImageMagick policy restrictions, memory exhaustion on large files
+      - Requires graphical terminal (X11/Wayland) - does not work in headless environments
+      - Temporary PNG files use `~/.pentlog/reports/tmp/` instead of `/tmp` (keeps files organized)
+      - Final GIF output saved to `~/.pentlog/reports/` (consistent with other exports)
+      - For large sessions, use `-s 10` flag to reduce memory usage
     - [ ] Export to MP4/WebM.
 - [x] **Custom Report Templates** (External HTML/CSS support)
     - [ ] Jinja2/Go template engine support.

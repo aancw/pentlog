@@ -119,7 +119,45 @@ View an interactive executive summary of your engagement logic, including eviden
 pentlog dashboard
 ```
 
-### 10. Versioning & Updates
+### 10. GIF Export (EXPERIMENTAL)
+Convert sessions to animated GIFs using `ttygif`.
+
+⚠️ **WARNING**: This feature is experimental and not recommended for production use.
+
+```bash
+# Interactive mode: select client, engagement, session
+pentlog gif
+
+# Convert specific session
+pentlog gif <session_id>
+
+# Increase speed for large files (reduce size and memory usage)
+pentlog gif -s 5      # 5x speed
+
+# Specify output filename
+pentlog gif -o demo.gif
+```
+
+**Known Limitations**:
+- Requires graphical terminal (X11/Wayland) - does not work in headless/SSH environments
+- May fail on medium/large TTY files due to ImageMagick memory/policy restrictions
+- For large sessions, use `-s 10` for faster conversion and smaller output
+- ImageMagick policy may restrict GIF creation (edit `/etc/ImageMagick-6/policy.xml` if needed)
+
+**Troubleshooting**:
+```bash
+# Increase memory limit for ImageMagick
+export MAGICK_MEMORY_LIMIT=2GB
+pentlog gif -s 5
+
+# Check ImageMagick policy
+cat /etc/ImageMagick-6/policy.xml | grep -A5 'gif'
+
+# Edit policy if needed
+sudo nano /etc/ImageMagick-6/policy.xml
+```
+
+### 11. Versioning & Updates
 Keep your tool up to date.
 
 ```bash
