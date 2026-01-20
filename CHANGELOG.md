@@ -18,6 +18,13 @@ All notable changes to this project will be documented in this file.
   - Graceful degradation (tool warns but continues if optional deps are missing)
   - Updated `install.sh` to verify system requirements immediately
 
+## [v0.12.0] - 2026-01-20
+### Added
+- **Export Management**: Enhanced `pentlog export` workflow
+  - **View Existing Reports**: Interactive menu to browse, select, and open previously generated reports for the current client.
+  - **Overwrite Protection**: Automatically detects if a report already exists for the selected scope.
+  - **Smart Prompt**: Show creation timestamp and ask for confirmation before regenerating a report.
+
 ## [v0.11.0] - 2026-01-19
 ### Added
 - **Interactive Timeline Browser**: Enhanced `pentlog timeline` command with interactive interface

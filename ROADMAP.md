@@ -59,6 +59,10 @@ This document outlines the current status of `pentlog` and our plans for future 
     - [x] Organize reports by Client directory structure.
     - [x] Interactive preview before saving.
     - [x] **Clean Exports**: ANSI stripping for Markdown reports.
+    - [x] **Export Management**:
+        - [x] List existing reports interactively before generation.
+        - [x] Prompt on overwrite with timestamp check.
+        - [x] Open existing reports directly from the menu.
 - [x] **AI Analysis**
     - [x] Integration with Google Gemini.
     - [x] Integration with Ollama for local LLMs.

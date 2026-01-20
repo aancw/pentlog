@@ -259,3 +259,27 @@ func GenerateHTMLReport(sessions []Session, client string, findings []vulns.Vuln
 
 	return buf.String(), nil
 }
+
+func ListClientReports(client string) ([]string, error) {
+	reportsDir, err := config.GetReportsDir()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get reports directory: %w", err)
+	}
+
+	clientDir := filepath.Join(reportsDir, utils.Slugify(client))
+	entries, err := os.ReadDir(clientDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to read client report directory: %w", err)
+	}
+
+	var reports []string
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			reports = append(reports, entry.Name())
+		}
+	}
+	return reports, nil
+}

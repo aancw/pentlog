@@ -63,13 +63,56 @@ var exportCmd = &cobra.Command{
 			engagements = append(engagements, e)
 		}
 
-		engagements = append([]string{"All Engagements"}, engagements...)
+		engagements = append([]string{"All Engagements", "[View Existing Reports]"}, engagements...)
 
-		engIdx := utils.SelectItem("Select Engagement", engagements)
-		if engIdx == -1 {
-			return
+		var selectedEngagement string
+		for {
+			engIdx := utils.SelectItem("Select Engagement", engagements)
+			if engIdx == -1 {
+				return
+			}
+			selectedEngagement = engagements[engIdx]
+
+			if selectedEngagement == "[View Existing Reports]" {
+				reports, err := logs.ListClientReports(selectedClient)
+				if err != nil {
+					fmt.Printf("Error listing reports: %v\n", err)
+				} else if len(reports) == 0 {
+					fmt.Println("No existing reports found for this client.")
+				} else {
+					for {
+						// Create a separate list for the menu to include "Back"
+						menuItems := append([]string{"[Back]"}, reports...)
+
+						reportIdx := utils.SelectItem("Select Report to Open", menuItems)
+						if reportIdx == -1 {
+							break // Exit inner loop
+						}
+
+						selectedReport := menuItems[reportIdx]
+						if selectedReport == "[Back]" {
+							break
+						}
+
+						// Open the report
+						reportsDir, err := config.GetReportsDir()
+						if err != nil {
+							fmt.Printf("Error getting reports dir: %v\n", err)
+							continue
+						}
+						fullPath := filepath.Join(reportsDir, utils.Slugify(selectedClient), selectedReport)
+
+						fmt.Printf("Opening %s...\n", selectedReport)
+						if err := utils.OpenFile(fullPath); err != nil {
+							fmt.Printf("Error opening file: %v\n", err)
+						}
+					}
+				}
+				continue
+			}
+			break
 		}
-		selectedEngagement := engagements[engIdx]
+
 		if selectedEngagement == "All Engagements" {
 			selectedEngagement = ""
 		}
@@ -97,6 +140,51 @@ var exportCmd = &cobra.Command{
 		if selectedPhase == "All Phases" {
 			selectedPhase = ""
 		}
+
+		// --- Check for existing reports ---
+		reportsDir, err := config.GetReportsDir()
+		if err == nil {
+			clientDir := filepath.Join(reportsDir, utils.Slugify(selectedClient))
+
+			// Construct default filenames (logic duplicated from save steps to check existence)
+			fileNameEng := selectedEngagement
+			if fileNameEng == "" {
+				fileNameEng = "all-engagements"
+			}
+			fileNamePhase := selectedPhase
+			if fileNamePhase == "" {
+				fileNamePhase = "all-phases"
+			}
+
+			baseName := fmt.Sprintf("%s_%s_%s_report", utils.Slugify(selectedClient), utils.Slugify(fileNameEng), utils.Slugify(fileNamePhase))
+			mdName := baseName + ".md"
+			htmlName := baseName + ".html"
+
+			mdPath := filepath.Join(clientDir, mdName)
+			htmlPath := filepath.Join(clientDir, htmlName)
+
+			var existing []string
+			if info, err := os.Stat(mdPath); err == nil {
+				existing = append(existing, fmt.Sprintf("%s (Created: %s)", mdPath, info.ModTime().Format("2006-01-02 15:04:05")))
+			}
+			if info, err := os.Stat(htmlPath); err == nil {
+				existing = append(existing, fmt.Sprintf("%s (Created: %s)", htmlPath, info.ModTime().Format("2006-01-02 15:04:05")))
+			}
+
+			if len(existing) > 0 {
+				fmt.Println("\nExisting report(s) found for this scope:")
+				for _, p := range existing {
+					fmt.Printf("- %s\n", p)
+				}
+				fmt.Println("")
+
+				regen := utils.SelectItem("Do you still want to generate the report?", []string{"No", "Yes"})
+				if regen == 0 { // No
+					return
+				}
+			}
+		}
+		// ----------------------------------
 
 		fmt.Printf("Exporting logs for Client: %s, Engagement: %s, Phase: %s...\n", selectedClient, selectedEngagement, selectedPhase)
 

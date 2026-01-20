@@ -51,7 +51,7 @@ Traditional logging (`script`, `tmux`) isn't built for professional engagements.
 | `completion` | Generate auto-completion scripts for Zsh and Bash. |
 | `create` | Initialize a new engagement context (Interactive). |
 | `dashboard` | Show an interactive dashboard of your pentest activity. |
-| `export` | Export commands for a specific phase (recon, exploit, etc.). |
+| `export` | Export commands for a specific phase with interactive preview and existing report management. |
 | `freeze` | Generate SHA256 hashes of all session logs. |
 | `note` | Manage session notes and bookmarks. |
 | `replay` | Replay a recorded session with full fidelity (Interactive). |

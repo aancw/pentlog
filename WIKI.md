@@ -74,6 +74,8 @@ pentlog search "vulnerability" --regex --after 15012026
 
 # Export a report (Interactive Menu)
 # - Select Phase
+# - [View Existing Reports] to browse and open previous files (shows timestamps)
+# - Generates report with overwrite protection check
 # - Preview in Pager or Save to File
 pentlog export
 ```
