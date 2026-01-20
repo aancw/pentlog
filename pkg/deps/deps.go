@@ -41,16 +41,7 @@ func NewManager() *Manager {
 					"alpine": {"sudo", "apk", "add", "ttyrec"},
 				},
 			},
-			{
-				Name: "ttygif",
-				InstallCmds: map[string][]string{
-					"darwin": {"brew", "install", "ttygif"},
-					"ubuntu": {"sudo", "apt-get", "install", "-y", "ttygif"},
-					"debian": {"sudo", "apt-get", "install", "-y", "ttygif"},
-					"fedora": {"sudo", "dnf", "install", "-y", "ttygif"},
-					"alpine": {"sudo", "apk", "add", "ttygif"},
-				},
-			},
+
 		},
 	}
 }

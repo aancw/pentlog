@@ -3,15 +3,12 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"pentlog/pkg/config"
-	"pentlog/pkg/deps"
 	"pentlog/pkg/logs"
+	"pentlog/pkg/recorder"
 	"pentlog/pkg/utils"
-	"runtime"
 	"strconv"
-	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -19,74 +16,32 @@ import (
 var (
 	gifOutputFlag string
 	gifSpeedFlag  float64
+	gifColsFlag   int
+	gifRowsFlag   int
 )
 
 var gifCmd = &cobra.Command{
-	Use:   "gif [id]",
-	Short: "Convert session(s) to GIF using ttygif",
-	Long: `Convert one or more sessions to an animated GIF.
-
-Note: ttygif requires a graphical terminal environment (X11/Wayland).
+	Use:   "gif [id|file.tty]",
+	Short: "Convert session(s) to animated GIF",
+	Long: `Convert one or more sessions to an animated GIF using native Go rendering.
 
 Examples:
-  pentlog gif 5              # Convert session ID 5 to GIF
-  pentlog gif -s 5           # Convert at 5x speed (faster, lower CPU)
-  pentlog gif                # Interactive mode: select session or merge
-  pentlog gif -o demo.gif    # Specify output filename`,
+  pentlog gif 5                    # Convert session ID 5 to GIF
+  pentlog gif session.tty          # Convert a .tty file directly
+  pentlog gif -s 5                 # Convert at 5x speed (faster playback)
+  pentlog gif                      # Interactive mode: select session or merge
+  pentlog gif -o demo.gif          # Specify output filename
+  pentlog gif --cols 120 --rows 40 # Custom terminal size`,
 	Run: func(cmd *cobra.Command, args []string) {
-		dm := deps.NewManager()
-		if ok, _ := dm.Check("ttygif"); !ok {
-			install := utils.SelectItem("ttygif is required but not installed. Install it?", []string{"Yes", "No"})
-			if install == 0 {
-				if err := dm.Install("ttygif"); err != nil {
-					fmt.Printf("Error installing ttygif: %v\n", err)
-					return
-				}
-			} else {
-				fmt.Println("GIF conversion requires ttygif. Aborting.")
+		if len(args) > 0 {
+			arg := args[0]
+			if _, err := os.Stat(arg); err == nil && filepath.Ext(arg) == ".tty" {
+				convertTTYFile(arg)
 				return
 			}
-		}
-
-		if runtime.GOOS == "linux" {
-			windowID := os.Getenv("WINDOWID")
-			// Validate WINDOWID - either missing or set to 0 (both invalid)
-			if windowID == "" || windowID == "0" {
-				if ok, _ := dm.Check("xdotool"); !ok {
-					fmt.Println("Error: xdotool is required to capture terminal window.")
-					fmt.Println("Install it with: sudo apt-get install xdotool")
-					return
-				}
-				out, err := exec.Command("xdotool", "getwindowfocus").Output()
-				if err != nil {
-					fmt.Println("Error: Could not get WINDOWID. Make sure you're in a graphical terminal.")
-					fmt.Printf("xdotool error: %v\n", err)
-					return
-				}
-				windowID = strings.TrimSpace(string(out))
-				// Validate that WINDOWID is not 0 (which indicates no valid window)
-				if windowID == "0" {
-					fmt.Println("Error: Could not detect a valid terminal window.")
-					fmt.Println("This command requires a graphical terminal environment (X11/Wayland).")
-					fmt.Println("ttygif cannot run in headless/SSH-only environments.")
-					return
-				}
-				os.Setenv("WINDOWID", windowID)
-				fmt.Printf("Auto-detected WINDOWID: %s\n", windowID)
-			}
-		}
-
-		if runtime.GOOS == "darwin" {
-			fmt.Println("Note: On macOS, ttygif requires screen recording permissions.")
-			fmt.Println("Go to: System Settings > Privacy & Security > Screen Recording")
-			fmt.Println("Add your terminal app (Terminal.app, iTerm2, etc.)")
-			fmt.Println("")
-		}
-
-		if len(args) > 0 {
-			id, err := strconv.Atoi(args[0])
+			id, err := strconv.Atoi(arg)
 			if err != nil {
-				fmt.Printf("Invalid session ID: %s\n", args[0])
+				fmt.Printf("Invalid session ID or file not found: %s\n", arg)
 				os.Exit(1)
 			}
 			convertSingleSession(id)
@@ -182,6 +137,33 @@ Examples:
 	},
 }
 
+func convertTTYFile(inputPath string) {
+	outputName := gifOutputFlag
+	if outputName == "" {
+		base := filepath.Base(inputPath)
+		defaultName := base[:len(base)-len(filepath.Ext(base))] + ".gif"
+		outputName = utils.PromptString("Enter output filename", defaultName)
+		if outputName == "" {
+			outputName = defaultName
+		}
+	}
+
+	if filepath.Ext(outputName) != ".gif" {
+		outputName += ".gif"
+	}
+
+	outputPath := outputName
+	if !filepath.IsAbs(outputPath) {
+		reportsDir, err := config.GetReportsDir()
+		if err == nil {
+			os.MkdirAll(reportsDir, 0700)
+			outputPath = filepath.Join(reportsDir, outputName)
+		}
+	}
+
+	renderGIF(inputPath, outputPath, 0)
+}
+
 func convertSingleSession(id int) {
 	session, err := logs.GetSession(id)
 	if err != nil {
@@ -200,6 +182,11 @@ func convertSingleSession(id int) {
 		os.Exit(1)
 	}
 
+	if err := os.MkdirAll(reportsDir, 0700); err != nil {
+		fmt.Printf("Error creating reports directory: %v\n", err)
+		os.Exit(1)
+	}
+
 	outputName := gifOutputFlag
 	if outputName == "" {
 		defaultName := fmt.Sprintf("session_%d.gif", id)
@@ -213,87 +200,32 @@ func convertSingleSession(id int) {
 		outputName += ".gif"
 	}
 
-	// Save to ~/.pentlog/reports/ like HTML/Markdown exports
 	outputPath := filepath.Join(reportsDir, outputName)
-	runTtygif(session.Path, outputPath, id)
+	renderGIF(session.Path, outputPath, id)
 }
 
-func runTtygif(inputPath, outputPath string, sessionID int) {
-	// Create temp directory in ~/.pentlog/reports/tmp for ttygif intermediate files
-	reportsDir, err := config.GetReportsDir()
-	if err != nil {
-		fmt.Printf("Error getting reports directory: %v\n", err)
-		return
-	}
-	tmpDir := filepath.Join(reportsDir, "tmp")
-	if err := os.MkdirAll(tmpDir, 0700); err != nil {
-		fmt.Printf("Error creating temp directory: %v\n", err)
-		return
-	}
-
-	// Ensure output directory exists
-	outputDir := filepath.Dir(outputPath)
-	if err := os.MkdirAll(outputDir, 0700); err != nil {
-		fmt.Printf("Error creating output directory: %v\n", err)
-		return
-	}
-
-	// Change to temp directory for ttygif to output intermediate PNG files
-	oldCwd, err := os.Getwd()
-	if err != nil {
-		fmt.Printf("Error getting current directory: %v\n", err)
-		return
-	}
-	if err := os.Chdir(tmpDir); err != nil {
-		fmt.Printf("Error changing to temp directory: %v\n", err)
-		return
-	}
-	defer os.Chdir(oldCwd)
-
-	speedStr := fmt.Sprintf("%.1f", gifSpeedFlag)
-	if gifSpeedFlag > 1 {
-		fmt.Printf("Converting at %.1fx speed (faster processing)...\n", gifSpeedFlag)
-	}
-
+func renderGIF(inputPath, outputPath string, sessionID int) {
 	if sessionID > 0 {
 		fmt.Printf("Converting session %d to GIF...\n", sessionID)
 	} else {
 		fmt.Printf("Converting to GIF...\n")
 	}
 
-	// Set TMPDIR environment variable to use ~/.pentlog/exports/tmp for ImageMagick
-	cmd := exec.Command("ttygif", inputPath, "-s", speedStr)
-	cmd.Env = append(os.Environ(), "TMPDIR="+tmpDir)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		fmt.Printf("Error running ttygif: %v\n", err)
-		fmt.Println("")
-		fmt.Println("=== Troubleshooting Tips ===")
-		fmt.Println("1. For medium/large sessions, try increasing speed to reduce file size:")
-		fmt.Println("   ./pentlog gif -s 10  (10x speed = smaller GIF, faster conversion)")
-		fmt.Println("")
-		fmt.Println("2. Check ImageMagick policy restrictions:")
-		fmt.Println("   cat /etc/ImageMagick-6/policy.xml | grep -A5 'gif'")
-		fmt.Println("")
-		fmt.Println("3. If policy restricts GIF, edit the policy file and remove GIF restrictions:")
-		fmt.Println("   sudo nano /etc/ImageMagick-6/policy.xml")
-		fmt.Println("")
-		fmt.Println("4. Alternatively, increase memory limit for convert:")
-		fmt.Println("   export MAGICK_MEMORY_LIMIT=2GB")
-		fmt.Println("   ./pentlog gif -s 5")
-		fmt.Println("")
+	cfg := recorder.DefaultConfig()
+	cfg.Speed = gifSpeedFlag
+	if gifColsFlag > 0 {
+		cfg.Cols = gifColsFlag
+	}
+	if gifRowsFlag > 0 {
+		cfg.Rows = gifRowsFlag
+	}
+
+	if err := recorder.RenderToGIF(inputPath, outputPath, cfg); err != nil {
+		fmt.Printf("Error rendering GIF: %v\n", err)
 		return
 	}
 
-	// Move GIF from temp dir to final output location
-	gifTempPath := filepath.Join(tmpDir, "tty.gif")
-	if err := os.Rename(gifTempPath, outputPath); err != nil {
-		fmt.Printf("Conversion ran, but failed to move GIF to '%s': %v\n", outputPath, err)
-		fmt.Printf("Check if 'tty.gif' was created in %s\n", tmpDir)
-	} else {
-		fmt.Printf("Success! GIF saved to %s\n", outputPath)
-	}
+	fmt.Printf("Success! GIF saved to %s\n", outputPath)
 }
 
 func convertMergedSessions(sessions []logs.Session, client, engagement string) {
@@ -316,7 +248,13 @@ func convertMergedSessions(sessions []logs.Session, client, engagement string) {
 		fmt.Printf("Error getting reports directory: %v\n", err)
 		return
 	}
-	tempFile := filepath.Join(reportsDir, "tmp", "pentlog_merged.tty")
+
+	if err := os.MkdirAll(reportsDir, 0700); err != nil {
+		fmt.Printf("Error creating reports directory: %v\n", err)
+		return
+	}
+
+	tempFile := filepath.Join(os.TempDir(), "pentlog_merged.tty")
 	if err := logs.MergeTTYFiles(ttyFiles, tempFile); err != nil {
 		fmt.Printf("Error merging TTY files: %v\n", err)
 		return
@@ -340,13 +278,14 @@ func convertMergedSessions(sessions []logs.Session, client, engagement string) {
 		outputName += ".gif"
 	}
 
-	// Save to ~/.pentlog/reports/ like HTML/Markdown exports
 	outputPath := filepath.Join(reportsDir, outputName)
-	runTtygif(tempFile, outputPath, 0)
+	renderGIF(tempFile, outputPath, 0)
 }
 
 func init() {
 	gifCmd.Flags().StringVarP(&gifOutputFlag, "output", "o", "", "Output GIF filename")
-	gifCmd.Flags().Float64VarP(&gifSpeedFlag, "speed", "s", 1.0, "Playback speed (higher = faster conversion, e.g., 5.0 for 5x)")
+	gifCmd.Flags().Float64VarP(&gifSpeedFlag, "speed", "s", 1.0, "Playback speed (higher = faster GIF playback)")
+	gifCmd.Flags().IntVar(&gifColsFlag, "cols", 80, "Terminal width in columns")
+	gifCmd.Flags().IntVar(&gifRowsFlag, "rows", 24, "Terminal height in rows")
 	rootCmd.AddCommand(gifCmd)
 }
