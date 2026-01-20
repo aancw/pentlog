@@ -7,26 +7,26 @@ import (
 
 // Shared Structs for Template Data
 
-type SessionData struct {
+type SessionTemplateData struct {
 	ID      int
 	ModTime string
 	Content template.HTML // HTML pre-rendered content
 }
 
-type PhaseData struct {
+type PhaseTemplateData struct {
 	Name     string
-	Sessions []SessionData
+	Sessions []SessionTemplateData
 }
 
-type EngagementData struct {
+type EngagementTemplateData struct {
 	Name   string
-	Phases []PhaseData
+	Phases []PhaseTemplateData
 }
 
-type ReportData struct {
+type ReportTemplateData struct {
 	Client      string
 	Findings    []vulns.Vuln
 	AIAnalysis  template.HTML // HTML content
 	CSS         template.CSS
-	Engagements []EngagementData
+	Engagements []EngagementTemplateData
 }

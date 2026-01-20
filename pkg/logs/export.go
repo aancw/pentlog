@@ -148,7 +148,7 @@ func GenerateHTMLReport(sessions []Session, client string, findings []vulns.Vuln
 	grouped := groupSessions(sessions)
 
 	// Prepare data for template
-	reportData := templates.ReportData{
+	reportData := templates.ReportTemplateData{
 		Client:     client,
 		Findings:   findings,
 		AIAnalysis: template.HTML(aiAnalysis),
@@ -161,7 +161,7 @@ func GenerateHTMLReport(sessions []Session, client string, findings []vulns.Vuln
 	sort.Strings(engKeys)
 
 	for _, eng := range engKeys {
-		eData := templates.EngagementData{Name: eng}
+		eData := templates.EngagementTemplateData{Name: eng}
 		phases := grouped[eng]
 		var phaseKeys []string
 		for k := range phases {
@@ -170,7 +170,7 @@ func GenerateHTMLReport(sessions []Session, client string, findings []vulns.Vuln
 		sort.Strings(phaseKeys)
 
 		for _, p := range phaseKeys {
-			pData := templates.PhaseData{Name: p}
+			pData := templates.PhaseTemplateData{Name: p}
 			sessList := phases[p]
 			sort.Slice(sessList, func(i, j int) bool {
 				return sessList[i].ID < sessList[j].ID
@@ -202,7 +202,7 @@ func GenerateHTMLReport(sessions []Session, client string, findings []vulns.Vuln
 					htmlContentBuilder.WriteString(htmlContent + "\n")
 				}
 
-				sData := templates.SessionData{
+				sData := templates.SessionTemplateData{
 					ID:      s.ID,
 					ModTime: s.ModTime,
 					Content: template.HTML(htmlContentBuilder.String()),
