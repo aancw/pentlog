@@ -285,7 +285,7 @@ func convertMergedSessions(sessions []logs.Session, client, engagement string) {
 func init() {
 	gifCmd.Flags().StringVarP(&gifOutputFlag, "output", "o", "", "Output GIF filename")
 	gifCmd.Flags().Float64VarP(&gifSpeedFlag, "speed", "s", 1.0, "Playback speed (higher = faster GIF playback)")
-	gifCmd.Flags().IntVar(&gifColsFlag, "cols", 80, "Terminal width in columns")
-	gifCmd.Flags().IntVar(&gifRowsFlag, "rows", 24, "Terminal height in rows")
+	gifCmd.Flags().IntVar(&gifColsFlag, "cols", 160, "Terminal width in columns")
+	gifCmd.Flags().IntVar(&gifRowsFlag, "rows", 45, "Terminal height in rows")
 	rootCmd.AddCommand(gifCmd)
 }
