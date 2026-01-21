@@ -138,6 +138,17 @@ Examples:
 }
 
 func convertTTYFile(inputPath string) {
+	// Prompt for resolution
+	resOptions := []string{"720p (1280x720)", "1080p (1920x1080)"}
+	resIdx := utils.SelectItem("Select Resolution:", resOptions)
+	if resIdx == -1 {
+		return
+	}
+	resolution := "720p"
+	if resIdx == 1 {
+		resolution = "1080p"
+	}
+
 	outputName := gifOutputFlag
 	if outputName == "" {
 		base := filepath.Base(inputPath)
@@ -161,7 +172,7 @@ func convertTTYFile(inputPath string) {
 		}
 	}
 
-	renderGIF(inputPath, outputPath, 0)
+	renderGIF(inputPath, outputPath, 0, resolution)
 }
 
 func convertSingleSession(id int) {
@@ -174,6 +185,17 @@ func convertSingleSession(id int) {
 	if session.Path == "" {
 		fmt.Println("Error: session file missing; cannot convert.")
 		os.Exit(1)
+	}
+
+	// Prompt for resolution
+	resOptions := []string{"720p (1280x720)", "1080p (1920x1080)"}
+	resIdx := utils.SelectItem("Select Resolution:", resOptions)
+	if resIdx == -1 {
+		return
+	}
+	resolution := "720p"
+	if resIdx == 1 {
+		resolution = "1080p"
 	}
 
 	reportsDir, err := config.GetReportsDir()
@@ -201,10 +223,10 @@ func convertSingleSession(id int) {
 	}
 
 	outputPath := filepath.Join(reportsDir, outputName)
-	renderGIF(session.Path, outputPath, id)
+	renderGIF(session.Path, outputPath, id, resolution)
 }
 
-func renderGIF(inputPath, outputPath string, sessionID int) {
+func renderGIF(inputPath, outputPath string, sessionID int, resolution string) {
 	if sessionID > 0 {
 		fmt.Printf("Converting session %d to GIF...\n", sessionID)
 	} else {
@@ -213,6 +235,18 @@ func renderGIF(inputPath, outputPath string, sessionID int) {
 
 	cfg := recorder.DefaultConfig()
 	cfg.Speed = gifSpeedFlag
+	cfg.Resolution = resolution
+
+	// Set dimensions based on resolution
+	if resolution == "1080p" {
+		cfg.Cols = 274
+		cfg.Rows = 83
+	} else { // 720p
+		cfg.Cols = 183
+		cfg.Rows = 55
+	}
+
+	// Allow manual override via flags
 	if gifColsFlag > 0 {
 		cfg.Cols = gifColsFlag
 	}
@@ -242,6 +276,17 @@ func convertMergedSessions(sessions []logs.Session, client, engagement string) {
 	}
 
 	fmt.Printf("Merging %d sessions...\n", len(ttyFiles))
+
+	// Prompt for resolution
+	resOptions := []string{"720p (1280x720)", "1080p (1920x1080)"}
+	resIdx := utils.SelectItem("Select Resolution:", resOptions)
+	if resIdx == -1 {
+		return
+	}
+	resolution := "720p"
+	if resIdx == 1 {
+		resolution = "1080p"
+	}
 
 	reportsDir, err := config.GetReportsDir()
 	if err != nil {
@@ -279,7 +324,7 @@ func convertMergedSessions(sessions []logs.Session, client, engagement string) {
 	}
 
 	outputPath := filepath.Join(reportsDir, outputName)
-	renderGIF(tempFile, outputPath, 0)
+	renderGIF(tempFile, outputPath, 0, resolution)
 }
 
 func init() {

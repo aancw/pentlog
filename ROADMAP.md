@@ -110,13 +110,13 @@ This document outlines the current status of `pentlog` and our plans for future 
     - [x] JSON export with accurate timestamps
     - [x] Fixed critical hang issue (removed Details template, added terminal clearing)
     - [x] Restored preview panel (post-selection display with no hang)
-- [ ] **Export to Visuals**
-    - [x] Export session to GIF (via `ttygif`) - **EXPERIMENTAL, NOT PRODUCTION READY**
-      - ⚠️ Known issues: ImageMagick policy restrictions, memory exhaustion on large files
-      - Requires graphical terminal (X11/Wayland) - does not work in headless environments
-      - Temporary PNG files use `~/.pentlog/reports/tmp/` instead of `/tmp` (keeps files organized)
-      - Final GIF output saved to `~/.pentlog/reports/` (consistent with other exports)
-      - For large sessions, use `-s 10` flag to reduce memory usage
+- [x] **Export to Visuals**
+    - [x] Export session to animated GIF (native Go rendering)
+      - Interactive resolution selection (720p/1080p)
+      - Improved ANSI color palette for Kali Linux terminals
+      - High-quality Go Mono font rendering
+      - Resolution-aware font sizing
+      - Support for single/merged sessions and direct file conversion
     - [ ] Export to MP4/WebM.
 - [x] **Custom Report Templates** (External HTML/CSS support)
     - [ ] Jinja2/Go template engine support.

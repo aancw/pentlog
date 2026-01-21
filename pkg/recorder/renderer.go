@@ -12,23 +12,26 @@ import (
 	"github.com/muesli/termenv"
 	"github.com/vito/vt100"
 	"golang.org/x/image/font"
-	"golang.org/x/image/font/basicfont"
+	"golang.org/x/image/font/gofont/gomono"
+	"golang.org/x/image/font/opentype"
 	"golang.org/x/image/math/fixed"
 )
 
 type RenderConfig struct {
-	Cols      int
-	Rows      int
-	Speed     float64
-	MaxFrames int
+	Cols       int
+	Rows       int
+	Speed      float64
+	MaxFrames  int
+	Resolution string // "720p" or "1080p"
 }
 
 func DefaultConfig() RenderConfig {
 	return RenderConfig{
-		Cols:      160,
-		Rows:      45,
-		Speed:     1.0,
-		MaxFrames: 0,
+		Cols:       160,
+		Rows:       45,
+		Speed:      1.0,
+		MaxFrames:  0,
+		Resolution: "720p",
 	}
 }
 
@@ -45,23 +48,24 @@ func filterPromptFromData(data []byte) []byte {
 	return result
 }
 
+// Improved ANSI color palette with better Kali Linux terminal colors
 var ansi16 = []color.RGBA{
-	{0, 0, 0, 255},
-	{170, 0, 0, 255},
-	{0, 170, 0, 255},
-	{170, 85, 0, 255},
-	{0, 0, 170, 255},
-	{170, 0, 170, 255},
-	{0, 170, 170, 255},
-	{170, 170, 170, 255},
-	{85, 85, 85, 255},
-	{255, 85, 85, 255},
-	{85, 255, 85, 255},
-	{255, 255, 85, 255},
-	{85, 85, 255, 255},
-	{255, 85, 255, 255},
-	{85, 255, 255, 255},
-	{255, 255, 255, 255},
+	{0, 0, 0, 255},       // Black
+	{205, 49, 49, 255},   // Red (improved)
+	{13, 188, 121, 255},  // Green (improved)
+	{229, 229, 16, 255},  // Yellow (improved)
+	{36, 114, 200, 255},  // Blue (improved)
+	{188, 63, 188, 255},  // Magenta (improved)
+	{17, 168, 205, 255},  // Cyan (improved)
+	{229, 229, 229, 255}, // White (improved)
+	{102, 102, 102, 255}, // Bright Black (Gray)
+	{241, 76, 76, 255},   // Bright Red
+	{35, 209, 139, 255},  // Bright Green
+	{245, 245, 67, 255},  // Bright Yellow
+	{59, 142, 234, 255},  // Bright Blue
+	{214, 112, 214, 255}, // Bright Magenta
+	{41, 184, 219, 255},  // Bright Cyan
+	{255, 255, 255, 255}, // Bright White
 }
 
 func buildPalette() color.Palette {
@@ -95,8 +99,20 @@ func RenderToGIF(inputPath, outputPath string, cfg RenderConfig) error {
 	term := vt100.NewVT100(cfg.Rows, cfg.Cols)
 	palette := buildPalette()
 
-	charW, charH := 7, 13
-	paddingX, paddingY := 8, 8
+	// Create font face based on resolution
+	fontSize := 12.0
+	if cfg.Resolution == "1080p" {
+		fontSize = 14.0
+	}
+	fontFace, err := createFontFace(fontSize)
+	if err != nil {
+		return err
+	}
+
+	// Calculate character dimensions from font metrics
+	charW := fontFace.Metrics().Height.Ceil() * 6 / 10 // Approximate monospace width
+	charH := fontFace.Metrics().Height.Ceil()
+	paddingX, paddingY := 12, 12
 	imgW := cfg.Cols*charW + paddingX*2
 	imgH := cfg.Rows*charH + paddingY*2
 
@@ -141,7 +157,7 @@ func RenderToGIF(inputPath, outputPath string, cfg RenderConfig) error {
 			delayCs = 300
 		}
 
-		img := renderTerminal(term, cfg.Cols, cfg.Rows, imgW, imgH, charW, charH, paddingX, paddingY, palette)
+		img := renderTerminal(term, cfg.Cols, cfg.Rows, imgW, imgH, charW, charH, paddingX, paddingY, palette, fontFace)
 		gifImages = append(gifImages, img)
 		delays = append(delays, delayCs)
 		lastCaptureTime = scaledElapsed
@@ -152,7 +168,7 @@ func RenderToGIF(inputPath, outputPath string, cfg RenderConfig) error {
 	}
 
 	if len(gifImages) == 0 {
-		img := renderTerminal(term, cfg.Cols, cfg.Rows, imgW, imgH, charW, charH, paddingX, paddingY, palette)
+		img := renderTerminal(term, cfg.Cols, cfg.Rows, imgW, imgH, charW, charH, paddingX, paddingY, palette, fontFace)
 		gifImages = append(gifImages, img)
 		delays = append(delays, 100)
 	}
@@ -179,7 +195,19 @@ func terminalContentHash(term *vt100.VT100, cols, rows int) string {
 	return b.String()
 }
 
-func renderTerminal(term *vt100.VT100, cols, rows, imgW, imgH, charW, charH, padX, padY int, palette color.Palette) *image.Paletted {
+func createFontFace(size float64) (font.Face, error) {
+	parsedFont, err := opentype.Parse(gomono.TTF)
+	if err != nil {
+		return nil, err
+	}
+	return opentype.NewFace(parsedFont, &opentype.FaceOptions{
+		Size:    size,
+		DPI:     72,
+		Hinting: font.HintingFull,
+	})
+}
+
+func renderTerminal(term *vt100.VT100, cols, rows, imgW, imgH, charW, charH, padX, padY int, palette color.Palette, face font.Face) *image.Paletted {
 	img := image.NewPaletted(image.Rect(0, 0, imgW, imgH), palette)
 
 	for y := 0; y < imgH; y++ {
@@ -188,7 +216,6 @@ func renderTerminal(term *vt100.VT100, cols, rows, imgW, imgH, charW, charH, pad
 		}
 	}
 
-	face := basicfont.Face7x13
 	cursorY, cursorX := term.Cursor.Y, term.Cursor.X
 
 	for row := 0; row < rows; row++ {

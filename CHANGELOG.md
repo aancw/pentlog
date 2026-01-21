@@ -17,21 +17,13 @@ All notable changes to this project will be documented in this file.
   - Detailed health check via `pentlog status --dependencies`
   - Graceful degradation (tool warns but continues if optional deps are missing)
   - Updated `install.sh` to verify system requirements immediately
-- **GIF Export (EXPERIMENTAL)**: Convert sessions to animated GIFs using `ttygif`
-  - ⚠️ **WARNING**: This feature is experimental and not recommended for production use
-  - Known issues: ImageMagick policy restrictions, memory exhaustion on large files
-  - Temporary PNG files use `~/.pentlog/reports/tmp/` instead of `/tmp` (keeps files organized)
-  - Final GIF output saved to `~/.pentlog/reports/` (consistent with Markdown/HTML exports)
-  - Set `TMPDIR` environment variable to ensure ImageMagick uses pentlog's temp directory
-  - Troubleshooting guide included for ImageMagick policy and memory issues
-
-### Known Issues
-- **GIF Feature (Experimental)**: 
-  - May fail on medium/large TTY files due to ImageMagick memory/policy restrictions
-  - Requires graphical terminal (X11/Wayland) - does not work in headless environments
-  - For large sessions, use `-s 10` flag to increase speed and reduce file size
-  - ImageMagick policy may need to be modified: `sudo nano /etc/ImageMagick-6/policy.xml`
-  - Increase memory limit: `export MAGICK_MEMORY_LIMIT=2GB`
+- **GIF Export (Stable)**: Convert sessions to animated GIFs using native Go rendering
+  - Interactive resolution selection: 720p (1280×720) or 1080p (1920×1080)
+  - Improved ANSI color palette for better Kali Linux terminal rendering
+  - High-quality font rendering using Go Mono (gomono) font
+  - Resolution-aware font sizing (12pt for 720p, 14pt for 1080p)
+  - Support for single sessions, merged sessions, and direct file conversion
+  - GIF output saved to `~/.pentlog/reports/`
 
 ## [v0.12.0] - 2026-01-20
 ### Added

@@ -119,43 +119,35 @@ View an interactive executive summary of your engagement logic, including eviden
 pentlog dashboard
 ```
 
-### 10. GIF Export (EXPERIMENTAL)
-Convert sessions to animated GIFs using `ttygif`.
-
-⚠️ **WARNING**: This feature is experimental and not recommended for production use.
+### 10. GIF Export
+Convert sessions to animated GIFs with high-quality rendering.
 
 ```bash
-# Interactive mode: select client, engagement, session
+# Interactive mode: select client, engagement, session, and resolution
 pentlog gif
 
 # Convert specific session
 pentlog gif <session_id>
 
-# Increase speed for large files (reduce size and memory usage)
-pentlog gif -s 5      # 5x speed
+# Convert TTY file directly
+pentlog gif session.tty
+
+# Adjust playback speed
+pentlog gif -s 5      # 5x speed (faster playback)
 
 # Specify output filename
 pentlog gif -o demo.gif
+
+# Custom terminal dimensions (overrides resolution preset)
+pentlog gif --cols 200 --rows 60
 ```
 
-**Known Limitations**:
-- Requires graphical terminal (X11/Wayland) - does not work in headless/SSH environments
-- May fail on medium/large TTY files due to ImageMagick memory/policy restrictions
-- For large sessions, use `-s 10` for faster conversion and smaller output
-- ImageMagick policy may restrict GIF creation (edit `/etc/ImageMagick-6/policy.xml` if needed)
-
-**Troubleshooting**:
-```bash
-# Increase memory limit for ImageMagick
-export MAGICK_MEMORY_LIMIT=2GB
-pentlog gif -s 5
-
-# Check ImageMagick policy
-cat /etc/ImageMagick-6/policy.xml | grep -A5 'gif'
-
-# Edit policy if needed
-sudo nano /etc/ImageMagick-6/policy.xml
-```
+**Features**:
+- **Resolution Selection**: Choose between 720p (1280×720) or 1080p (1920×1080)
+- **High-Quality Font**: Uses Go Mono font for crisp, professional text rendering
+- **Improved Colors**: Enhanced ANSI palette for better Kali Linux terminal rendering
+- **Multiple Modes**: Single session, merged sessions, or direct file conversion
+- **Native Rendering**: Pure Go implementation using `vt100` terminal emulator
 
 ### 11. Versioning & Updates
 Keep your tool up to date.

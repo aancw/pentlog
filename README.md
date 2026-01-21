@@ -53,7 +53,7 @@ Traditional logging (`script`, `tmux`) isn't built for professional engagements.
 | `dashboard` | Show an interactive dashboard of your pentest activity. |
 | `export` | Export commands for a specific phase with interactive preview and existing report management. |
 | `freeze` | Generate SHA256 hashes of all session logs. |
-| `gif` | Convert sessions to animated GIF (⚠️ **EXPERIMENTAL - Not production ready**). |
+| `gif` | Convert sessions to animated GIF with resolution selection (720p/1080p). |
 | `note` | Manage session notes and bookmarks. |
 | `replay` | Replay a recorded session with full fidelity (Interactive). |
 | `reset` | Clear the current active engagement context. |
@@ -140,7 +140,7 @@ Contributions are welcome! Checking out [ROADMAP.md](ROADMAP.md) for planned fea
 
 - Thanks to [roomkangali](https://github.com/roomkangali) for adding the [AI Summary feature](#ai-analysis) and the logo!
 - Special thanks to the authors of `ttyrec/ttyplay` for the underlying recording technology.
-- Special thanks to the authors of `ttygif` for the GIF export functionality (⚠️ **Note**: GIF feature is experimental and not recommended for production use).
+- GIF export functionality uses native Go rendering with `vt100` terminal emulator and `gomono` font for high-quality output.
 
 ## License
 
