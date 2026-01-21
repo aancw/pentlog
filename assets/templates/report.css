@@ -53,6 +53,56 @@ h4 { color: #9cdcfe; margin-top: 20px; font-size: 1.1em; }
 .ansi-bright-cyan { color: #29b8db; }
 .ansi-bright-white { color: #ffffff; }
 
+/* Session GIF Recording */
+.session-gif {
+    margin: 15px 0;
+    text-align: center;
+}
+.session-gif img {
+    max-width: 100%;
+    border-radius: 8px;
+    border: 2px solid #444;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* Collapsible Terminal Output */
+.terminal-details {
+    margin-top: 15px;
+}
+.terminal-details summary {
+    cursor: pointer;
+    padding: 10px 15px;
+    background-color: #333;
+    border-radius: 5px;
+    color: #9cdcfe;
+    font-weight: bold;
+    user-select: none;
+    transition: background-color 0.2s;
+    list-style: none;
+}
+.terminal-details summary::-webkit-details-marker {
+    display: none;
+}
+.terminal-details summary::before {
+    content: "▶ ";
+    display: inline-block;
+    transition: transform 0.2s;
+}
+.terminal-details[open] summary::before {
+    transform: rotate(90deg);
+}
+.terminal-details summary:hover {
+    background-color: #3c3c3c;
+}
+.terminal-details[open] summary {
+    border-radius: 5px 5px 0 0;
+}
+.terminal-details .log-content {
+    margin-top: 0;
+    border-radius: 0 0 5px 5px;
+    border-top: 1px solid #444;
+}
+
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
     width: 10px;

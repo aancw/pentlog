@@ -55,7 +55,15 @@
             {{range .Sessions}}
             <div class="session">
                 <h4>Session {{.ID}} ({{.ModTime}})</h4>
-                <div class="log-content">{{.Content}}</div>
+                {{if .GIFPath}}
+                <div class="session-gif">
+                    <img src="{{.GIFPath}}" alt="Session {{.ID}} Recording" loading="lazy"/>
+                </div>
+                {{end}}
+                <details class="terminal-details">
+                    <summary>View Terminal Output</summary>
+                    <div class="log-content">{{.Content}}</div>
+                </details>
             </div>
             {{end}}
         {{end}}
