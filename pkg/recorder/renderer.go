@@ -124,8 +124,8 @@ func RenderToGIF(inputPath, outputPath string, cfg RenderConfig) error {
 	var lastContent string
 
 	for i, frame := range frames {
-		filteredData := filterPromptFromData(frame.Data)
-		reader := bytes.NewReader(filteredData)
+		// filteredData := filterPromptFromData(frame.Data) // Removed: breaks cursor positioning
+		reader := bytes.NewReader(frame.Data)
 		for reader.Len() > 0 {
 			cmd, err := vt100.Decode(reader)
 			if err != nil {
