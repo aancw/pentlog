@@ -3,6 +3,8 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+
+## [v0.12.0] - 2026-01-21
 ### Added
 - **Incremental Search with Bubble Tea**: Refactored `pentlog search` command with modern TUI
   - Live search results as you type (background task execution)
@@ -24,9 +26,6 @@ All notable changes to this project will be documented in this file.
   - Resolution-aware font sizing (12pt for 720p, 14pt for 1080p)
   - Support for single sessions, merged sessions, and direct file conversion
   - GIF output saved to `~/.pentlog/reports/`
-
-## [v0.12.0] - 2026-01-20
-### Added
 - **Export Management**: Enhanced `pentlog export` workflow
   - **View Existing Reports**: Interactive menu to browse, select, and open previously generated reports for the current client.
   - **Overwrite Protection**: Automatically detects if a report already exists for the selected scope.
