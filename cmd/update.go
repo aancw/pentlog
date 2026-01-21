@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"pentlog/pkg/config"
 	"pentlog/pkg/utils"
 	"runtime"
 	"strings"
@@ -21,11 +22,18 @@ const (
 	RepoName  = "pentlog"
 )
 
+var updateTemplateFlag bool
+
 var updateCmd = &cobra.Command{
 	Use:   "update",
 	Short: "Update pentlog to the latest version",
 	Long:  `Downloads and installs the latest version of pentlog from GitHub Releases.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		if updateTemplateFlag {
+			updateTemplates()
+			return
+		}
+
 		ctx := context.Background()
 		var client *github.Client
 
@@ -118,7 +126,61 @@ var updateCmd = &cobra.Command{
 	},
 }
 
+func updateTemplates() {
+	fmt.Println("Updating report templates from repository...")
+
+	templatesDir, err := config.GetTemplatesDir()
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		os.Exit(1)
+	}
+
+	if err := os.MkdirAll(templatesDir, 0755); err != nil {
+		fmt.Printf("Error creating templates directory: %v\n", err)
+		os.Exit(1)
+	}
+
+	baseURL := "https://raw.githubusercontent.com/aancw/pentlog/main/assets/templates/"
+	files := []string{"report.html", "report.css"}
+
+	for _, file := range files {
+		destPath := filepath.Join(templatesDir, file)
+		url := baseURL + file
+
+		fmt.Printf("  Downloading %s... ", file)
+		if err := downloadTemplateFile(url, destPath); err != nil {
+			fmt.Printf("FAIL (%v)\n", err)
+		} else {
+			fmt.Println("OK")
+		}
+	}
+
+	fmt.Println("Templates updated successfully.")
+}
+
+func downloadTemplateFile(url, dest string) error {
+	resp, err := http.Get(url)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("bad status: %s", resp.Status)
+	}
+
+	out, err := os.Create(dest)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	_, err = io.Copy(out, resp.Body)
+	return err
+}
+
 func init() {
+	updateCmd.Flags().BoolVarP(&updateTemplateFlag, "template", "t", false, "Update report templates from repository")
 	rootCmd.AddCommand(updateCmd)
 }
 

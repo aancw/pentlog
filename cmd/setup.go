@@ -61,7 +61,7 @@ var setupCmd = &cobra.Command{
 		}
 		fmt.Printf("OK (%s)\n", logDir)
 
-		fmt.Print("Downloading default templates... ")
+		fmt.Print("Downloading latest templates... ")
 		templatesDir, err := config.GetTemplatesDir()
 		if err != nil {
 			fmt.Printf("FAIL\n%v\n", err)
@@ -75,12 +75,10 @@ var setupCmd = &cobra.Command{
 
 				for _, file := range files {
 					destPath := filepath.Join(templatesDir, file)
-					if _, err := os.Stat(destPath); os.IsNotExist(err) {
-						url := baseURL + file
-						if err := downloadFile(url, destPath); err != nil {
-							fmt.Printf("\n    FAIL (download %s): %v", file, err)
-							success = false
-						}
+					url := baseURL + file
+					if err := downloadFile(url, destPath); err != nil {
+						fmt.Printf("\n    FAIL (download %s): %v", file, err)
+						success = false
 					}
 				}
 				if success {

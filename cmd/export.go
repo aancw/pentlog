@@ -8,6 +8,7 @@ import (
 	"pentlog/pkg/ai"
 	"pentlog/pkg/config"
 	"pentlog/pkg/logs"
+	"pentlog/pkg/recorder"
 	"pentlog/pkg/utils"
 	"pentlog/pkg/vulns"
 	"strings"
@@ -17,6 +18,8 @@ import (
 )
 
 var analyze bool
+var includeGifs bool
+var gifResolution string
 
 var exportCmd = &cobra.Command{
 	Use:   "export [phase]",
@@ -419,6 +422,73 @@ var exportCmd = &cobra.Command{
 
 				fullPath := filepath.Join(reportDir, filename)
 
+				// --- GIF Generation ---
+				var gifPaths map[int]string
+				wantGifs := includeGifs
+				if !includeGifs {
+					gifIdx := utils.SelectItem("Create GIF recordings and embed them in the report?", []string{"No", "Yes"})
+					wantGifs = gifIdx == 1
+				}
+
+				if wantGifs {
+					gifPaths = make(map[int]string)
+
+					resolution := gifResolution
+					if resolution == "" {
+						resOptions := []string{"720p (1280x720)", "1080p (1920x1080)"}
+						resIdx := utils.SelectItem("Select GIF Resolution:", resOptions)
+						if resIdx == 1 {
+							resolution = "1080p"
+						} else {
+							resolution = "720p"
+						}
+					}
+
+					gifsDir := filepath.Join(reportDir, "gifs")
+					if err := os.MkdirAll(gifsDir, 0755); err != nil {
+						fmt.Printf("Error creating gifs directory: %v\n", err)
+					} else {
+						fmt.Printf("Generating GIF recordings for %d sessions...\n", len(finalSessions))
+
+						for i, s := range finalSessions {
+							if s.Path == "" {
+								continue
+							}
+
+							gifName := fmt.Sprintf("session-%d.gif", s.ID)
+							gifPath := filepath.Join(gifsDir, gifName)
+							relativePath := filepath.Join("gifs", gifName)
+
+							if _, err := os.Stat(gifPath); err == nil {
+								fmt.Printf("  [%d/%d] Session %d: exists, skipping\n", i+1, len(finalSessions), s.ID)
+								gifPaths[s.ID] = relativePath
+								continue
+							}
+
+							fmt.Printf("  [%d/%d] Session %d: generating... ", i+1, len(finalSessions), s.ID)
+
+							cfg := recorder.DefaultConfig()
+							cfg.Speed = 2.0
+							cfg.Resolution = resolution
+							if resolution == "1080p" {
+								cfg.Cols = 274
+								cfg.Rows = 83
+							} else {
+								cfg.Cols = 183
+								cfg.Rows = 55
+							}
+
+							if err := recorder.RenderToGIF(s.Path, gifPath, cfg); err != nil {
+								fmt.Printf("failed (%v)\n", err)
+							} else {
+								fmt.Println("done")
+								gifPaths[s.ID] = relativePath
+							}
+						}
+					}
+				}
+				// ----------------------------
+
 				// --- Findings and Analysis ---
 				var filteredFindings []vulns.Vuln
 				manager := vulns.NewManager(selectedClient, selectedEngagement)
@@ -437,26 +507,27 @@ var exportCmd = &cobra.Command{
 					analysisHTML = string(markdown.ToHTML([]byte(analysisResult), nil, nil))
 				}
 
-				htmlReport, err := logs.GenerateHTMLReport(finalSessions, selectedClient, filteredFindings, analysisHTML)
+				htmlReport, err := logs.GenerateHTMLReport(finalSessions, selectedClient, filteredFindings, analysisHTML, gifPaths)
 				if err != nil {
 					fmt.Printf("Error generating HTML: %v\n", err)
-					continue
+					return
 				}
 				// ----------------------------
 
 				if err := os.WriteFile(fullPath, []byte(htmlReport), 0644); err != nil {
 					fmt.Printf("Error saving file: %v\n", err)
-				} else {
-					fmt.Printf("HTML Report saved to %s\n", fullPath)
-
-					prompt := utils.PromptString("Do you want to open the file? (y/N)", "no")
-					if strings.ToLower(prompt) == "y" || strings.ToLower(prompt) == "yes" {
-						if err := utils.OpenFile(fullPath); err != nil {
-							fmt.Printf("Error opening file: %v\n", err)
-						}
-					}
 					return
 				}
+
+				fmt.Printf("HTML Report saved to %s\n", fullPath)
+
+				prompt := utils.PromptString("Do you want to open the file? (y/N)", "no")
+				if strings.ToLower(prompt) == "y" || strings.ToLower(prompt) == "yes" {
+					if err := utils.OpenFile(fullPath); err != nil {
+						fmt.Printf("Error opening file: %v\n", err)
+					}
+				}
+				return
 			}
 		}
 
@@ -466,4 +537,6 @@ var exportCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(exportCmd)
 	exportCmd.Flags().BoolVar(&analyze, "analyze", false, "Analyze the report with an AI provider")
+	exportCmd.Flags().BoolVar(&includeGifs, "include-gifs", false, "Generate GIF recordings and embed them in HTML report")
+	exportCmd.Flags().StringVar(&gifResolution, "gif-resolution", "", "GIF resolution: 720p or 1080p (default: interactive prompt)")
 }

@@ -10,6 +10,7 @@ import (
 type SessionTemplateData struct {
 	ID      int
 	ModTime string
+	GIFPath string        // Relative path to session GIF (optional)
 	Content template.HTML // HTML pre-rendered content
 }
 

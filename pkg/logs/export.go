@@ -138,10 +138,10 @@ func ExportCommandsHTML(client, engagement, phase string) (string, error) {
 		return "", fmt.Errorf("no sessions found matching criteria")
 	}
 
-	return GenerateHTMLReport(filtered, client, nil, "")
+	return GenerateHTMLReport(filtered, client, nil, "", nil)
 }
 
-func GenerateHTMLReport(sessions []Session, client string, findings []vulns.Vuln, aiAnalysis string) (string, error) {
+func GenerateHTMLReport(sessions []Session, client string, findings []vulns.Vuln, aiAnalysis string, gifPaths map[int]string) (string, error) {
 	if len(sessions) == 0 {
 		return "", fmt.Errorf("no sessions to report")
 	}
@@ -206,6 +206,11 @@ func GenerateHTMLReport(sessions []Session, client string, findings []vulns.Vuln
 					ID:      s.ID,
 					ModTime: s.ModTime,
 					Content: template.HTML(htmlContentBuilder.String()),
+				}
+				if gifPaths != nil {
+					if gifPath, ok := gifPaths[s.ID]; ok {
+						sData.GIFPath = gifPath
+					}
 				}
 				pData.Sessions = append(pData.Sessions, sData)
 			}

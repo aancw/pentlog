@@ -264,7 +264,7 @@ Examples:
 			}
 
 			if generateHTML {
-				htmlReport, err := logs.GenerateHTMLReport(toArchive, clientName, nil, "")
+				htmlReport, err := logs.GenerateHTMLReport(toArchive, clientName, nil, "", nil)
 				if err != nil {
 					fmt.Printf("Error generating HTML report: %v\n", err)
 				} else {

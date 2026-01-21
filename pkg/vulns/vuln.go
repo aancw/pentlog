@@ -227,6 +227,23 @@ func (m *Manager) writeVulns(vulns []Vuln) error {
 	return os.WriteFile(path, data, 0644)
 }
 
+func (v Vuln) SeverityColor() string {
+	switch v.Severity {
+	case SeverityCritical:
+		return "#ff0000"
+	case SeverityHigh:
+		return "#ff6600"
+	case SeverityMedium:
+		return "#ffcc00"
+	case SeverityLow:
+		return "#00cc00"
+	case SeverityInfo:
+		return "#0099ff"
+	default:
+		return "#ffffff"
+	}
+}
+
 func (m *Manager) GenerateID(title string) (string, error) {
 	vulns, err := m.List()
 	if err != nil {
