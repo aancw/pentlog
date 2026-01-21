@@ -56,8 +56,12 @@
             <div class="session">
                 <h4>Session {{.ID}} ({{.ModTime}})</h4>
                 {{if .GIFPath}}
-                <div class="session-gif">
-                    <img src="{{.GIFPath}}" alt="Session {{.ID}} Recording" loading="lazy"/>
+                <div class="gif-player" data-gif="{{.GIFPath}}">
+                    <div class="gif-placeholder">
+                        <div class="gif-play-btn">▶</div>
+                        <span class="gif-label">Click to play session recording</span>
+                    </div>
+                    <img class="gif-image" alt="Session {{.ID}} Recording"/>
                 </div>
                 {{end}}
                 <details class="terminal-details">
@@ -68,5 +72,28 @@
             {{end}}
         {{end}}
     {{end}}
+
+    <script>
+    document.querySelectorAll('.gif-player').forEach(player => {
+        const placeholder = player.querySelector('.gif-placeholder');
+        const img = player.querySelector('.gif-image');
+        const gifSrc = player.dataset.gif;
+        let isPlaying = false;
+
+        player.addEventListener('click', () => {
+            if (!isPlaying) {
+                img.src = gifSrc;
+                img.style.display = 'block';
+                placeholder.style.display = 'none';
+                isPlaying = true;
+            } else {
+                img.src = '';
+                img.style.display = 'none';
+                placeholder.style.display = 'flex';
+                isPlaying = false;
+            }
+        });
+    });
+    </script>
 </body>
 </html>
