@@ -30,6 +30,9 @@ All notable changes to this project will be documented in this file.
   - **View Existing Reports**: Interactive menu to browse, select, and open previously generated reports for the current client.
   - **Overwrite Protection**: Automatically detects if a report already exists for the selected scope.
   - **Smart Prompt**: Show creation timestamp and ask for confirmation before regenerating a report.
+  - **GIF Embedding**: Option to embed clickable GIF recordings directly into HTML reports using `--include-gifs`
+  - **Template Updates**: New `pentlog update --template` command to refresh report templates from the repository
+
 
 ## [v0.11.0] - 2026-01-19
 ### Added

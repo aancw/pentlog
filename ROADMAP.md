@@ -82,6 +82,8 @@ This document outlines the current status of `pentlog` and our plans for future 
     - [x] **Shell Completion**
         - [x] Interactive setup for Zsh and Bash.
         - [x] Automatic configuration update.
+    - [x] **Template Extensions**: `pentlog update --template` to fetching latest reports.
+
 
 ---
 
@@ -112,11 +114,13 @@ This document outlines the current status of `pentlog` and our plans for future 
     - [x] Restored preview panel (post-selection display with no hang)
 - [x] **Export to Visuals**
     - [x] Export session to animated GIF (native Go rendering)
-      - Interactive resolution selection (720p/1080p)
-      - Improved ANSI color palette for Kali Linux terminals
-      - High-quality Go Mono font rendering
-      - Resolution-aware font sizing
-      - Support for single/merged sessions and direct file conversion
+      - [x] Interactive resolution selection (720p/1080p)
+      - [x] Improved ANSI color palette for Kali Linux terminals
+      - [x] High-quality Go Mono font rendering
+      - [x] Resolution-aware font sizing
+      - [x] Support for single/merged sessions and direct file conversion
+      - [x] Embed clickable GIFs in HTML reports
+
     - [ ] Export to MP4/WebM.
 - [x] **Custom Report Templates** (External HTML/CSS support)
     - [ ] Jinja2/Go template engine support.
