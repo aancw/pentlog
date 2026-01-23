@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"pentlog/pkg/config"
-	"pentlog/pkg/metadata"
 )
 
 type Severity string
@@ -58,7 +57,8 @@ func NewManager(client, engagement string) *Manager {
 }
 
 func NewManagerFromContext() (*Manager, error) {
-	ctx, err := metadata.Load()
+	mgr := config.Manager()
+	ctx, err := mgr.LoadContext()
 	if err != nil {
 		return nil, err
 	}
@@ -66,10 +66,8 @@ func NewManagerFromContext() (*Manager, error) {
 }
 
 func (m *Manager) GetVulnsDir() (string, error) {
-	baseDir, err := config.GetUserPentlogDir()
-	if err != nil {
-		return "", err
-	}
+	mgr := config.Manager()
+	baseDir := mgr.GetPaths().Home
 	return filepath.Join(baseDir, "vulns", m.Client, m.Engagement), nil
 }
 
@@ -127,10 +125,8 @@ func (m *Manager) List() ([]Vuln, error) {
 }
 
 func (m *Manager) listAllEngagements() ([]Vuln, error) {
-	baseDir, err := config.GetUserPentlogDir()
-	if err != nil {
-		return nil, err
-	}
+	mgr := config.Manager()
+	baseDir := mgr.GetPaths().Home
 	clientDir := filepath.Join(baseDir, "vulns", m.Client)
 
 	entries, err := os.ReadDir(clientDir)

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"pentlog/pkg/config"
 	"pentlog/pkg/db"
 	"strings"
 	"testing"
@@ -12,6 +13,10 @@ import (
 )
 
 func TestArchiveSessions(t *testing.T) {
+	// Reset config singleton for test isolation
+	config.ResetManagerForTesting()
+	defer config.ResetManagerForTesting()
+
 	// Setup tmp env
 	tmpDir, err := os.MkdirTemp("", "pentlog-archive-test")
 	if err != nil {
@@ -210,6 +215,10 @@ func TestArchiveSessionFiltering(t *testing.T) {
 }
 
 func TestArchiveSessionsEncrypted(t *testing.T) {
+	// Reset config singleton for test isolation
+	config.ResetManagerForTesting()
+	defer config.ResetManagerForTesting()
+
 	// Setup tmp env
 	tmpDir, err := os.MkdirTemp("", "pentlog-archive-enc-test")
 	if err != nil {

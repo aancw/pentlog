@@ -5,7 +5,7 @@ import (
 	"os"
 	"text/tabwriter"
 
-	"pentlog/pkg/metadata"
+	"pentlog/pkg/config"
 	"pentlog/pkg/vulns"
 
 	"github.com/charmbracelet/huh"
@@ -44,7 +44,8 @@ func init() {
 }
 
 func runVulnAdd(cmd *cobra.Command, args []string) {
-	ctx, err := metadata.Load()
+	mgr := config.Manager()
+	ctx, err := mgr.LoadContext()
 	if err != nil {
 		fmt.Println("Error: Not in an active engagement. Run 'pentlog create' or 'pentlog switch' first.")
 		return

@@ -62,30 +62,27 @@ var setupCmd = &cobra.Command{
 		fmt.Printf("OK (%s)\n", logDir)
 
 		fmt.Print("Downloading latest templates... ")
-		templatesDir, err := config.GetTemplatesDir()
-		if err != nil {
-			fmt.Printf("FAIL\n%v\n", err)
+		mgr := config.Manager()
+		templatesDir := mgr.GetPaths().TemplatesDir
+		if err := os.MkdirAll(templatesDir, 0755); err != nil {
+			fmt.Printf("FAIL (mkdir)\n%v\n", err)
 		} else {
-			if err := os.MkdirAll(templatesDir, 0755); err != nil {
-				fmt.Printf("FAIL (mkdir)\n%v\n", err)
-			} else {
-				baseURL := "https://raw.githubusercontent.com/aancw/pentlog/main/assets/templates/"
-				files := []string{"report.html", "report.css"}
-				success := true
+			baseURL := "https://raw.githubusercontent.com/aancw/pentlog/main/assets/templates/"
+			files := []string{"report.html", "report.css"}
+			success := true
 
-				for _, file := range files {
-					destPath := filepath.Join(templatesDir, file)
-					url := baseURL + file
-					if err := downloadFile(url, destPath); err != nil {
-						fmt.Printf("\n    FAIL (download %s): %v", file, err)
-						success = false
-					}
+			for _, file := range files {
+				destPath := filepath.Join(templatesDir, file)
+				url := baseURL + file
+				if err := downloadFile(url, destPath); err != nil {
+					fmt.Printf("\n    FAIL (download %s): %v", file, err)
+					success = false
 				}
-				if success {
-					fmt.Printf("OK (%s)\n", templatesDir)
-				} else {
-					fmt.Println("\n    (Some templates failed to download. Check your internet connection.)")
-				}
+			}
+			if success {
+				fmt.Printf("OK (%s)\n", templatesDir)
+			} else {
+				fmt.Println("\n    (Some templates failed to download. Check your internet connection.)")
 			}
 		}
 

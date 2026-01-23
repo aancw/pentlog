@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 	"pentlog/pkg/ai"
 	"pentlog/pkg/config"
 	"pentlog/pkg/utils"
@@ -24,11 +23,8 @@ var analyzeCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		reportFile := args[0]
 
-		confDir, err := config.GetUserPentlogDir()
-		if err != nil {
-			return fmt.Errorf("failed to get pentlog directory: %w", err)
-		}
-		aiConfigPath := filepath.Join(confDir, "ai.yaml")
+		mgr := config.Manager()
+		aiConfigPath := mgr.GetPaths().AIConfigFile
 
 		if _, err := os.Stat(aiConfigPath); os.IsNotExist(err) {
 			idx := utils.SelectItem("AI config not found. Create one?", []string{"Yes", "No"})

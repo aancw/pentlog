@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"pentlog/pkg/metadata"
+	"pentlog/pkg/config"
 	"pentlog/pkg/utils"
 	"time"
 
@@ -91,7 +91,7 @@ var createCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		ctx := metadata.Context{
+		ctx := &config.ContextData{
 			Client:     createClient,
 			Engagement: createEngagement,
 			Scope:      createScope,
@@ -101,7 +101,8 @@ var createCmd = &cobra.Command{
 			Type:       createType,
 		}
 
-		if err := metadata.Save(ctx); err != nil {
+		mgr := config.Manager()
+		if err := mgr.SaveContext(ctx); err != nil {
 			fmt.Printf("Error saving context: %v\n", err)
 			os.Exit(1)
 		}

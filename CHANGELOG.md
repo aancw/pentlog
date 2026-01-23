@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+- **Configuration Management Refactor**: Centralized ConfigManager singleton
+  - Consolidated all config.GetXDir() functions into Manager().GetPaths()
+  - Eliminated code duplication and improved consistency
+  - Better environment variable override support (PENTLOG_HOME, PENTLOG_DB_PATH, etc.)
+  - Improved test isolation with ResetManagerForTesting()
+  - All configuration now has single source of truth
+
 ## [v0.12.0] - 2026-01-21
 ### Added
 - **Incremental Search with Bubble Tea**: Refactored `pentlog search` command with modern TUI

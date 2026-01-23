@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
-	"path/filepath"
 	"pentlog/pkg/config"
 
 	_ "modernc.org/sqlite"
@@ -25,16 +24,14 @@ func GetDB() (*sql.DB, error) {
 }
 
 func InitDB() error {
-	dir, err := config.GetUserPentlogDir()
-	if err != nil {
-		return fmt.Errorf("failed to get pentlog dir: %w", err)
-	}
+	mgr := config.Manager()
+	dir := mgr.GetPaths().Home
 
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return fmt.Errorf("failed to create pentlog dir: %w", err)
 	}
 
-	dbPath := filepath.Join(dir, "pentlog.db")
+	dbPath := mgr.GetPaths().DatabaseFile
 	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		return fmt.Errorf("failed to open database: %w", err)

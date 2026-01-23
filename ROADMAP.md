@@ -139,7 +139,7 @@ This document outlines the current status of `pentlog` and our plans for future 
     - [ ] Passive scanner plugin API.
     - [ ] Third-party metadata injection.
 
-### Bastion Mode
+### Bastion Mode Server
 - [ ] **Unified Access Logging**
     - [ ] Record SSH logins (Bastion Shell).
     - [ ] Record `su` actions.

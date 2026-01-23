@@ -129,11 +129,8 @@ var updateCmd = &cobra.Command{
 func updateTemplates() {
 	fmt.Println("Updating report templates from repository...")
 
-	templatesDir, err := config.GetTemplatesDir()
-	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-		os.Exit(1)
-	}
+	mgr := config.Manager()
+	templatesDir := mgr.GetPaths().TemplatesDir
 
 	if err := os.MkdirAll(templatesDir, 0755); err != nil {
 		fmt.Printf("Error creating templates directory: %v\n", err)

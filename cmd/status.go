@@ -2,8 +2,8 @@ package cmd
 
 import (
 	"fmt"
+	"pentlog/pkg/config"
 	"pentlog/pkg/deps"
-	"pentlog/pkg/metadata"
 	"pentlog/pkg/utils"
 
 	"github.com/spf13/cobra"
@@ -34,7 +34,8 @@ var statusCmd = &cobra.Command{
 			return
 		}
 
-		ctx, err := metadata.Load()
+		mgr := config.Manager()
+		ctx, err := mgr.LoadContext()
 		if err != nil {
 			lines = append(lines, "Context: No active engagement found.")
 		} else {

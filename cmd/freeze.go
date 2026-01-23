@@ -24,11 +24,8 @@ var freezeCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		hashesDir, err := config.GetHashesDir()
-		if err != nil {
-			fmt.Printf("Error getting hashes dir: %v\n", err)
-			os.Exit(1)
-		}
+		mgr := config.Manager()
+		hashesDir := mgr.GetPaths().HashesDir
 
 		if err := os.MkdirAll(hashesDir, 0700); err != nil {
 			fmt.Printf("Error creating hashes dir: %v\n", err)

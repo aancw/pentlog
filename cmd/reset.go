@@ -12,11 +12,8 @@ var resetCmd = &cobra.Command{
 	Use:   "reset",
 	Short: "Clear the current active engagement context",
 	Run: func(cmd *cobra.Command, args []string) {
-		path, err := config.GetContextFilePath()
-		if err != nil {
-			fmt.Printf("Error resolving path: %v\n", err)
-			os.Exit(1)
-		}
+		mgr := config.Manager()
+		path := mgr.GetPaths().ContextFile
 
 		if _, err := os.Stat(path); os.IsNotExist(err) {
 			fmt.Println("No active context to reset.")

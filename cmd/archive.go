@@ -205,8 +205,8 @@ Examples:
 				fileNameEng = "all-engagements"
 			}
 
-			reportsBaseDir, _ := config.GetReportsDir()
-			clientReportDir := filepath.Join(reportsBaseDir, utils.Slugify(clientName))
+			mgr := config.Manager()
+			clientReportDir := filepath.Join(mgr.GetPaths().ReportsDir, utils.Slugify(clientName))
 
 			baseName := fmt.Sprintf("%s_%s_%s_report", utils.Slugify(clientName), utils.Slugify(fileNameEng), utils.Slugify(fileNamePhase))
 			expectedMD := filepath.Join(clientReportDir, baseName+".md")

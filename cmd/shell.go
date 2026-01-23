@@ -6,9 +6,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"pentlog/pkg/config"
 	"pentlog/pkg/deps"
 	"pentlog/pkg/logs"
-	"pentlog/pkg/metadata"
 	"pentlog/pkg/system"
 	"pentlog/pkg/utils"
 	"time"
@@ -31,7 +31,8 @@ var shellCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		ctx, err := metadata.Load()
+		mgr := config.Manager()
+		ctx, err := mgr.LoadContext()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error loading context: %v\n", err)
 			os.Exit(1)
@@ -43,7 +44,7 @@ var shellCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		sessionDir := getSessionDir(logDir, *ctx)
+		sessionDir := getSessionDir(logDir, ctx)
 		if err := os.MkdirAll(sessionDir, 0700); err != nil {
 			fmt.Fprintf(os.Stderr, "Error creating session dir: %v\n", err)
 			os.Exit(1)
@@ -72,7 +73,7 @@ var shellCmd = &cobra.Command{
 			fmt.Fprintf(os.Stderr, "Warning: Failed to add session to DB: %v\n", err)
 		}
 
-		newEnv, tempDir, err := prepareShellEnv(*ctx, sessionDir, metaFilePath, logFilePath)
+		newEnv, tempDir, err := prepareShellEnv(ctx, sessionDir, metaFilePath, logFilePath)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error preparing shell environment: %v\n", err)
 			os.Exit(1)
@@ -88,7 +89,7 @@ var shellCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		if err := startRecording(c, newEnv, *ctx); err != nil {
+		if err := startRecording(c, newEnv, ctx); err != nil {
 			fmt.Fprintf(os.Stderr, "Error running recorder: %v\n", err)
 			return
 		}
@@ -97,7 +98,7 @@ var shellCmd = &cobra.Command{
 	},
 }
 
-func getSessionDir(logDir string, ctx metadata.Context) string {
+func getSessionDir(logDir string, ctx *config.ContextData) string {
 	if ctx.Type == "Log Only" {
 		return filepath.Join(logDir, utils.Slugify(ctx.Client))
 	}
@@ -109,7 +110,7 @@ func getSessionDir(logDir string, ctx metadata.Context) string {
 	)
 }
 
-func prepareShellEnv(ctx metadata.Context, sessionDir, metaFilePath, logFilePath string) ([]string, string, error) {
+func prepareShellEnv(ctx *config.ContextData, sessionDir, metaFilePath, logFilePath string) ([]string, string, error) {
 	tempDir, err := os.MkdirTemp("", "pentlog-shell-*")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: Could not create temp dir for shell config: %v\n", err)
@@ -167,7 +168,7 @@ func prepareShellEnv(ctx metadata.Context, sessionDir, metaFilePath, logFilePath
 	return newEnv, tempDir, nil
 }
 
-func startRecording(c *exec.Cmd, env []string, ctx metadata.Context) error {
+func startRecording(c *exec.Cmd, env []string, ctx *config.ContextData) error {
 	c.Stdin = os.Stdin
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr

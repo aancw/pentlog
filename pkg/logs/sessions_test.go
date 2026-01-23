@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"pentlog/pkg/config"
 	"pentlog/pkg/db"
 	"sort"
 	"testing"
@@ -12,6 +13,10 @@ import (
 )
 
 func TestListSessions(t *testing.T) {
+	// Reset config singleton for test isolation
+	config.ResetManagerForTesting()
+	defer config.ResetManagerForTesting()
+
 	// Setup temporary home directory
 	tmpDir, err := os.MkdirTemp("", "pentlog-test")
 	if err != nil {

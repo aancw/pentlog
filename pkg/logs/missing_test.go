@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"pentlog/pkg/config"
 	"pentlog/pkg/db"
 	"strings"
 	"testing"
@@ -13,6 +14,10 @@ import (
 
 // TestListSessionsPaginatedMissingFile verifies that missing session files generate warnings
 func TestListSessionsPaginatedMissingFile(t *testing.T) {
+	// Reset config singleton for test isolation
+	config.ResetManagerForTesting()
+	defer config.ResetManagerForTesting()
+
 	// Setup temporary home directory
 	tmpDir, err := os.MkdirTemp("", "pentlog-missing-test")
 	if err != nil {

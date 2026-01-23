@@ -165,11 +165,10 @@ func convertTTYFile(inputPath string) {
 
 	outputPath := outputName
 	if !filepath.IsAbs(outputPath) {
-		reportsDir, err := config.GetReportsDir()
-		if err == nil {
-			os.MkdirAll(reportsDir, 0700)
-			outputPath = filepath.Join(reportsDir, outputName)
-		}
+		mgr := config.Manager()
+		reportsDir := mgr.GetPaths().ReportsDir
+		os.MkdirAll(reportsDir, 0700)
+		outputPath = filepath.Join(reportsDir, outputName)
 	}
 
 	renderGIF(inputPath, outputPath, 0, resolution)
@@ -198,11 +197,8 @@ func convertSingleSession(id int) {
 		resolution = "1080p"
 	}
 
-	reportsDir, err := config.GetReportsDir()
-	if err != nil {
-		fmt.Printf("Error getting reports directory: %v\n", err)
-		os.Exit(1)
-	}
+	mgr := config.Manager()
+	reportsDir := mgr.GetPaths().ReportsDir
 
 	if err := os.MkdirAll(reportsDir, 0700); err != nil {
 		fmt.Printf("Error creating reports directory: %v\n", err)
@@ -288,11 +284,8 @@ func convertMergedSessions(sessions []logs.Session, client, engagement string) {
 		resolution = "1080p"
 	}
 
-	reportsDir, err := config.GetReportsDir()
-	if err != nil {
-		fmt.Printf("Error getting reports directory: %v\n", err)
-		return
-	}
+	mgr := config.Manager()
+	reportsDir := mgr.GetPaths().ReportsDir
 
 	if err := os.MkdirAll(reportsDir, 0700); err != nil {
 		fmt.Printf("Error creating reports directory: %v\n", err)

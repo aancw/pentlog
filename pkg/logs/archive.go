@@ -76,21 +76,18 @@ func ArchiveSessionsFromList(toArchive []Session, clientName string, deleteOrigi
 		return 0, nil
 	}
 
-	archiveDir, err := config.GetArchiveDir()
-	if err != nil {
-		return 0, err
-	}
-	clientArchiveDir := filepath.Join(archiveDir, clientName)
+	mgr := config.Manager()
+	clientArchiveDir := filepath.Join(mgr.GetPaths().ArchiveDir, clientName)
 	if err := os.MkdirAll(clientArchiveDir, 0755); err != nil {
 		return 0, fmt.Errorf("failed to create archive dir: %w", err)
 	}
 
 	timestamp := time.Now().Format("20060102-150405")
 
-	return archiveZip(toArchive, extraFiles, clientArchiveDir, timestamp, deleteOriginals, password)
+	return archiveZip(toArchive, extraFiles, clientArchiveDir, timestamp, deleteOriginals, password, mgr)
 }
 
-func archiveZip(toArchive []Session, extraFiles []string, clientArchiveDir, timestamp string, deleteOriginals bool, password string) (int, error) {
+func archiveZip(toArchive []Session, extraFiles []string, clientArchiveDir, timestamp string, deleteOriginals bool, password string, mgr *config.ConfigManager) (int, error) {
 	archiveFilename := fmt.Sprintf("%s.zip", timestamp)
 	archivePath := filepath.Join(clientArchiveDir, archiveFilename)
 
@@ -153,9 +150,8 @@ func archiveZip(toArchive []Session, extraFiles []string, clientArchiveDir, time
 				continue
 			}
 
-			logsDir, _ := config.GetLogsDir()
 			var targetPath string
-			if rel, err := filepath.Rel(logsDir, fPath); err == nil && !strings.HasPrefix(rel, "..") {
+			if rel, err := filepath.Rel(mgr.GetPaths().LogsDir, fPath); err == nil && !strings.HasPrefix(rel, "..") {
 				targetPath = filepath.Join("logs", rel)
 			} else {
 				targetPath = filepath.Join("logs", filepath.Base(fPath))
@@ -179,9 +175,8 @@ func archiveZip(toArchive []Session, extraFiles []string, clientArchiveDir, time
 	}
 
 	for _, extraFile := range extraFiles {
-		reportsDir, _ := config.GetReportsDir()
 		var targetPath string
-		if rel, err := filepath.Rel(reportsDir, extraFile); err == nil && !strings.HasPrefix(rel, "..") {
+		if rel, err := filepath.Rel(mgr.GetPaths().ReportsDir, extraFile); err == nil && !strings.HasPrefix(rel, "..") {
 			targetPath = filepath.Join("reports", rel)
 		} else {
 			targetPath = filepath.Join("reports", utils.Slugify(filepath.Base(filepath.Dir(extraFile))), filepath.Base(extraFile))
@@ -209,14 +204,11 @@ func archiveZip(toArchive []Session, extraFiles []string, clientArchiveDir, time
 }
 
 func ListArchives() ([]ArchiveItem, error) {
-	archiveDir, err := config.GetArchiveDir()
-	if err != nil {
-		return nil, err
-	}
+	mgr := config.Manager()
 
 	var items []ArchiveItem
 
-	entries, err := os.ReadDir(archiveDir)
+	entries, err := os.ReadDir(mgr.GetPaths().ArchiveDir)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return []ArchiveItem{}, nil
@@ -229,7 +221,7 @@ func ListArchives() ([]ArchiveItem, error) {
 			continue
 		}
 		clientName := clientEntry.Name()
-		clientPath := filepath.Join(archiveDir, clientName)
+		clientPath := filepath.Join(mgr.GetPaths().ArchiveDir, clientName)
 
 		files, err := os.ReadDir(clientPath)
 		if err != nil {

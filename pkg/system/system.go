@@ -27,10 +27,8 @@ func CheckReplayDependencies() error {
 }
 
 func EnsureLogDir() (string, error) {
-	dir, err := config.GetLogsDir()
-	if err != nil {
-		return "", err
-	}
+	mgr := config.Manager()
+	dir := mgr.GetPaths().LogsDir
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return "", fmt.Errorf("failed to create log dir: %w", err)
 	}
@@ -38,10 +36,8 @@ func EnsureLogDir() (string, error) {
 }
 
 func IsSetupRun() (bool, error) {
-	dir, err := config.GetLogsDir()
-	if err != nil {
-		return false, err
-	}
+	mgr := config.Manager()
+	dir := mgr.GetPaths().LogsDir
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		return false, nil
 	}

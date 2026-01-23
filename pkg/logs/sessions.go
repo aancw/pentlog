@@ -81,7 +81,8 @@ func ListSessionsPaginated(limit, offset int) ([]Session, error) {
 	defer rows.Close()
 
 	var sessions []Session
-	rootDir, _ := config.GetLogsDir()
+	mgr := config.Manager()
+	rootDir := mgr.GetPaths().LogsDir
 
 	for rows.Next() {
 		var s Session
@@ -148,11 +149,11 @@ func GetSession(id int) (*Session, error) {
 		return nil, err
 	}
 
-	rootDir, _ := config.GetLogsDir()
+	mgr := config.Manager()
 
 	s.ID = id
 	s.Filename = filename
-	s.Path = filepath.Join(rootDir, relPath)
+	s.Path = filepath.Join(mgr.GetPaths().LogsDir, relPath)
 	s.DisplayPath = relPath
 	s.Size = size
 	s.Metadata = SessionMetadata{
@@ -177,10 +178,8 @@ func GetSession(id int) (*Session, error) {
 }
 
 func SyncSessions() error {
-	rootDir, err := config.GetLogsDir()
-	if err != nil {
-		return err
-	}
+	mgr := config.Manager()
+	rootDir := mgr.GetPaths().LogsDir
 
 	database, err := db.GetDB()
 	if err != nil {
@@ -288,10 +287,8 @@ func AddSessionToDB(meta SessionMetadata, absLogPath string) error {
 		return err
 	}
 
-	rootDir, err := config.GetLogsDir()
-	if err != nil {
-		return err
-	}
+	mgr := config.Manager()
+	rootDir := mgr.GetPaths().LogsDir
 
 	relPath, err := filepath.Rel(rootDir, absLogPath)
 	if err != nil {

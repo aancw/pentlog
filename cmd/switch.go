@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"pentlog/pkg/metadata"
+	"pentlog/pkg/config"
 	"pentlog/pkg/utils"
 	"time"
 
@@ -14,7 +14,8 @@ var switchCmd = &cobra.Command{
 	Use:   "switch [phase]",
 	Short: "Switch to a different pentest phase (Interactive)",
 	Run: func(cmd *cobra.Command, args []string) {
-		ctx, err := metadata.Load()
+		mgr := config.Manager()
+		ctx, err := mgr.LoadContext()
 		if err != nil {
 			fmt.Println("Error: No active engagement found. Run 'pentlog create' first.")
 			os.Exit(1)
@@ -65,7 +66,7 @@ var switchCmd = &cobra.Command{
 		ctx.Phase = newPhase
 		ctx.Timestamp = time.Now().Format(time.RFC3339)
 
-		if err := metadata.Save(*ctx); err != nil {
+		if err := mgr.SaveContext(ctx); err != nil {
 			fmt.Printf("Error saving context: %v\n", err)
 			os.Exit(1)
 		}
@@ -75,7 +76,8 @@ var switchCmd = &cobra.Command{
 }
 
 func switchBack() {
-	history, err := metadata.LoadHistory()
+	mgr := config.Manager()
+	history, err := mgr.LoadContextHistory()
 	if err != nil {
 		fmt.Printf("Error loading history: %v\n", err)
 		os.Exit(1)
@@ -89,7 +91,7 @@ func switchBack() {
 	target := history[len(history)-2]
 	target.Timestamp = time.Now().Format(time.RFC3339)
 
-	if err := metadata.Save(target); err != nil {
+	if err := mgr.SaveContext(&target); err != nil {
 		fmt.Printf("Error saving context: %v\n", err)
 		os.Exit(1)
 	}
@@ -99,7 +101,8 @@ func switchBack() {
 }
 
 func listSessions() bool {
-	history, err := metadata.LoadHistory()
+	mgr := config.Manager()
+	history, err := mgr.LoadContextHistory()
 	if err != nil {
 		fmt.Printf("Error loading history: %v\n", err)
 		return false
@@ -116,7 +119,7 @@ func listSessions() bool {
 		Engagement string
 	}
 	seen := make(map[key]bool)
-	var candidates []metadata.Context
+	var candidates []config.ContextData
 
 	for i := len(history) - 1; i >= 0; i-- {
 		ctx := history[i]
@@ -146,7 +149,7 @@ func listSessions() bool {
 	selected := candidates[idx]
 	selected.Timestamp = time.Now().Format(time.RFC3339)
 
-	if err := metadata.Save(selected); err != nil {
+	if err := mgr.SaveContext(&selected); err != nil {
 		fmt.Printf("Error saving context: %v\n", err)
 		return false
 	}
@@ -156,7 +159,7 @@ func listSessions() bool {
 	return true
 }
 
-func printSummary(ctx metadata.Context) {
+func printSummary(ctx config.ContextData) {
 	fmt.Printf("\nSwitched to phase: %s\n", ctx.Phase)
 
 	summary := []string{

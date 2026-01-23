@@ -223,14 +223,9 @@ func GenerateHTMLReport(sessions []Session, client string, findings []vulns.Vuln
 		}
 	}
 
-	// Load templates from disk
-	templatesDir, err := config.GetTemplatesDir()
-	if err != nil {
-		return "", fmt.Errorf("failed to get templates dir: %w", err)
-	}
-
-	htmlPath := filepath.Join(templatesDir, "report.html")
-	cssPath := filepath.Join(templatesDir, "report.css")
+	mgr := config.Manager()
+	htmlPath := filepath.Join(mgr.GetPaths().TemplatesDir, "report.html")
+	cssPath := filepath.Join(mgr.GetPaths().TemplatesDir, "report.css")
 
 	// Check if files exist
 	if _, err := os.Stat(htmlPath); os.IsNotExist(err) {
@@ -266,12 +261,8 @@ func GenerateHTMLReport(sessions []Session, client string, findings []vulns.Vuln
 }
 
 func ListClientReports(client string) ([]string, error) {
-	reportsDir, err := config.GetReportsDir()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get reports directory: %w", err)
-	}
-
-	clientDir := filepath.Join(reportsDir, utils.Slugify(client))
+	mgr := config.Manager()
+	clientDir := filepath.Join(mgr.GetPaths().ReportsDir, utils.Slugify(client))
 	entries, err := os.ReadDir(clientDir)
 	if err != nil {
 		if os.IsNotExist(err) {

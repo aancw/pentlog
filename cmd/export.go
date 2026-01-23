@@ -25,6 +25,8 @@ var exportCmd = &cobra.Command{
 	Use:   "export [phase]",
 	Short: "Export commands for a specific phase (recon, exploit, etc.)",
 	Run: func(cmd *cobra.Command, args []string) {
+		mgr := config.Manager()
+
 		sessions, err := logs.ListSessions()
 		if err != nil {
 			fmt.Printf("Error listing sessions: %v\n", err)
@@ -98,12 +100,7 @@ var exportCmd = &cobra.Command{
 						}
 
 						// Open the report
-						reportsDir, err := config.GetReportsDir()
-						if err != nil {
-							fmt.Printf("Error getting reports dir: %v\n", err)
-							continue
-						}
-						fullPath := filepath.Join(reportsDir, utils.Slugify(selectedClient), selectedReport)
+						fullPath := filepath.Join(mgr.GetPaths().ReportsDir, utils.Slugify(selectedClient), selectedReport)
 
 						fmt.Printf("Opening %s...\n", selectedReport)
 						if err := utils.OpenFile(fullPath); err != nil {
@@ -145,8 +142,8 @@ var exportCmd = &cobra.Command{
 		}
 
 		// --- Check for existing reports ---
-		reportsDir, err := config.GetReportsDir()
-		if err == nil {
+		reportsDir := mgr.GetPaths().ReportsDir
+		if true {
 			clientDir := filepath.Join(reportsDir, utils.Slugify(selectedClient))
 
 			// Construct default filenames (logic duplicated from save steps to check existence)
@@ -213,12 +210,7 @@ var exportCmd = &cobra.Command{
 
 		var analysisResult string
 		if analyze {
-			confDir, err := config.GetUserPentlogDir()
-			if err != nil {
-				fmt.Printf("Error getting pentlog directory: %v\n", err)
-				os.Exit(1)
-			}
-			aiConfigPath := filepath.Join(confDir, "ai.yaml")
+			aiConfigPath := mgr.GetPaths().AIConfigFile
 
 			if _, err := os.Stat(aiConfigPath); os.IsNotExist(err) {
 				idx := utils.SelectItem("AI config not found. Create one?", []string{"Yes", "No"})
@@ -361,11 +353,7 @@ var exportCmd = &cobra.Command{
 				if fileNameEng == "" {
 					fileNameEng = "all-engagements"
 				}
-				reportsBaseDir, err := config.GetReportsDir()
-				if err != nil {
-					fmt.Printf("Error getting reports directory: %v\n", err)
-					return
-				}
+				reportsBaseDir := mgr.GetPaths().ReportsDir
 				reportDir := filepath.Join(reportsBaseDir, utils.Slugify(selectedClient))
 				if err := os.MkdirAll(reportDir, 0755); err != nil {
 					fmt.Printf("Error creating report directory: %v\n", err)
@@ -403,11 +391,7 @@ var exportCmd = &cobra.Command{
 				if fileNameEng == "" {
 					fileNameEng = "all-engagements"
 				}
-				reportsBaseDir, err := config.GetReportsDir()
-				if err != nil {
-					fmt.Printf("Error getting reports directory: %v\n", err)
-					continue
-				}
+				reportsBaseDir := mgr.GetPaths().ReportsDir
 				reportDir := filepath.Join(reportsBaseDir, utils.Slugify(selectedClient))
 				if err := os.MkdirAll(reportDir, 0755); err != nil {
 					fmt.Printf("Error creating report directory: %v\n", err)
