@@ -73,7 +73,7 @@ var shellCmd = &cobra.Command{
 			fmt.Fprintf(os.Stderr, "Warning: Failed to add session to DB: %v\n", err)
 		}
 
-		newEnv, tempDir, err := prepareShellEnv(ctx, sessionDir, metaFilePath, logFilePath)
+		newEnv, tempDir, shellArgs, err := prepareShellEnv(ctx, sessionDir, metaFilePath, logFilePath)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error preparing shell environment: %v\n", err)
 			os.Exit(1)
@@ -83,7 +83,7 @@ var shellCmd = &cobra.Command{
 		}
 
 		recorder := system.NewRecorder()
-		c, err := recorder.BuildCommand("", logFilePath)
+		c, err := recorder.BuildCommand("", logFilePath, shellArgs...)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error creating recorder command: %v\n", err)
 			os.Exit(1)
@@ -110,7 +110,7 @@ func getSessionDir(logDir string, ctx *config.ContextData) string {
 	)
 }
 
-func prepareShellEnv(ctx *config.ContextData, sessionDir, metaFilePath, logFilePath string) ([]string, string, error) {
+func prepareShellEnv(ctx *config.ContextData, sessionDir, metaFilePath, logFilePath string) ([]string, string, []string, error) {
 	tempDir, err := os.MkdirTemp("", "pentlog-shell-*")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: Could not create temp dir for shell config: %v\n", err)
@@ -132,6 +132,7 @@ func prepareShellEnv(ctx *config.ContextData, sessionDir, metaFilePath, logFileP
 		shell = "/bin/sh"
 	}
 	baseShell := filepath.Base(shell)
+	var shellArgs []string
 
 	if baseShell == "zsh" && tempDir != "" {
 		zshrcPath := filepath.Join(tempDir, ".zshrc")
@@ -156,16 +157,54 @@ func prepareShellEnv(ctx *config.ContextData, sessionDir, metaFilePath, logFileP
 		if _, err := os.Stat(userBashrc); err == nil {
 			bashContent += fmt.Sprintf("source %s\n", userBashrc)
 		}
-		bashContent += fmt.Sprintf("\nPS1=\"\\[\\033[0;36m\\]%s\\[\\033[0m\\] $PS1\"\n", promptSegment)
+		bashContent += "\n# Pentlog Session Indicator - inject into PS1\n"
+		bashContent += fmt.Sprintf(`_pentlog_prompt_text="%s"
+
+# Print right-aligned indicator
+_pentlog_rprompt() {
+    local cols=$(tput cols 2>/dev/null || echo 80)
+    local text_len=${#_pentlog_prompt_text}
+    local padding=$((cols - text_len))
+    printf '%%*s\033[0;36m%%s\033[0m\n' "$padding" "" "$_pentlog_prompt_text"
+}
+
+# Wrap PS1 to include our indicator (runs after Kali's bashrc sets PS1)
+_pentlog_orig_ps1="$PS1"
+PS1='\[$(_pentlog_rprompt)\]'"$_pentlog_orig_ps1"
+`, promptSegment)
 
 		if err := os.WriteFile(bashrcPath, []byte(bashContent), 0644); err != nil {
 			fmt.Fprintf(os.Stderr, "Warning: Could not write .bashrc: %v\n", err)
 		} else {
-			newEnv = append(newEnv, fmt.Sprintf("PS1=\\[\\033[0;36m\\]%s\\[\\033[0m\\] $PS1", promptSegment))
+			shellArgs = []string{"bash", "--rcfile", bashrcPath}
+		}
+	} else if baseShell == "sh" && tempDir != "" {
+		shrcPath := filepath.Join(tempDir, ".shrc")
+		userShrc := filepath.Join(os.Getenv("HOME"), ".shrc")
+		shContent := ""
+		if _, err := os.Stat(userShrc); err == nil {
+			shContent += fmt.Sprintf(". %s\n", userShrc)
+		}
+		shContent += "\n# Pentlog Prompt Injection with RPROMPT support\n"
+		shContent += fmt.Sprintf(`# Right-aligned prompt for RPROMPT support (RPROMPT emulation for sh)
+_pentlog_rprompt="\033[0;36m%s\033[0m"
+_pentlog_prompt_cmd() {
+    # Print right-aligned prompt segment
+    printf "%%s\n" "$_pentlog_rprompt" >&2
+}
+# sh uses ENV variable, set PROMPT_COMMAND equivalent if supported
+PROMPT_COMMAND="_pentlog_prompt_cmd${PROMPT_COMMAND:+;$PROMPT_COMMAND}"
+PS1="\033[0;36m%s\033[0m $PS1"
+`, promptSegment, promptSegment)
+
+		if err := os.WriteFile(shrcPath, []byte(shContent), 0644); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: Could not write .shrc: %v\n", err)
+		} else {
+			newEnv = append(newEnv, fmt.Sprintf("ENV=%s", shrcPath))
 		}
 	}
 
-	return newEnv, tempDir, nil
+	return newEnv, tempDir, shellArgs, nil
 }
 
 func startRecording(c *exec.Cmd, env []string, ctx *config.ContextData) error {
