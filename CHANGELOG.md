@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- **Persistent Session Indicator for Bash**: Enhanced `pentlog shell` with bash-specific session indicator
+  - Bash sessions now display a persistent indicator in the shell prompt (similar to zsh functionality)
+  - Transient right prompt (rprompt) implementation for modern bash shells
+  - Session indicator appears at the right side of the terminal, disappearing after each command execution
+  - Automatic detection of bash version compatibility
+
+### Fixed
+- Fixed bash rprompt positioning to show correctly at the right bottom of every prompt
+- Fixed transient rprompt implementation to behave like zsh (disappearing after command execution)
+
 ### Changed
 - **Configuration Management Refactor**: Centralized ConfigManager singleton
   - Consolidated all config.GetXDir() functions into Manager().GetPaths()
