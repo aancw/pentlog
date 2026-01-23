@@ -2,6 +2,58 @@
 
 Welcome to the official documentation for **pentlog**.
 
+## 📖 Table of Contents
+
+- [Getting Started](#-getting-started)
+- [Core Concepts](#-core-concepts)
+- [User Guide](#-user-guide)
+- [AI Analysis](#-ai-analysis)
+- [Reporting](#-reporting)
+- [Archiving](#-archiving)
+- [Advanced Configuration](#️-advanced-configuration)
+- [Storage Layout](#-storage-layout)
+
+---
+
+## 🚀 Getting Started
+
+### 1. Quick Setup (3 steps)
+
+```bash
+# Install
+curl -sSf https://raw.githubusercontent.com/aancw/pentlog/main/install.sh | sh
+
+# One-time setup (checks dependencies)
+pentlog setup
+
+# Create your first engagement
+pentlog create
+```
+
+### 2. Choose Your Mode
+
+When you run `pentlog create`, select a context mode:
+
+- **Client Mode**: Full professional engagement (Client, Engagement, Scope, Phase)
+- **Exam/Lab Mode**: Certifications & CTFs (Exam Name, Target IP)
+- **Log Only Mode**: Quick logging (Project Name only)
+
+### 3. Start Recording
+
+```bash
+pentlog shell
+# Your shell is now recorded with perfect terminal fidelity
+```
+
+### 4. Search & Export
+
+```bash
+pentlog search       # Find commands across all sessions
+pentlog export       # Generate Markdown/HTML reports
+```
+
+---
+
 ## 📚 Core Concepts
 
 ### Context Modes
@@ -11,7 +63,7 @@ Pentlog supports different workflows depending on your needs:
 *   **Exam/Lab Mode**: Optimized for CTFs and Certifications (OSCP, PNPT, etc.). Tracks Exam Name and Target IP.
 *   **Log Only Mode**: Minimal setup. Just asks for a Project Name and starts logging immediately to a simplified path.
 
-## 🚀 User Guide
+## 📖 User Guide
 
 ### 1. Initialize Engagement
 Use the `create` command to start a new logging context.
@@ -58,7 +110,7 @@ pentlog note add "Found SQLi"
 pentlog note list
 ```
 
-### 5. Search & Export
+### 5. Search
 All commands function interactively.
 
 ```bash
@@ -71,16 +123,84 @@ pentlog search
 
 # Search with query from command line
 pentlog search "vulnerability" --regex --after 15012026
+```
 
-# Export a report (Interactive Menu)
+### 6. Integrity
+Generate SHA256 hashes of all logs for evidence integrity.
+
+```bash
+pentlog freeze
+```
+
+### 7. Dashboard
+View an interactive executive summary of your engagement logic, including evidence size, recent findings, and statistical breakdowns.
+
+```bash
+pentlog dashboard
+```
+
+### 8. Versioning & Updates
+Keep your tool up to date.
+
+```bash
+# Check version
+pentlog version
+
+# Update automatically
+pentlog update
+```
+
+---
+
+## 💾 Reporting
+
+### Export Reports
+Generate structured Markdown and HTML reports from your sessions.
+
+```bash
+# Interactive mode (Recommended)
 # - Select Phase
 # - [View Existing Reports] to browse and open previous files (shows timestamps)
 # - Generates report with overwrite protection check
 # - Preview in Pager or Save to File
 pentlog export
+
+# Export specific client/engagement
+pentlog export acme -e incident-response
 ```
 
-### 6. Timeline Analysis
+### AI Analysis
+Analyze your reports with AI to get a summary of the findings.
+
+#### Usage
+
+There are two ways to use the AI analysis feature:
+
+1. **Analyze an existing report:**
+    ```bash
+    # Summarized analysis (default)
+    pentlog analyze <report_file>
+
+    # Full analysis
+    pentlog analyze --full-report <report_file>
+    ```
+
+2. **Analyze a report during export:**
+    ```bash
+    # Summarized analysis (default)
+    pentlog export --analyze
+
+    # Full analysis
+    pentlog export --analyze --full-report
+    ```
+
+#### Configuration
+
+See the [AI Analysis](#-ai-analysis) section for setup instructions.
+
+---
+
+## 📊 Timeline Analysis
 Analyze a terminal session recording and extract a chronological timeline of commands executed and their outputs.
 
 ```bash
@@ -94,7 +214,7 @@ pentlog timeline
 pentlog timeline <session_id> -o output.json
 ```
 
-### 7. Replay
+### 9. Replay
 Replay recorded sessions with full fidelity.
 
 ```bash
@@ -103,20 +223,6 @@ pentlog replay
 
 # Or specify ID directly (Linux Only)
 pentlog replay 1 -s 2.0
-```
-
-### 8. Integrity
-Generate SHA256 hashes of all logs for evidence integrity.
-
-```bash
-pentlog freeze
-```
-
-### 9. Dashboard
-View an interactive executive summary of your engagement logic, including evidence size, recent findings, and statistical breakdowns.
-
-```bash
-pentlog dashboard
 ```
 
 ### 10. GIF Export
@@ -149,53 +255,36 @@ pentlog gif --cols 200 --rows 60
 - **Multiple Modes**: Single session, merged sessions, or direct file conversion
 - **Native Rendering**: Pure Go implementation using `vt100` terminal emulator
 
-### 11. Versioning & Updates
-Keep your tool up to date.
-
-```bash
-# Check version
-pentlog version
-
-# Update automatically
-pentlog update
-```
+---
 
 ## 🧠 AI Analysis
 
-Analyze your reports with AI to get a summary of the findings.
+### Setup
 
-### Usage
-There are two ways to use the AI analysis feature:
-
-1.  **Analyze an existing report:**
-    ```bash
-    # Summarized analysis (default)
-    pentlog analyze <report_file>
-
-    # Full analysis
-    pentlog analyze --full-report <report_file>
-    ```
-
-2.  **Analyze a report during export:**
-    ```bash
-    # Summarized analysis (default)
-    pentlog export --analyze
-
-    # Full analysis
-    pentlog export --analyze --full-report
-    ```
-
-## 🛠️ Advanced Configuration
-
-### Shell Completion
-Generate and install shell completion scripts for Zsh and Bash.
+Configure your AI provider before using the analyze feature.
 
 ```bash
-pentlog completion
-```
-Select your shell and follow the prompts.
+# Configure AI provider (Gemini or Ollama)
+# Creates ~/.pentlog/ai_config.yaml
+pentlog setup ai
 
-### Archive Management
+# View current configuration
+cat ~/.pentlog/ai_config.yaml
+```
+
+### Supported Providers
+
+- **Google Gemini** (cloud-based, requires API key)
+- **Ollama** (local LLMs, self-hosted)
+
+### Using AI Analysis
+
+See the [Reporting](#-reporting) section for AI analysis usage with `pentlog export --analyze` and `pentlog analyze`.
+
+---
+
+## 💾 Archiving
+
 Manage disk usage by archiving old or completed sessions.
 
 ```bash
@@ -215,6 +304,24 @@ pentlog archive acme -e internal-audit
 # List archives
 pentlog archive list
 ```
+
+**Features**:
+- **Compression**: ZIP format for better compatibility
+- **Encryption**: Optional AES-256 password protection
+- **Selective**: Archive by Client, Engagement, or Phase
+- **Evidence Ready**: Includes auto-generated reports in archives
+
+---
+
+## ⚙️ Advanced Configuration
+
+### Shell Completion
+Generate and install shell completion scripts for Zsh and Bash.
+
+```bash
+pentlog completion
+```
+Select your shell and follow the prompts.
 
 ## 📦 Storage Layout
 

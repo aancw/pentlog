@@ -1,31 +1,27 @@
-# PentLog
+# PentLog 🔐
 
-![Version](https://img.shields.io/github/v/release/aancw/pentlog?style=for-the-badge)
-![Go Version](https://img.shields.io/github/go-mod/go-version/aancw/pentlog?style=for-the-badge)
-![Downloads](https://img.shields.io/github/downloads/aancw/pentlog/total?style=for-the-badge&color=blue)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
+**Evidence-First Penetration Testing Logging Tool**
 
-Evidence-First Pentest Logging Tool.
-Captures shell activity as high-fidelity terminal logs backed by `ttyrec`.
+Capture shell activity as high-fidelity terminal logs backed by `ttyrec`. Perfect for **OSCP**, **HTB**, **Real-World Engagements**, and compliance audits.
 
 <p align="center">
   <img src="pentlog.png" width="500">
 </p>
 
-## 📜 Table of Contents
+<p align="center">
+  <a href="https://github.com/aancw/pentlog/releases"><img alt="Release" src="https://img.shields.io/github/v/release/aancw/pentlog?style=flat-square&color=blue"></a>
+  <a href="https://golang.org"><img alt="Go" src="https://img.shields.io/github/go-mod/go-version/aancw/pentlog?style=flat-square&color=blue"></a>
+  <a href="https://github.com/aancw/pentlog/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/aancw/pentlog/total?style=flat-square&color=blue"></a>
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/License-MIT-blue?style=flat-square"></a>
+</p>
 
-- [✨ Features](#features)
-- [⌨️ Command Reference](#command-reference)
-- [🛠️ Installation](#installation)
-- [🚀 Usage](#usage)
-- [🧠 AI Analysis](#ai-analysis)
-- [📦 Storage Layout](#storage-layout)
-- [🗺️ Roadmap](#roadmap)
-- [🤝 Contributing](#contributing)
-- [📝 License](#license)
+<p align="center">
+  <strong><a href="#-quick-start">Quick Start</a> • <a href="#-key-features">Features</a> • <a href="#️-commands">Commands</a> • <a href="#️-installation">Install</a> • <a href="#-documentation">Docs</a> • <a href="#-contributing">Contributing</a></strong>
+</p>
 
+---
 
-## Why PentLog?
+## ✨ Why PentLog?
 
 Traditional logging (`script`, `tmux`) isn't built for professional engagements. PentLog fills the gap:
 
@@ -39,109 +35,198 @@ Traditional logging (`script`, `tmux`) isn't built for professional engagements.
 - **AI Analysis**: Analyze your reports with AI to get a summary of the findings.
 - **Shell Completion**: Generate and install shell completion scripts for bash and zsh.
 
-> Used by professionals for **OSCP**, **HTB**, and **Real-World Engagements**.
+---
+
+## 🚀 Quick Start
+
+```bash
+# 1. Install (macOS/Linux)
+curl -sSf https://raw.githubusercontent.com/aancw/pentlog/main/install.sh | sh
+
+# 2. Setup (one-time)
+pentlog setup
+
+# 3. Create engagement
+pentlog create
+
+# 4. Start recording
+pentlog shell
+
+# 5. Search logs
+pentlog search
+```
+
+---
+
+## 📋 Key Features
+
+| Feature | Description |
+|---------|-------------|
+| 🎬 **High-Fidelity Recording** | Captures full terminal output with timing using `ttyrec` |
+| 🔍 **Interactive Search** | Search logs with regex and boolean operators across all sessions |
+| 📊 **Virtual Terminal Emulator** | Guarantees what you see matches what happened (handles colors, overwrites, etc.) |
+| 📝 **Context Awareness** | Tracks Client, Engagement, Phase, Operator, Timestamp automatically |
+| 💾 **Structured Export** | Export to Markdown and customizable HTML reports |
+| 🔐 **AES-256 Archive** | Compress and encrypt sessions for evidence packaging |
+| 🤖 **AI Analysis** | Summarize findings with Google Gemini or Ollama |
+| 🎯 **Timeline Extraction** | Browse command history with interactive timeline browser |
+| 📌 **Notes & Bookmarks** | Add timestamped notes to sessions |
+| 🔄 **Full Replay** | Faithful playback with `ttyplay` |
+
+---
 
 <details>
-<summary><strong>Command Reference</strong> (Click to expand)</summary>
+<summary><h2 style="display: inline;">⌨️ Commands</h2></summary>
 
 | Command | Description |
 | :--- | :--- |
-| `analyze` | Analyze a report with an AI provider to summarize findings. |
-| `archive` | Archive old sessions to save space (Interactive). |
-| `completion` | Generate auto-completion scripts for Zsh and Bash. |
-| `create` | Initialize a new engagement context (Interactive). |
-| `dashboard` | Show an interactive dashboard of your pentest activity. |
-| `export` | Export commands for a specific phase with interactive preview and existing report management. |
-| `freeze` | Generate SHA256 hashes of all session logs. |
-| `gif` | Convert sessions to animated GIF with resolution selection (720p/1080p). |
-| `note` | Manage session notes and bookmarks. |
-| `replay` | Replay a recorded session with full fidelity (Interactive). |
-| `reset` | Clear the current active engagement context. |
-| `search` | Search command history across all sessions (supports Regex). |
-| `sessions` | List and manage recorded sessions. |
-| `setup` | Verify dependencies and prepare local logging. |
-| `shell` | Start a recorded shell with the engagement context loaded. |
-| `status` | Show current tool and engagement status. |
-| `switch` | Switch to a different pentest phase (Interactive/History). |
-| `timeline` | Interactive browser for command timeline extraction from sessions. |
-| `update` | Update pentlog to the latest version automatically. |
-| `vuln` | Manage findings and vulnerabilities.
+| **Session Management** ||
+| `create` | Initialize a new engagement context (Interactive) |
+| `shell` | Start a recorded shell with the engagement context loaded |
+| `sessions` | List and manage recorded sessions |
+| `switch` | Switch to a different pentest phase |
+| **Analysis & Search** ||
+| `search` | Search command history across all sessions (Regex & Boolean) |
+| `timeline` | Interactive browser for command timeline extraction |
+| `dashboard` | Show an interactive dashboard of your pentest activity |
+| `note` | Manage session notes and bookmarks |
+| **Reporting** ||
+| `export` | Export commands for a specific phase (Markdown/HTML) |
+| `analyze` | Analyze a report with an AI provider to summarize findings |
+| `vuln` | Manage findings and vulnerabilities |
+| **Data Management** ||
+| `archive` | Archive old sessions with optional encryption |
+| `freeze` | Generate SHA256 hashes of all session logs for integrity |
+| `gif` | Convert sessions to animated GIF (720p/1080p) |
+| **Utilities** ||
+| `replay` | Replay a recorded session with full fidelity |
+| `status` | Show current tool and engagement status |
+| `setup` | Verify dependencies and prepare local logging |
+| `reset` | Clear the current active engagement context |
+| `completion` | Generate auto-completion scripts for Zsh and Bash |
+| `update` | Update pentlog to the latest version automatically |
 
 </details>
 
 
-## Installation
- 
- ### Quick Install (Linux & macOS)
- 
- ```bash
- curl -sSf https://raw.githubusercontent.com/aancw/pentlog/main/install.sh | sh
- ```
- 
- ### Build from Source
- 
- ```bash
- # Build on Linux
- go build -o pentlog main.go
- 
- # Cross-compile on Mac for Linux
- GOOS=linux GOARCH=amd64 go build -o pentlog main.go
- ```
- 
- ### System Dependencies
- 
- PentLog requires `ttyrec` to function. `ttyplay` is optional but recommended for session replay.
- 
- **Automatic Setup**: `pentlog setup` can auto-install dependencies on supported systems (macOS, Ubuntu/Debian, Fedora, Alpine).
- 
- **Manual Installation**:
- - **macOS**: `brew install ttyrec`
- - **Ubuntu/Debian/WSL**: `sudo apt install ttyrec`
- - **Fedora**: `sudo dnf install ttyrec`
- - **Alpine**: `sudo apk add ttyrec`
- 
- Note: On some systems, `ttyplay` is included with `ttyrec` package.
- 
- ```bash
- # Initial setup (checks deps, creates ~/.pentlog/logs)
- # ⚠️ REQUIRED before first use!
- pentlog setup
- ```
- 
- ### Security Note
- 
- **Password-Protected Archives**: When using `pentlog archive --password`, prefer interactive mode (without the flag) to prompt for password entry. This prevents passwords from being stored in shell history.
+## 🛠️ Installation
 
-## Usage
+### Requirements
 
-Detailed guides are available in our **[Wiki](https://github.com/aancw/pentlog/wiki)** or locally in [`WIKI.md`](WIKI.md).
+- **Go 1.24.0+** (if building from source)
+- **ttyrec** (terminal recording tool)
+- **ttyplay** (optional, for session replay)
 
-*   [**User Guide**](WIKI.md#user-guide): Deep dive into `switch`, `notes`, `freeze`, and more.
-*   [**Modes**](WIKI.md#core-concepts): Learn about Client Mode vs. Exam/Lab Mode.
-*   [**AI Analysis**](WIKI.md#ai-analysis): How to configure and use the AI summarizer.
+### Quick Install
 
-### Quick Start
+```bash
+curl -sSf https://raw.githubusercontent.com/aancw/pentlog/main/install.sh | sh
+pentlog setup  # One-time dependency check and setup
+```
 
-1.  **Initialize**: `pentlog create`
-2.  **Start Shell**: `pentlog shell`
-3.  **Search Logs**: `pentlog search`
+### Build from Source
 
-Check out our [ROADMAP.md](ROADMAP.md) to see what features are currently implemented and what we have planned for the future.
+```bash
+git clone https://github.com/aancw/pentlog.git
+cd pentlog
+go build -o pentlog main.go
 
-## Changelog
+# Or cross-compile for Linux
+GOOS=linux GOARCH=amd64 go build -o pentlog main.go
+```
 
-See [CHANGELOG.md](CHANGELOG.md) for a full list of changes.
+### Install System Dependencies
 
-## Contributing
+**Automatic** (recommended):
+```bash
+pentlog setup  # Auto-installs on macOS, Ubuntu, Fedora, Alpine
+```
 
-Contributions are welcome! Checking out [ROADMAP.md](ROADMAP.md) for planned features and read [CONTRIBUTING.md](CONTRIBUTING.md) to get started.
+**Manual Installation**:
+- **macOS**: `brew install ttyrec`
+- **Ubuntu/Debian/WSL**: `sudo apt-get install ttyrec`
+- **Fedora**: `sudo dnf install ttyrec`
+- **Alpine**: `sudo apk add ttyrec`
 
-## Acknowledgements
+### ⚠️ Security Best Practices
 
-- Thanks to [roomkangali](https://github.com/roomkangali) for adding the [AI Summary feature](#ai-analysis) and the logo!
-- Special thanks to the authors of `ttyrec/ttyplay` for the underlying recording technology.
-- GIF export functionality uses native Go rendering with `vt100` terminal emulator and `gomono` font for high-quality output.
+- **Password-Protected Archives**: Use interactive mode (`pentlog archive`) instead of `--password` flag to avoid storing passwords in shell history
+- **Database Permissions**: Sensitive files are created with 0600 permissions automatically
+- **Evidence Integrity**: Use `pentlog freeze` before archiving for compliance audits
 
-## License
+## 📖 Documentation
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+### Getting Started
+- **[Quick Start Guide](WIKI.md#getting-started)** - Set up and run your first engagement
+- **[User Guide](WIKI.md#user-guide)** - Deep dive into all commands and features
+- **[Modes Guide](WIKI.md#core-concepts)** - Client Mode vs. Exam/Lab Mode vs. Log-Only Mode
+
+### Advanced Topics
+- **[AI Analysis Setup](WIKI.md#ai-analysis)** - Configure Gemini or Ollama for report summarization
+- **[Export & Reporting](WIKI.md#reporting)** - Generate Markdown and HTML reports
+- **[Archiving & Encryption](WIKI.md#archiving)** - Create encrypted evidence packages
+
+### Project Info
+- **[Roadmap](ROADMAP.md)** - Implemented features and future plans
+- **[Changelog](CHANGELOG.md)** - Version history and improvements
+- **[Contributing](CONTRIBUTING.md)** - Help us improve PentLog
+
+---
+
+## 💡 Use Cases
+
+### Penetration Testing Engagements
+- Document every command and output for professional reports
+- Maintain metadata and context throughout the engagement
+- Generate evidence-ready documentation with AI summaries
+
+### Certifications (OSCP, HTB)
+- Track all activity for writeups with perfect terminal fidelity
+- Search across all sessions to find specific commands
+- Export clean Markdown reports for documentation
+
+### Compliance & Audits
+- Create tamper-proof logs with SHA256 integrity verification
+- Archive evidence with AES-256 encryption
+- Maintain detailed audit trails with timestamps
+
+### Security Research
+- Record terminal sessions with precise timing for reproducibility
+- Extract command timelines for analysis
+- Replay sessions exactly as they happened
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions! Start by checking:
+1. [Roadmap](ROADMAP.md) - See what's planned
+2. [Contributing Guide](CONTRIBUTING.md) - Review guidelines
+3. [Open Issues](https://github.com/aancw/pentlog/issues) - Find items to work on
+
+---
+
+## 👏 Acknowledgements
+
+- **[roomkangali](https://github.com/roomkangali)** - AI Summary feature & logo design
+- **ttyrec/ttyplay authors** - Underlying recording technology
+- **Go community** - Bubble Tea, Cobra, and other excellent libraries
+
+---
+
+## 📄 License
+
+MIT License - See [LICENSE](LICENSE) for details.
+
+---
+
+## 🎯 Support & Community
+
+- 📖 **Documentation**: [WIKI.md](WIKI.md)
+- 🐛 **Issues**: [GitHub Issues](https://github.com/aancw/pentlog/issues)
+- 💬 **Discussions**: [GitHub Discussions](https://github.com/aancw/pentlog/discussions)
+- ⭐ **Star us on GitHub** if you find PentLog useful!
+
+---
+
+**Made for professionals. Evidence-first. No compromises.**
