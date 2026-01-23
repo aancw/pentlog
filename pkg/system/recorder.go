@@ -22,8 +22,8 @@ func (t *TtyrecRecorder) BuildCommand(timingFile, logFile string) (*exec.Cmd, er
 		return nil, fmt.Errorf("'ttyrec' command not found")
 	}
 
-	// Explicitly set the output file; otherwise ttyrec treats the argument as a command to execute.
-	return exec.Command(path, "-a", "-f", logFile), nil
+	// macOS ttyrec doesn't support -f flag; uses positional argument instead
+	return exec.Command(path, "-a", logFile), nil
 }
 
 func (t *TtyrecRecorder) SupportsTiming() bool {
