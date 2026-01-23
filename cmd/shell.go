@@ -159,34 +159,33 @@ func prepareShellEnv(ctx *config.ContextData, sessionDir, metaFilePath, logFileP
 		}
 		bashContent += "\n# Pentlog Transient RPROMPT (right side of input line)\n"
 		bashContent += fmt.Sprintf(`_pentlog_prompt_text="%s"
-_pentlog_need_clear=0
+_pentlog_marker="/tmp/.pentlog_rprompt_$$"
 
-# Append RPROMPT to PS1 - shows on right side of input line
-# Uses ANSI: save cursor, move to column, print, restore cursor
+# Show RPROMPT on right side of input line
 _pentlog_rprompt() {
     local cols=$(tput cols 2>/dev/null || echo 80)
     local text_len=${#_pentlog_prompt_text}
     local col=$((cols - text_len + 1))
-    # Save cursor, move to column, print cyan text, restore cursor
     printf '\033[s\033[%%dG\033[0;36m%%s\033[0m\033[u' "$col" "$_pentlog_prompt_text"
-    _pentlog_need_clear=1
+    touch "$_pentlog_marker"
 }
 
 # Clear RPROMPT before command runs (transient)
 _pentlog_preexec() {
     [[ -n "$COMP_LINE" ]] && return
-    [[ "$_pentlog_need_clear" -eq 0 ]] && return
+    [[ ! -f "$_pentlog_marker" ]] && return
     [[ "$BASH_COMMAND" == *"_pentlog_"* ]] && return
     
     local cols=$(tput cols 2>/dev/null || echo 80)
     local text_len=${#_pentlog_prompt_text}
     local col=$((cols - text_len + 1))
-    # Move up 1 line (back to input line), go to RPROMPT column, clear to EOL, move back down
+    # Move up 1 line, go to RPROMPT column, clear to EOL, move back down
     printf '\033[A\033[%%dG\033[K\033[B\r' "$col"
-    _pentlog_need_clear=0
+    rm -f "$_pentlog_marker"
 }
 
 trap '_pentlog_preexec' DEBUG
+trap 'rm -f "$_pentlog_marker"' EXIT
 
 # Append RPROMPT display to end of PS1
 PS1="$PS1"'\[$(_pentlog_rprompt)\]'
