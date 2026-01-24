@@ -117,9 +117,10 @@ func cleanControlChars(str string) string {
 
 func isPromptLine(line string) bool {
 	patterns := []string{
+		`┌──\(`,           // Kali prompt header (multi-line prompt start)
 		`└─\$`,            // Kali/custom prompt like "└─$" (ACTUAL command line, not header)
-		`\$\s+$`,          // Simple $ at end
-		`#\s+$`,           // Root # at end
+		`\$\s*$`,          // Simple $ at end (with optional whitespace)
+		`#\s*$`,           // Root # at end (with optional whitespace)
 		`[a-zA-Z0-9_-]+@`, // user@host pattern
 		`:\~\$`,           // :~$ pattern
 		`:\~#`,            // :~# pattern
