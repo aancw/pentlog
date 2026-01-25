@@ -413,3 +413,5 @@ Select your shell and follow the prompts.
 *   **Export Reports**: `~/.pentlog/reports/<client>/`
 *   **Templates**: `~/.pentlog/templates/`
 *   **Archives**: `~/.pentlog/archive/<client>/`
+
+Wiki Updated
