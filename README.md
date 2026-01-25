@@ -159,14 +159,14 @@ pentlog setup  # Auto-installs on macOS, Ubuntu, Fedora, Alpine
 ## 📖 Documentation
 
 ### Getting Started
-- **[Quick Start Guide](WIKI.md#getting-started)** - Set up and run your first engagement
-- **[User Guide](WIKI.md#user-guide)** - Deep dive into all commands and features
-- **[Modes Guide](WIKI.md#core-concepts)** - Client Mode vs. Exam/Lab Mode vs. Log-Only Mode
+- **[Quick Start Guide](docs/wiki/WIKI.md#getting-started)** - Set up and run your first engagement
+- **[User Guide](docs/wiki/WIKI.md#user-guide)** - Deep dive into all commands and features
+- **[Modes Guide](docs/wiki/WIKI.md#core-concepts)** - Client Mode vs. Exam/Lab Mode vs. Log-Only Mode
 
 ### Advanced Topics
-- **[AI Analysis Setup](WIKI.md#ai-analysis)** - Configure Gemini or Ollama for report summarization
-- **[Export & Reporting](WIKI.md#reporting)** - Generate Markdown and HTML reports
-- **[Archiving & Encryption](WIKI.md#archiving)** - Create encrypted evidence packages
+- **[AI Analysis Setup](docs/wiki/WIKI.md#ai-analysis)** - Configure Gemini or Ollama for report summarization
+- **[Export & Reporting](docs/wiki/WIKI.md#reporting)** - Generate Markdown and HTML reports
+- **[Archiving & Encryption](docs/wiki/WIKI.md#archiving)** - Create encrypted evidence packages
 
 ### Project Info
 - **[Roadmap](ROADMAP.md)** - Implemented features and future plans
@@ -224,7 +224,7 @@ MIT License - See [LICENSE](LICENSE) for details.
 
 ## 🎯 Support & Community
 
-- 📖 **Documentation**: [WIKI.md](WIKI.md)
+- 📖 **Documentation**: [docs/wiki/WIKI.md](docs/wiki/WIKI.md)
 - 🐛 **Issues**: [GitHub Issues](https://github.com/aancw/pentlog/issues)
 - 💬 **Discussions**: [GitHub Discussions](https://github.com/aancw/pentlog/discussions)
 - ⭐ **Star us on GitHub** if you find PentLog useful!

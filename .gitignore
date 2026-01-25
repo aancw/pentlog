@@ -37,11 +37,10 @@ pentlog
 pentlog*
 sample_data
 
-# Markdown files (allow only specific ones)
 *.md
 !README.md
 !CHANGELOG.md
 !CONTRIBUTING.md
 !ROADMAP.md
-!WIKI.md
+!docs/wiki/WIKI.md
 !.github/**/*.md
