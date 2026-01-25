@@ -159,14 +159,14 @@ pentlog setup  # Auto-installs on macOS, Ubuntu, Fedora, Alpine
 ## 📖 Documentation
 
 ### Getting Started
-- **[Quick Start Guide](wiki/Home.md#getting-started)** - Set up and run your first engagement
-- **[User Guide](wiki/Home.md#user-guide)** - Deep dive into all commands and features
-- **[Modes Guide](wiki/Home.md#core-concepts)** - Client Mode vs. Exam/Lab Mode vs. Log-Only Mode
+- **[Quick Start Guide](docs/wiki/Home.md#getting-started)** - Set up and run your first engagement
+- **[User Guide](docs/wiki/Home.md#user-guide)** - Deep dive into all commands and features
+- **[Modes Guide](docs/wiki/Home.md#core-concepts)** - Client Mode vs. Exam/Lab Mode vs. Log-Only Mode
 
 ### Advanced Topics
-- **[AI Analysis Setup](wiki/Home.md#ai-analysis)** - Configure Gemini or Ollama for report summarization
-- **[Export & Reporting](wiki/Home.md#reporting)** - Generate Markdown and HTML reports
-- **[Archiving & Encryption](wiki/Home.md#archiving)** - Create encrypted evidence packages
+- **[AI Analysis Setup](docs/wiki/Home.md#ai-analysis)** - Configure Gemini or Ollama for report summarization
+- **[Export & Reporting](docs/wiki/Home.md#reporting)** - Generate Markdown and HTML reports
+- **[Archiving & Encryption](docs/wiki/Home.md#archiving)** - Create encrypted evidence packages
 
 ### Project Info
 - **[Roadmap](ROADMAP.md)** - Implemented features and future plans
@@ -224,7 +224,7 @@ MIT License - See [LICENSE](LICENSE) for details.
 
 ## 🎯 Support & Community
 
-- 📖 **Documentation**: [wiki/Home.md](wiki/Home.md)
+- 📖 **Documentation**: [docs/wiki/Home.md](docs/wiki/Home.md)
 - 🐛 **Issues**: [GitHub Issues](https://github.com/aancw/pentlog/issues)
 - 💬 **Discussions**: [GitHub Discussions](https://github.com/aancw/pentlog/discussions)
 - ⭐ **Star us on GitHub** if you find PentLog useful!

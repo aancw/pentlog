@@ -3,7 +3,7 @@ on:
   push:
     branches: [main]
     paths:
-      - wiki/**
+      - docs/wiki/**
       - .github/workflows/publish-wiki.yml
 concurrency:
   group: publish-wiki
@@ -16,3 +16,5 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: Andrew-Chen-Wang/github-wiki-action@v4
+        with:
+          path: "docs/wiki/"
