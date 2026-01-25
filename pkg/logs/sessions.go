@@ -23,6 +23,14 @@ type SessionMetadata struct {
 	Timestamp  string `json:"timestamp"`
 }
 
+type SessionState string
+
+const (
+	SessionStateActive    SessionState = "active"
+	SessionStateCompleted SessionState = "completed"
+	SessionStateCrashed   SessionState = "crashed"
+)
+
 type SessionNote struct {
 	Timestamp  string `json:"timestamp"`
 	Content    string `json:"content"`
@@ -40,6 +48,8 @@ type Session struct {
 	Size        int64
 	Metadata    SessionMetadata
 	SortKey     time.Time
+	State       SessionState
+	LastSyncAt  string
 }
 
 func ListSessions() ([]Session, error) {
@@ -116,12 +126,6 @@ func ListSessionsPaginated(limit, offset int) ([]Session, error) {
 			s.SortKey = ts
 		} else {
 			s.ModTime = timestamp
-		}
-
-		// Verify session file exists on disk for evidence integrity
-		if _, err := os.Stat(s.Path); os.IsNotExist(err) {
-			fmt.Fprintf(os.Stderr, "WARNING: Session %d references missing file: %s\n", id, s.Path)
-			// Continue to list session even if file is missing for visibility
 		}
 
 		sessions = append(sessions, s)
@@ -281,10 +285,14 @@ func SyncSessions() error {
 	return err
 }
 
-func AddSessionToDB(meta SessionMetadata, absLogPath string) error {
+func AddSessionToDB(meta SessionMetadata, absLogPath string) (int64, error) {
+	return AddSessionToDBWithState(meta, absLogPath, SessionStateActive)
+}
+
+func AddSessionToDBWithState(meta SessionMetadata, absLogPath string, state SessionState) (int64, error) {
 	database, err := db.GetDB()
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	mgr := config.Manager()
@@ -292,14 +300,197 @@ func AddSessionToDB(meta SessionMetadata, absLogPath string) error {
 
 	relPath, err := filepath.Rel(rootDir, absLogPath)
 	if err != nil {
+		return 0, err
+	}
+
+	now := time.Now().Format(time.RFC3339)
+	result, err := database.Exec(`
+		INSERT INTO sessions (client, engagement, scope, operator, phase, timestamp, filename, relative_path, size, state, last_sync_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, meta.Client, meta.Engagement, meta.Scope, meta.Operator, meta.Phase, meta.Timestamp, filepath.Base(absLogPath), relPath, 0, string(state), now)
+
+	if err != nil {
+		return 0, err
+	}
+
+	return result.LastInsertId()
+}
+
+func UpdateSessionState(sessionID int64, state SessionState) error {
+	database, err := db.GetDB()
+	if err != nil {
 		return err
 	}
 
-	_, err = database.Exec(`
-		INSERT INTO sessions (client, engagement, scope, operator, phase, timestamp, filename, relative_path, size)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`, meta.Client, meta.Engagement, meta.Scope, meta.Operator, meta.Phase, meta.Timestamp, filepath.Base(absLogPath), relPath, 0)
+	now := time.Now().Format(time.RFC3339)
+	_, err = database.Exec(`UPDATE sessions SET state = ?, last_sync_at = ? WHERE id = ?`, string(state), now, sessionID)
+	return err
+}
 
+func UpdateSessionHeartbeat(sessionID int64) error {
+	database, err := db.GetDB()
+	if err != nil {
+		return err
+	}
+
+	now := time.Now().Format(time.RFC3339)
+	_, err = database.Exec(`UPDATE sessions SET last_sync_at = ? WHERE id = ?`, now, sessionID)
+	return err
+}
+
+func UpdateSessionSize(sessionID int64, size int64) error {
+	database, err := db.GetDB()
+	if err != nil {
+		return err
+	}
+
+	now := time.Now().Format(time.RFC3339)
+	_, err = database.Exec(`UPDATE sessions SET size = ?, last_sync_at = ? WHERE id = ?`, size, now, sessionID)
+	return err
+}
+
+func GetActiveSessions() ([]Session, error) {
+	return GetSessionsByState(SessionStateActive)
+}
+
+func GetCrashedSessions() ([]Session, error) {
+	return GetSessionsByState(SessionStateCrashed)
+}
+
+func GetSessionsByState(state SessionState) ([]Session, error) {
+	database, err := db.GetDB()
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := database.Query(`
+		SELECT id, client, engagement, scope, operator, phase, timestamp, filename, relative_path, size, state, last_sync_at
+		FROM sessions WHERE state = ? ORDER BY timestamp DESC
+	`, string(state))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var sessions []Session
+	mgr := config.Manager()
+	rootDir := mgr.GetPaths().LogsDir
+
+	for rows.Next() {
+		var s Session
+		var client, engagement, scope, operator, phase, timestamp, filename, relPath string
+		var size int64
+		var id int
+		var stateStr, lastSyncAt sql.NullString
+
+		if err := rows.Scan(&id, &client, &engagement, &scope, &operator, &phase, &timestamp, &filename, &relPath, &size, &stateStr, &lastSyncAt); err != nil {
+			continue
+		}
+
+		s.ID = id
+		s.Filename = filename
+		s.Path = filepath.Join(rootDir, relPath)
+		s.DisplayPath = relPath
+		s.Size = size
+		s.Metadata = SessionMetadata{
+			Client:     client,
+			Engagement: engagement,
+			Scope:      scope,
+			Operator:   operator,
+			Phase:      phase,
+			Timestamp:  timestamp,
+		}
+		s.MetaPath = strings.Replace(s.Path, ".tty", ".json", 1)
+		s.NotesPath = strings.Replace(s.Path, ".tty", ".notes.json", 1)
+
+		if stateStr.Valid {
+			s.State = SessionState(stateStr.String)
+		} else {
+			s.State = SessionStateCompleted
+		}
+		if lastSyncAt.Valid {
+			s.LastSyncAt = lastSyncAt.String
+		}
+
+		if ts, err := time.Parse(time.RFC3339, timestamp); err == nil {
+			s.ModTime = ts.Format("2006-01-02 15:04:05")
+			s.SortKey = ts
+		} else {
+			s.ModTime = timestamp
+		}
+
+		sessions = append(sessions, s)
+	}
+
+	return sessions, nil
+}
+
+func MarkStaleSessions(timeout time.Duration) (int, error) {
+	database, err := db.GetDB()
+	if err != nil {
+		return 0, err
+	}
+
+	cutoff := time.Now().Add(-timeout).Format(time.RFC3339)
+	result, err := database.Exec(`
+		UPDATE sessions SET state = ? 
+		WHERE state = ? AND last_sync_at < ?
+	`, string(SessionStateCrashed), string(SessionStateActive), cutoff)
+
+	if err != nil {
+		return 0, err
+	}
+
+	affected, _ := result.RowsAffected()
+	return int(affected), nil
+}
+
+func RecoverSession(sessionID int) error {
+	database, err := db.GetDB()
+	if err != nil {
+		return err
+	}
+
+	_, err = database.Exec(`UPDATE sessions SET state = ? WHERE id = ?`, string(SessionStateCompleted), sessionID)
+	if err != nil {
+		return err
+	}
+
+	session, err := GetSession(sessionID)
+	if err != nil {
+		return nil
+	}
+
+	if info, err := os.Stat(session.Path); err == nil {
+		UpdateSessionSize(int64(sessionID), info.Size())
+	}
+
+	return nil
+}
+
+func GetOrphanedSessions() ([]Session, error) {
+	sessions, err := ListSessions()
+	if err != nil {
+		return nil, err
+	}
+
+	var orphaned []Session
+	for _, s := range sessions {
+		if _, err := os.Stat(s.Path); os.IsNotExist(err) {
+			orphaned = append(orphaned, s)
+		}
+	}
+
+	return orphaned, nil
+}
+
+func DeleteSession(sessionID int) error {
+	database, err := db.GetDB()
+	if err != nil {
+		return err
+	}
+
+	_, err = database.Exec(`DELETE FROM sessions WHERE id = ?`, sessionID)
 	return err
 }
 

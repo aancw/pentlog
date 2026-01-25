@@ -3,7 +3,10 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"pentlog/pkg/db"
+	"pentlog/pkg/logs"
 	"pentlog/pkg/system"
+	"time"
 
 	"github.com/spf13/cobra"
 )
@@ -38,6 +41,13 @@ Features include automated hashing (integrity), markdown export, and full shell 
 			fmt.Println("Please run 'pentlog setup' first to initialize the environment.")
 			os.Exit(1)
 		}
+
+		// Initialize database and run migrations early
+		if _, err := db.GetDB(); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: Failed to initialize database: %v\n", err)
+		}
+
+		checkForCrashedSessions(cmd.Name())
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		cmd.Help()
@@ -64,4 +74,20 @@ func init() {
 	rootCmd.AddCommand(versionCmd)
 
 	rootCmd.PersistentFlags().BoolVar(&fullReport, "full-report", false, "Perform a full analysis without summarization")
+}
+
+func checkForCrashedSessions(cmdName string) {
+	if cmdName == "recover" || cmdName == "shell" {
+		return
+	}
+
+	logs.MarkStaleSessions(5 * time.Minute)
+
+	crashed, err := logs.GetCrashedSessions()
+	if err != nil || len(crashed) == 0 {
+		return
+	}
+
+	fmt.Fprintf(os.Stderr, "\n⚠️  Warning: %d crashed session(s) detected.\n", len(crashed))
+	fmt.Fprintln(os.Stderr, "   Run 'pentlog recover' to review and recover them.")
 }

@@ -21,6 +21,13 @@ This document outlines the current status of `pentlog` and our plans for future 
     - [x] Verify evidence chain-of-custody.
     - [x] Warn on missing session files during listing.
     - [x] Enforce secure file permissions (0600) for sensitive configs.
+- [x] **Crash Recovery**
+    - [x] Session state tracking (`active`, `completed`, `crashed`).
+    - [x] Periodic heartbeat during recording (30-second interval).
+    - [x] `pentlog recover` command for managing crashed/stale sessions.
+    - [x] Automatic detection of stale sessions (no heartbeat for 5+ minutes).
+    - [x] Handle orphaned sessions (database entries with missing files).
+    - [x] Startup warning when crashed sessions are detected.
 - [x] **Notes & Bookmarks**
     - [x] Add real-time notes via `pentlog note add`.
     - [x] List notes interactively with `pentlog note list`.

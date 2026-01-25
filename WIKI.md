@@ -10,6 +10,7 @@ Welcome to the official documentation for **pentlog**.
 - [AI Analysis](#-ai-analysis)
 - [Reporting](#-reporting)
 - [Archiving](#-archiving)
+- [Crash Recovery](#-crash-recovery)
 - [Advanced Configuration](#️-advanced-configuration)
 - [Storage Layout](#-storage-layout)
 
@@ -310,6 +311,86 @@ pentlog archive list
 - **Encryption**: Optional AES-256 password protection
 - **Selective**: Archive by Client, Engagement, or Phase
 - **Evidence Ready**: Includes auto-generated reports in archives
+
+---
+
+## 🛡️ Crash Recovery
+
+Pentlog protects your evidence from unexpected session terminations (SSH disconnects, OOM kills, SIGKILL, etc.) with automatic crash detection and recovery.
+
+### How It Works
+
+1. **Session State Tracking**: Each session is tracked as `active`, `completed`, or `crashed`
+2. **Heartbeat Mechanism**: During recording, pentlog updates a heartbeat every 30 seconds
+3. **Stale Detection**: Sessions with no heartbeat for 5+ minutes are marked as crashed
+4. **Startup Warning**: Any pentlog command will warn you about crashed sessions
+
+### Using Recovery
+
+```bash
+# Interactive mode (Recommended)
+pentlog recover
+
+# List crashed/stale/orphaned sessions
+pentlog recover --list
+
+# Recover a specific session by ID
+pentlog recover --recover 42
+
+# Recover all crashed sessions at once
+pentlog recover --recover-all
+
+# Mark stale active sessions as crashed
+pentlog recover --mark-stale
+
+# Clean up orphaned sessions (database entries with missing files)
+pentlog recover --clean-orphans
+```
+
+### Session States
+
+| State | Description |
+|-------|-------------|
+| `active` | Session currently recording (heartbeat within 5 min) |
+| `completed` | Session ended normally (exit/Ctrl+D) |
+| `crashed` | Session terminated unexpectedly |
+
+### Common Scenarios
+
+| Scenario | What Happens |
+|----------|--------------|
+| SSH disconnects | Session stays `active`, marked `crashed` after 5 min on next command |
+| System OOM kills process | Session stays `active`, marked `crashed` after 5 min |
+| Normal exit | Session marked `completed` immediately |
+| Power failure | Session stays `active`, marked `crashed` after 5 min on reboot |
+
+### Recovery Workflow
+
+```bash
+# 1. SSH disconnects during 4-hour exam
+# 2. Reconnect and run any pentlog command
+$ pentlog sessions
+
+⚠️  Warning: 1 crashed session(s) detected.
+   Run 'pentlog recover' to review and recover them.
+
+# 3. Recover the session
+$ pentlog recover
+❌ Crashed Sessions (1):
+  [42] ClientX/internal-pentest/exploitation
+      File: session-operator-20260125-143022.tty (2.3 MiB)
+      Crashed: 23 minutes ago
+
+? What would you like to do?
+> Recover a crashed session
+
+✓ Session 42 recovered successfully
+
+# 4. Session is now usable for replay, search, export
+$ pentlog replay 42
+```
+
+**Note**: The recovery feature marks sessions as reviewed - your TTY recordings are preserved on disk even after crashes.
 
 ---
 

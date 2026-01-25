@@ -1,20 +1,26 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"pentlog/pkg/config"
 	"pentlog/pkg/deps"
 	"pentlog/pkg/logs"
 	"pentlog/pkg/system"
 	"pentlog/pkg/utils"
+	"sync"
+	"syscall"
 	"time"
 
 	"github.com/spf13/cobra"
 )
+
+const heartbeatInterval = 30 * time.Second
 
 var shellCmd = &cobra.Command{
 	Use:   "shell",
@@ -69,7 +75,8 @@ var shellCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		if err := logs.AddSessionToDB(meta, logFilePath); err != nil {
+		sessionID, err := logs.AddSessionToDB(meta, logFilePath)
+		if err != nil {
 			fmt.Fprintf(os.Stderr, "Warning: Failed to add session to DB: %v\n", err)
 		}
 
@@ -89,8 +96,39 @@ var shellCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		if err := startRecording(c, newEnv, ctx); err != nil {
-			fmt.Fprintf(os.Stderr, "Error running recorder: %v\n", err)
+		hbCtx, hbCancel := context.WithCancel(context.Background())
+		var wg sync.WaitGroup
+
+		if sessionID > 0 {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				runHeartbeat(hbCtx, sessionID, logFilePath)
+			}()
+		}
+
+		sigChan := make(chan os.Signal, 1)
+		signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
+		go func() {
+			<-sigChan
+			hbCancel()
+			if sessionID > 0 {
+				updateSessionOnExit(sessionID, logFilePath, false)
+			}
+		}()
+
+		runErr := startRecording(c, newEnv, ctx)
+
+		hbCancel()
+		wg.Wait()
+		signal.Stop(sigChan)
+
+		if sessionID > 0 {
+			updateSessionOnExit(sessionID, logFilePath, runErr == nil)
+		}
+
+		if runErr != nil {
+			fmt.Fprintf(os.Stderr, "Error running recorder: %v\n", runErr)
 			return
 		}
 
@@ -277,4 +315,37 @@ func writeMetadata(path string, meta logs.SessionMetadata) error {
 	enc := json.NewEncoder(f)
 	enc.SetIndent("", "  ")
 	return enc.Encode(meta)
+}
+
+func runHeartbeat(ctx context.Context, sessionID int64, logFilePath string) {
+	ticker := time.NewTicker(heartbeatInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			if info, err := os.Stat(logFilePath); err == nil {
+				logs.UpdateSessionSize(sessionID, info.Size())
+			} else {
+				logs.UpdateSessionHeartbeat(sessionID)
+			}
+		}
+	}
+}
+
+func updateSessionOnExit(sessionID int64, logFilePath string, normalExit bool) {
+	state := logs.SessionStateCompleted
+	if !normalExit {
+		state = logs.SessionStateCrashed
+	}
+
+	if err := logs.UpdateSessionState(sessionID, state); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: Failed to update session state: %v\n", err)
+	}
+
+	if info, err := os.Stat(logFilePath); err == nil {
+		logs.UpdateSessionSize(sessionID, info.Size())
+	}
 }

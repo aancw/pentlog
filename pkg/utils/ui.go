@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"strings"
 	"syscall"
+	"time"
 	"unsafe"
 )
 
@@ -255,4 +256,46 @@ func FormatBytes(b int64) string {
 		exp++
 	}
 	return fmt.Sprintf("%.1f %cKiB", float64(b)/float64(div), "KMGTPE"[exp])
+}
+
+func FormatSize(b int64) string {
+	return FormatBytes(b)
+}
+
+func FormatRelativeTime(t time.Time) string {
+	now := time.Now()
+	diff := now.Sub(t)
+
+	if diff < 0 {
+		diff = -diff
+	}
+
+	switch {
+	case diff < time.Minute:
+		secs := int(diff.Seconds())
+		if secs <= 1 {
+			return "just now"
+		}
+		return fmt.Sprintf("%d seconds ago", secs)
+	case diff < time.Hour:
+		mins := int(diff.Minutes())
+		if mins == 1 {
+			return "1 minute ago"
+		}
+		return fmt.Sprintf("%d minutes ago", mins)
+	case diff < 24*time.Hour:
+		hours := int(diff.Hours())
+		if hours == 1 {
+			return "1 hour ago"
+		}
+		return fmt.Sprintf("%d hours ago", hours)
+	case diff < 7*24*time.Hour:
+		days := int(diff.Hours() / 24)
+		if days == 1 {
+			return "1 day ago"
+		}
+		return fmt.Sprintf("%d days ago", days)
+	default:
+		return t.Format("2006-01-02 15:04")
+	}
 }

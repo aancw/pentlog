@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- **Crash Recovery Mechanism**: Protect evidence from unexpected session terminations
+  - Session state tracking: `active`, `completed`, `crashed`
+  - 30-second heartbeat during recording to track session health
+  - New `pentlog recover` command for managing crashed/stale sessions
+  - Automatic detection of stale sessions (no heartbeat for 5+ minutes)
+  - Handle orphaned sessions (database entries with missing files)
+  - Startup warning when crashed sessions are detected
+  - Auto-run database migration on any pentlog command
 - **Persistent Session Indicator for Bash**: Enhanced `pentlog shell` with bash-specific session indicator
   - Bash sessions now display a persistent indicator in the shell prompt (similar to zsh functionality)
   - Transient right prompt (rprompt) implementation for modern bash shells
@@ -16,6 +24,7 @@ All notable changes to this project will be documented in this file.
 - Fixed transient rprompt implementation to behave like zsh (disappearing after command execution)
 
 ### Changed
+- **Database Schema**: Added `state` and `last_sync_at` columns for crash recovery
 - **Configuration Management Refactor**: Centralized ConfigManager singleton
   - Consolidated all config.GetXDir() functions into Manager().GetPaths()
   - Eliminated code duplication and improved consistency

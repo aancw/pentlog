@@ -1,18 +1,16 @@
 package logs
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
 	"pentlog/pkg/config"
 	"pentlog/pkg/db"
-	"strings"
 	"testing"
 	"time"
 )
 
-// TestListSessionsPaginatedMissingFile verifies that missing session files generate warnings
+// TestListSessionsPaginatedMissingFile verifies that sessions with missing files are still listed
 func TestListSessionsPaginatedMissingFile(t *testing.T) {
 	// Reset config singleton for test isolation
 	config.ResetManagerForTesting()
@@ -54,7 +52,7 @@ func TestListSessionsPaginatedMissingFile(t *testing.T) {
 	}
 
 	// Add session to DB manually
-	if err := AddSessionToDB(meta, sessionPath); err != nil {
+	if _, err := AddSessionToDB(meta, sessionPath); err != nil {
 		t.Fatal(err)
 	}
 
@@ -63,22 +61,8 @@ func TestListSessionsPaginatedMissingFile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Capture stderr
-	oldStderr := os.Stderr
-	r, w, _ := os.Pipe()
-	os.Stderr = w
-
-	// List sessions - should succeed but warn
+	// List sessions - should succeed and include the session
 	sessions, err := ListSessions()
-
-	// Restore stderr
-	w.Close()
-	os.Stderr = oldStderr
-
-	// Read captured stderr
-	var buf bytes.Buffer
-	buf.ReadFrom(r)
-	stderrOutput := buf.String()
 
 	// Verify no error occurred
 	if err != nil {
@@ -90,15 +74,6 @@ func TestListSessionsPaginatedMissingFile(t *testing.T) {
 		t.Errorf("Expected 1 session in results despite missing file, got %d", len(sessions))
 	}
 
-	// Verify warning was printed to stderr
-	if !strings.Contains(stderrOutput, "WARNING: Session") {
-		t.Errorf("Expected WARNING in stderr, got: %s", stderrOutput)
-	}
-
-	if !strings.Contains(stderrOutput, sessionPath) {
-		t.Errorf("Expected warning to mention file path %s, got: %s", sessionPath, stderrOutput)
-	}
-
 	// Verify session metadata is correct
 	if len(sessions) > 0 {
 		s := sessions[0]
@@ -108,5 +83,19 @@ func TestListSessionsPaginatedMissingFile(t *testing.T) {
 		if s.Path != sessionPath {
 			t.Errorf("Expected path %s, got %s", sessionPath, s.Path)
 		}
+	}
+
+	// Verify GetOrphanedSessions detects the missing file
+	orphaned, err := GetOrphanedSessions()
+	if err != nil {
+		t.Fatalf("GetOrphanedSessions failed: %v", err)
+	}
+
+	if len(orphaned) != 1 {
+		t.Errorf("Expected 1 orphaned session, got %d", len(orphaned))
+	}
+
+	if len(orphaned) > 0 && orphaned[0].Path != sessionPath {
+		t.Errorf("Expected orphaned session path %s, got %s", sessionPath, orphaned[0].Path)
 	}
 }

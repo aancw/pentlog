@@ -72,6 +72,7 @@ pentlog search
 | 🎯 **Timeline Extraction** | Browse command history with interactive timeline browser |
 | 📌 **Notes & Bookmarks** | Add timestamped notes to sessions |
 | 🔄 **Full Replay** | Faithful playback with `ttyplay` |
+| 🛡️ **Crash Recovery** | Protect evidence from SSH disconnects, OOM kills, and unexpected crashes |
 
 ---
 
@@ -98,6 +99,7 @@ pentlog search
 | `archive` | Archive old sessions with optional encryption |
 | `freeze` | Generate SHA256 hashes of all session logs for integrity |
 | `gif` | Convert sessions to animated GIF (720p/1080p) |
+| `recover` | Recover and manage crashed or stale sessions |
 | **Utilities** ||
 | `replay` | Replay a recorded session with full fidelity |
 | `status` | Show current tool and engagement status |
