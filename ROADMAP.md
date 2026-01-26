@@ -32,6 +32,7 @@ This document outlines the current status of `pentlog` and our plans for future 
     - [x] Add real-time notes via `pentlog note add`.
     - [x] List notes interactively with `pentlog note list`.
     - [x] Support offline note management for past sessions.
+    - [x] **Quick Hotkeys**: `Ctrl+N` for instant notes, `Ctrl+G` for quick vulns during shell sessions.
 
 ### User Interface (TUI)
 - [x] **Dashboard**

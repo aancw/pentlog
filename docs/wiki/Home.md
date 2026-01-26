@@ -111,6 +111,28 @@ pentlog note add "Found SQLi"
 pentlog note list
 ```
 
+### Quick Hotkeys (Inside `pentlog shell`)
+
+During a shell session, use keyboard shortcuts for rapid note/vuln entry:
+
+| Hotkey | Action | Description |
+|--------|--------|-------------|
+| `Ctrl+N` | Quick Note | Prompts for a one-line note, saves instantly |
+| `Ctrl+G` | Quick Vuln | Prompts for title, severity (c/h/m/l/i), and description |
+
+**Example workflow:**
+```bash
+# Press Ctrl+N during shell session
+📝 Quick note: Found open port 8080
+✓ Note saved [14:05:43]
+
+# Press Ctrl+G for vulnerability
+🔓 Vuln title: SQL Injection in login form
+Severity (c/h/m/l/i): h
+Description (optional): POST /login endpoint vulnerable to blind SQLi
+✓ Vuln saved: V-abc123 [High] SQL Injection in login form
+```
+
 ### 5. Search
 All commands function interactively.
 

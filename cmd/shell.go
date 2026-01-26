@@ -172,6 +172,11 @@ func prepareShellEnv(ctx *config.ContextData, sessionDir, metaFilePath, logFileP
 	baseShell := filepath.Base(shell)
 	var shellArgs []string
 
+	pentlogBin, _ := os.Executable()
+	if pentlogBin == "" {
+		pentlogBin = "pentlog"
+	}
+
 	if baseShell == "zsh" && tempDir != "" {
 		zshrcPath := filepath.Join(tempDir, ".zshrc")
 		userZshrc := filepath.Join(os.Getenv("HOME"), ".zshrc")
@@ -182,6 +187,26 @@ func prepareShellEnv(ctx *config.ContextData, sessionDir, metaFilePath, logFileP
 		zshContent += "\n# Pentlog Prompt Injection\n"
 		zshContent += "setopt TRANSIENT_RPROMPT\n"
 		zshContent += fmt.Sprintf("RPROMPT=\"%%F{cyan}%s%%f $RPROMPT\"\n", promptSegment)
+		zshContent += fmt.Sprintf(`
+# Pentlog quick commands alias
+alias pentlog="%s"
+
+# Zsh widget bindings for Ctrl+N (note) and Ctrl+G (vuln)
+zle -N _pentlog_quicknote_widget
+_pentlog_quicknote_widget() {
+    zle push-line
+    BUFFER="pentlog quicknote"
+    zle accept-line
+}
+zle -N _pentlog_quickvuln_widget
+_pentlog_quickvuln_widget() {
+    zle push-line
+    BUFFER="pentlog quickvuln"
+    zle accept-line
+}
+bindkey '^N' _pentlog_quicknote_widget
+bindkey '^G' _pentlog_quickvuln_widget
+`, pentlogBin)
 
 		if err := os.WriteFile(zshrcPath, []byte(zshContent), 0644); err != nil {
 			fmt.Fprintf(os.Stderr, "Warning: Could not write .zshrc: %v\n", err)
@@ -195,6 +220,7 @@ func prepareShellEnv(ctx *config.ContextData, sessionDir, metaFilePath, logFileP
 		if _, err := os.Stat(userBashrc); err == nil {
 			bashContent += fmt.Sprintf("source %s\n", userBashrc)
 		}
+		bashContent += fmt.Sprintf("\n# Pentlog quick commands alias\nalias pentlog=\"%s\"\n", pentlogBin)
 		bashContent += "\n# Pentlog Transient RPROMPT (right side of input line)\n"
 		bashContent += fmt.Sprintf(`_pentlog_prompt_text="%s"
 _pentlog_marker="/tmp/.pentlog_rprompt_$$"
@@ -227,6 +253,10 @@ trap 'rm -f "$_pentlog_marker"' EXIT
 
 # Append RPROMPT display to end of PS1
 PS1="$PS1"'\[$(_pentlog_rprompt)\]'
+
+# Bash keybindings for Ctrl+N (note) and Ctrl+G (vuln)
+bind '"\C-n": "\C-apentlog quicknote\C-m"'
+bind '"\C-g": "\C-apentlog quickvuln\C-m"'
 `, promptSegment)
 
 		if err := os.WriteFile(bashrcPath, []byte(bashContent), 0644); err != nil {
@@ -288,7 +318,10 @@ func startRecording(c *exec.Cmd, env []string, ctx *config.ContextData) error {
 	fmt.Println()
 	fmt.Println("⚠️  WARNING: All input (including passwords) is logged.")
 	fmt.Println()
-	utils.PrintCenteredBlock([]string{"Type 'exit' or Ctrl+D to stop recording."})
+	utils.PrintCenteredBlock([]string{
+		"Type 'exit' or Ctrl+D to stop recording.",
+		"Hotkeys: Ctrl+N = Quick Note | Ctrl+G = Quick Vuln",
+	})
 
 	if err := c.Run(); err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {

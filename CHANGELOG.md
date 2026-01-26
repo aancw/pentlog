@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- **Quick Note Hotkey System**: Keyboard shortcuts for rapid note/vuln entry during shell sessions
+  - `Ctrl+N`: Quick note entry with single-line prompt
+  - `Ctrl+G`: Quick vulnerability entry with abbreviated severity input (c/h/m/l/i)
+  - Works in both zsh and bash shells
+  - Reads from `/dev/tty` for reliable input in keybinding context
+  - Hotkey hints displayed in shell banner on session start
 - **Crash Recovery Mechanism**: Protect evidence from unexpected session terminations
   - Session state tracking: `active`, `completed`, `crashed`
   - 30-second heartbeat during recording to track session health

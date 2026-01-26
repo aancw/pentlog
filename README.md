@@ -71,6 +71,7 @@ pentlog search
 | 🤖 **AI Analysis** | Summarize findings with Google Gemini or Ollama |
 | 🎯 **Timeline Extraction** | Browse command history with interactive timeline browser |
 | 📌 **Notes & Bookmarks** | Add timestamped notes to sessions |
+| ⌨️ **Quick Hotkeys** | Ctrl+N for notes, Ctrl+G for vulns during shell sessions |
 | 🔄 **Full Replay** | Faithful playback with `ttyplay` |
 | 🛡️ **Crash Recovery** | Protect evidence from SSH disconnects, OOM kills, and unexpected crashes |
 
