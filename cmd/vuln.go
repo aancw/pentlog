@@ -6,6 +6,7 @@ import (
 	"text/tabwriter"
 
 	"pentlog/pkg/config"
+	"pentlog/pkg/errors"
 	"pentlog/pkg/vulns"
 
 	"github.com/charmbracelet/huh"
@@ -47,13 +48,13 @@ func runVulnAdd(cmd *cobra.Command, args []string) {
 	mgr := config.Manager()
 	ctx, err := mgr.LoadContext()
 	if err != nil {
-		fmt.Println("Error: Not in an active engagement. Run 'pentlog create' or 'pentlog switch' first.")
+		errors.NoContext().Print()
 		return
 	}
 
 	manager, err := vulns.NewManagerFromContext()
 	if err != nil {
-		fmt.Printf("Error initializing vulns manager: %v\n", err)
+		errors.FromError(errors.Generic, "Failed to initialize vulnerability manager", err).Print()
 		return
 	}
 
@@ -124,13 +125,13 @@ func runVulnAdd(cmd *cobra.Command, args []string) {
 func runVulnList(cmd *cobra.Command, args []string) {
 	manager, err := vulns.NewManagerFromContext()
 	if err != nil {
-		fmt.Println("Error: Not in an active engagement.")
+		errors.NoContext().Print()
 		return
 	}
 
 	list, err := manager.List()
 	if err != nil {
-		fmt.Printf("Error listing vulns: %v\n", err)
+		errors.FromError(errors.DatabaseError, "Failed to list vulnerabilities", err).Print()
 		return
 	}
 

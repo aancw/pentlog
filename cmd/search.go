@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"pentlog/pkg/errors"
 	"pentlog/pkg/logs"
 	"pentlog/pkg/search"
 	"pentlog/pkg/utils"
@@ -93,8 +94,7 @@ var searchCmd = &cobra.Command{
 
 		allSessions, err := logs.ListSessions()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error listing sessions: %v\n", err)
-			os.Exit(1)
+			errors.DatabaseErr("list sessions", err).Fatal()
 		}
 
 		clientMap := make(map[string]bool)
@@ -193,14 +193,12 @@ var searchCmd = &cobra.Command{
 		p := tea.NewProgram(model)
 		finalModel, err := p.Run()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error running search UI: %v\n", err)
-			os.Exit(1)
+			errors.FromError(errors.Generic, "Error running search UI", err).Fatal()
 		}
 
 		if m, ok := finalModel.(searchModel); ok {
 			if m.err != nil {
-				fmt.Fprintf(os.Stderr, "Error: %v\n", m.err)
-				os.Exit(1)
+				errors.FromError(errors.Generic, "Search error", m.err).Fatal()
 			}
 			if m.selectedMatch != nil {
 				viewInPager(*m.selectedMatch)

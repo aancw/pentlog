@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"pentlog/pkg/errors"
 	"pentlog/pkg/logs"
 	"pentlog/pkg/utils"
 	"strings"
@@ -29,8 +30,7 @@ var noteAddCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		sessionDir := os.Getenv("PENTLOG_SESSION_DIR")
 		if sessionDir == "" {
-			fmt.Fprintln(os.Stderr, "Error: Not currently in an active pentlog session (PENTLOG_SESSION_DIR not set).")
-			os.Exit(1)
+			errors.NewError(errors.NoActiveContext, "Not currently in an active pentlog session").WithDetails("PENTLOG_SESSION_DIR not set").Fatal()
 		}
 
 		message := strings.Join(args, " ")
@@ -60,8 +60,7 @@ var noteAddCmd = &cobra.Command{
 		}
 
 		if err := logs.AppendNote(notesPath, note); err != nil {
-			fmt.Fprintf(os.Stderr, "Error saving note: %v\n", err)
-			os.Exit(1)
+			errors.FileErr(notesPath, err).Fatal()
 		}
 
 		if byteOffset != -1 {
@@ -95,8 +94,7 @@ var noteListCmd = &cobra.Command{
 		for {
 			sessions, err := logs.ListSessions()
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error listing sessions: %v\n", err)
-				os.Exit(1)
+				errors.DatabaseErr("list sessions", err).Fatal()
 			}
 			if len(sessions) == 0 {
 				fmt.Println("No sessions found.")
@@ -160,7 +158,7 @@ func runInteractiveNoteList(notesPath, logPath string, allowBack bool) {
 
 		notes, err := logs.ReadNotes(notesPath)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error reading notes: %v\n", err)
+			errors.FileErr(notesPath, err).Print()
 			if allowBack {
 				waitForEnter("Press Enter to go back...")
 				return

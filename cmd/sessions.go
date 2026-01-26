@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"pentlog/pkg/errors"
 	"pentlog/pkg/logs"
 	"text/tabwriter"
 
@@ -28,8 +29,7 @@ var sessionsCmd = &cobra.Command{
 		}
 
 		if err != nil {
-			fmt.Printf("Error listing sessions: %v\n", err)
-			os.Exit(1)
+			errors.DatabaseErr("list sessions", err).Fatal()
 		}
 
 		if len(sessions) == 0 {

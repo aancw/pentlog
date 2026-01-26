@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"pentlog/pkg/config"
+	"pentlog/pkg/errors"
 
 	"github.com/spf13/cobra"
 )
@@ -21,8 +22,7 @@ var resetCmd = &cobra.Command{
 		}
 
 		if err := os.Remove(path); err != nil {
-			fmt.Printf("Error removing context file: %v\n", err)
-			os.Exit(1)
+			errors.FileErr(path, err).Fatal()
 		}
 
 		fmt.Println("Active context cleared. You can now start a new engagement.")

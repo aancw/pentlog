@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"pentlog/pkg/ai"
 	"pentlog/pkg/config"
+	"pentlog/pkg/errors"
 	"pentlog/pkg/logs"
 	"pentlog/pkg/recorder"
 	"pentlog/pkg/utils"
@@ -29,7 +30,7 @@ var exportCmd = &cobra.Command{
 
 		sessions, err := logs.ListSessions()
 		if err != nil {
-			fmt.Printf("Error listing sessions: %v\n", err)
+			errors.DatabaseErr("list sessions", err).Print()
 			return
 		}
 
@@ -81,7 +82,7 @@ var exportCmd = &cobra.Command{
 			if selectedEngagement == "[View Existing Reports]" {
 				reports, err := logs.ListClientReports(selectedClient)
 				if err != nil {
-					fmt.Printf("Error listing reports: %v\n", err)
+					errors.DatabaseErr("list reports", err).Print()
 				} else if len(reports) == 0 {
 					fmt.Println("No existing reports found for this client.")
 				} else {
@@ -104,7 +105,7 @@ var exportCmd = &cobra.Command{
 
 						fmt.Printf("Opening %s...\n", selectedReport)
 						if err := utils.OpenFile(fullPath); err != nil {
-							fmt.Printf("Error opening file: %v\n", err)
+							errors.FileErr(fullPath, err).Print()
 						}
 					}
 				}
@@ -204,8 +205,7 @@ var exportCmd = &cobra.Command{
 
 		report, err := logs.GenerateReport(finalSessions, selectedClient)
 		if err != nil {
-			fmt.Printf("Error: %v\n", err)
-			os.Exit(1)
+			errors.FromError(errors.Generic, "Failed to generate report", err).Fatal()
 		}
 
 		var analysisResult string
@@ -232,8 +232,7 @@ var exportCmd = &cobra.Command{
 				}
 
 				if err := os.WriteFile(aiConfigPath, []byte(content), 0600); err != nil {
-					fmt.Printf("Error creating config file: %v\n", err)
-					os.Exit(1)
+					errors.FileErr(aiConfigPath, err).Fatal()
 				}
 				fmt.Printf("AI config created at %s\n", aiConfigPath)
 			}
@@ -243,8 +242,7 @@ var exportCmd = &cobra.Command{
 			cfg, err := ai.LoadConfig(aiConfigPath)
 			if err != nil {
 				spin.Stop()
-				fmt.Printf("failed to load config: %v\n", err)
-				os.Exit(1)
+				errors.FromError(errors.AIConfigMissing, "Failed to load AI config", err).Fatal()
 			}
 
 			var analyzer ai.AIAnalyzer
@@ -341,7 +339,7 @@ var exportCmd = &cobra.Command{
 				cmd.Stdout = os.Stdout
 				cmd.Stderr = os.Stderr
 				if err := cmd.Run(); err != nil {
-					fmt.Printf("Error running pager: %v\n", err)
+					errors.FromError(errors.Generic, "Error running pager", err).Print()
 				}
 
 			case 1:
@@ -356,7 +354,7 @@ var exportCmd = &cobra.Command{
 				reportsBaseDir := mgr.GetPaths().ReportsDir
 				reportDir := filepath.Join(reportsBaseDir, utils.Slugify(selectedClient))
 				if err := os.MkdirAll(reportDir, 0755); err != nil {
-					fmt.Printf("Error creating report directory: %v\n", err)
+					errors.DirErr(reportDir, err).Print()
 					return
 				}
 
@@ -369,14 +367,14 @@ var exportCmd = &cobra.Command{
 				fullPath := filepath.Join(reportDir, filename)
 
 				if err := os.WriteFile(fullPath, []byte(report), 0644); err != nil {
-					fmt.Printf("Error saving file: %v\n", err)
+					errors.FileErr(fullPath, err).Print()
 				} else {
 					fmt.Printf("Report saved to %s\n", fullPath)
 
 					prompt := utils.PromptString("Do you want to open the file? (y/N)", "no")
 					if strings.ToLower(prompt) == "y" || strings.ToLower(prompt) == "yes" {
 						if err := utils.OpenFile(fullPath); err != nil {
-							fmt.Printf("Error opening file: %v\n", err)
+							errors.FileErr(fullPath, err).Print()
 						}
 					}
 					return
@@ -394,7 +392,7 @@ var exportCmd = &cobra.Command{
 				reportsBaseDir := mgr.GetPaths().ReportsDir
 				reportDir := filepath.Join(reportsBaseDir, utils.Slugify(selectedClient))
 				if err := os.MkdirAll(reportDir, 0755); err != nil {
-					fmt.Printf("Error creating report directory: %v\n", err)
+					errors.DirErr(reportDir, err).Print()
 					continue
 				}
 
@@ -430,7 +428,7 @@ var exportCmd = &cobra.Command{
 
 					gifsDir := filepath.Join(reportDir, "gifs")
 					if err := os.MkdirAll(gifsDir, 0755); err != nil {
-						fmt.Printf("Error creating gifs directory: %v\n", err)
+						errors.DirErr(gifsDir, err).Print()
 					} else {
 						fmt.Printf("Generating GIF recordings for %d sessions...\n", len(finalSessions))
 
@@ -493,13 +491,13 @@ var exportCmd = &cobra.Command{
 
 				htmlReport, err := logs.GenerateHTMLReport(finalSessions, selectedClient, filteredFindings, analysisHTML, gifPaths)
 				if err != nil {
-					fmt.Printf("Error generating HTML: %v\n", err)
+					errors.FromError(errors.Generic, "Error generating HTML", err).Print()
 					return
 				}
 				// ----------------------------
 
 				if err := os.WriteFile(fullPath, []byte(htmlReport), 0644); err != nil {
-					fmt.Printf("Error saving file: %v\n", err)
+					errors.FileErr(fullPath, err).Print()
 					return
 				}
 
@@ -508,7 +506,7 @@ var exportCmd = &cobra.Command{
 				prompt := utils.PromptString("Do you want to open the file? (y/N)", "no")
 				if strings.ToLower(prompt) == "y" || strings.ToLower(prompt) == "yes" {
 					if err := utils.OpenFile(fullPath); err != nil {
-						fmt.Printf("Error opening file: %v\n", err)
+						errors.FileErr(fullPath, err).Print()
 					}
 				}
 				return

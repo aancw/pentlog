@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"pentlog/pkg/config"
+	"pentlog/pkg/errors"
 	"pentlog/pkg/logs"
 	"pentlog/pkg/utils"
 	"strconv"
@@ -47,8 +48,7 @@ Examples:
 		if len(args) == 0 {
 			sessions, err := logs.ListSessions()
 			if err != nil {
-				fmt.Printf("Error listing sessions: %v\n", err)
-				os.Exit(1)
+				errors.DatabaseErr("list sessions", err).Fatal()
 			}
 			if len(sessions) == 0 {
 				fmt.Println("No sessions found to archive.")
@@ -183,8 +183,7 @@ Examples:
 
 		toArchive, err := logs.GetSessionsToArchive(clientName, engagement, phase, olderThan)
 		if err != nil {
-			fmt.Printf("Error finding sessions to archive: %v\n", err)
-			os.Exit(1)
+			errors.DatabaseErr("find sessions to archive", err).Fatal()
 		}
 
 		if len(toArchive) == 0 {
@@ -290,8 +289,7 @@ Examples:
 		}
 
 		if err != nil {
-			fmt.Printf("Error archiving sessions: %v\n", err)
-			os.Exit(1)
+			errors.FromError(errors.Generic, "Error archiving sessions", err).Fatal()
 		}
 
 		fmt.Printf("Successfully archived %d sessions.\n", count)
@@ -310,8 +308,7 @@ var archiveListCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		items, err := logs.ListArchives()
 		if err != nil {
-			fmt.Printf("Error listing archives: %v\n", err)
-			os.Exit(1)
+			errors.FromError(errors.Generic, "Error listing archives", err).Fatal()
 		}
 
 		if len(items) == 0 {

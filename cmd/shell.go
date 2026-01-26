@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"pentlog/pkg/config"
 	"pentlog/pkg/deps"
+	"pentlog/pkg/errors"
 	"pentlog/pkg/logs"
 	"pentlog/pkg/system"
 	"pentlog/pkg/utils"
@@ -27,20 +28,18 @@ var shellCmd = &cobra.Command{
 	Short: "Start a recorded shell with the engagement context loaded",
 	Run: func(cmd *cobra.Command, args []string) {
 		if os.Getenv("PENTLOG_SESSION_LOG_PATH") != "" {
-			fmt.Fprintln(os.Stderr, "Error: You are already in a pentlog shell session.")
-			os.Exit(1)
+			errors.AlreadyInShell().Fatal()
 		}
 
 		dm := deps.NewManager()
 		if ok, _ := dm.Check("ttyrec"); !ok {
-			fmt.Fprintln(os.Stderr, "Error: 'ttyrec' is missing. Please run 'pentlog setup' or install it manually to record sessions.")
-			os.Exit(1)
+			errors.MissingDependency("ttyrec", "brew install ttyrec || apt-get install ttyrec").Fatal()
 		}
 
 		mgr := config.Manager()
 		ctx, err := mgr.LoadContext()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error loading context: %v\n", err)
+			errors.NoContext().Print()
 			os.Exit(1)
 		}
 

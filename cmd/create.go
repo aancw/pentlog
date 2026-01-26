@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"pentlog/pkg/config"
+	"pentlog/pkg/errors"
 	"pentlog/pkg/utils"
 	"time"
 
@@ -87,8 +88,12 @@ var createCmd = &cobra.Command{
 		}
 
 		if createClient == "" || createEngagement == "" || createOperator == "" {
-			fmt.Println("Error: Client, Engagement, and Operator are required.")
-			os.Exit(1)
+			errors.NewError(errors.InvalidContext, "Required fields missing").
+				AddReason("Client name not provided").
+				AddReason("Engagement name not provided").
+				AddReason("Operator name not provided").
+				AddSolution("Re-run pentlog create with all required information").
+				Fatal()
 		}
 
 		ctx := &config.ContextData{
@@ -103,8 +108,7 @@ var createCmd = &cobra.Command{
 
 		mgr := config.Manager()
 		if err := mgr.SaveContext(ctx); err != nil {
-			fmt.Printf("Error saving context: %v\n", err)
-			os.Exit(1)
+			errors.FromError(errors.Generic, "Failed to save engagement context", err).Fatal()
 		}
 
 		fmt.Println("\nContext initialized successfully!")

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"pentlog/pkg/config"
+	"pentlog/pkg/errors"
 	"pentlog/pkg/vulns"
 
 	"github.com/spf13/cobra"
@@ -19,27 +20,23 @@ var quickVulnCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		sessionDir := os.Getenv("PENTLOG_SESSION_DIR")
 		if sessionDir == "" {
-			fmt.Fprintln(os.Stderr, "Error: Not in a pentlog session.")
-			os.Exit(1)
+			errors.NewError(errors.NoActiveContext, "Not in a pentlog session").Fatal()
 		}
 
 		mgr := config.Manager()
 		ctx, err := mgr.LoadContext()
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "Error: Not in an active engagement.")
-			os.Exit(1)
+			errors.NoContext().Fatal()
 		}
 
 		manager, err := vulns.NewManagerFromContext()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
+			errors.FromError(errors.Generic, "Failed to create vuln manager", err).Fatal()
 		}
 
 		tty, err := os.Open("/dev/tty")
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "Error: Cannot open terminal.")
-			os.Exit(1)
+			errors.NewError(errors.Generic, "Cannot open terminal").Fatal()
 		}
 		defer tty.Close()
 
@@ -94,8 +91,7 @@ var quickVulnCmd = &cobra.Command{
 		}
 
 		if err := manager.Save(vuln); err != nil {
-			fmt.Fprintf(os.Stderr, "\033[31m✗ Error: %v\033[0m\n", err)
-			os.Exit(1)
+			errors.FromError(errors.Generic, "Failed to save vulnerability", err).Fatal()
 		}
 
 		fmt.Printf("\033[32m✓ Vuln saved:\033[0m %s [%s] %s\n", id, severity, title)

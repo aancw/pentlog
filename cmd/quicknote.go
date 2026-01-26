@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"pentlog/pkg/errors"
 	"pentlog/pkg/logs"
 	"strings"
 	"time"
@@ -19,14 +20,12 @@ var quickNoteCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		sessionDir := os.Getenv("PENTLOG_SESSION_DIR")
 		if sessionDir == "" {
-			fmt.Fprintln(os.Stderr, "Error: Not in a pentlog session.")
-			os.Exit(1)
+			errors.NewError(errors.NoActiveContext, "Not in a pentlog session").Fatal()
 		}
 
 		tty, err := os.Open("/dev/tty")
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "Error: Cannot open terminal.")
-			os.Exit(1)
+			errors.NewError(errors.Generic, "Cannot open terminal").Fatal()
 		}
 		defer tty.Close()
 
@@ -67,8 +66,7 @@ var quickNoteCmd = &cobra.Command{
 		}
 
 		if err := logs.AppendNote(notesPath, note); err != nil {
-			fmt.Fprintf(os.Stderr, "\033[31m✗ Error: %v\033[0m\n", err)
-			os.Exit(1)
+			errors.FileErr(notesPath, err).Fatal()
 		}
 
 		fmt.Printf("\033[32m✓ Note saved\033[0m [%s]\n", timestamp)

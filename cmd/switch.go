@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"pentlog/pkg/config"
+	"pentlog/pkg/errors"
 	"pentlog/pkg/utils"
 	"time"
 
@@ -17,8 +18,7 @@ var switchCmd = &cobra.Command{
 		mgr := config.Manager()
 		ctx, err := mgr.LoadContext()
 		if err != nil {
-			fmt.Println("Error: No active engagement found. Run 'pentlog create' first.")
-			os.Exit(1)
+			errors.NoContext().Fatal()
 		}
 
 		newPhase := ""
@@ -59,16 +59,14 @@ var switchCmd = &cobra.Command{
 		}
 
 		if newPhase == "" {
-			fmt.Println("Error: Phase cannot be empty.")
-			os.Exit(1)
+			errors.NewError(errors.Generic, "Phase cannot be empty").Fatal()
 		}
 
 		ctx.Phase = newPhase
 		ctx.Timestamp = time.Now().Format(time.RFC3339)
 
 		if err := mgr.SaveContext(ctx); err != nil {
-			fmt.Printf("Error saving context: %v\n", err)
-			os.Exit(1)
+			errors.FromError(errors.Generic, "Error saving context", err).Fatal()
 		}
 
 		printSummary(*ctx)
@@ -79,8 +77,7 @@ func switchBack() {
 	mgr := config.Manager()
 	history, err := mgr.LoadContextHistory()
 	if err != nil {
-		fmt.Printf("Error loading history: %v\n", err)
-		os.Exit(1)
+		errors.FromError(errors.Generic, "Error loading history", err).Fatal()
 	}
 
 	if len(history) < 2 {
@@ -92,8 +89,7 @@ func switchBack() {
 	target.Timestamp = time.Now().Format(time.RFC3339)
 
 	if err := mgr.SaveContext(&target); err != nil {
-		fmt.Printf("Error saving context: %v\n", err)
-		os.Exit(1)
+		errors.FromError(errors.Generic, "Error saving context", err).Fatal()
 	}
 
 	fmt.Println("\nSwitched to previous session:")
@@ -104,7 +100,7 @@ func listSessions() bool {
 	mgr := config.Manager()
 	history, err := mgr.LoadContextHistory()
 	if err != nil {
-		fmt.Printf("Error loading history: %v\n", err)
+		errors.FromError(errors.Generic, "Error loading history", err).Print()
 		return false
 	}
 
@@ -150,7 +146,7 @@ func listSessions() bool {
 	selected.Timestamp = time.Now().Format(time.RFC3339)
 
 	if err := mgr.SaveContext(&selected); err != nil {
-		fmt.Printf("Error saving context: %v\n", err)
+		errors.FromError(errors.Generic, "Error saving context", err).Print()
 		return false
 	}
 

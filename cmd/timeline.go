@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"pentlog/pkg/errors"
 	"pentlog/pkg/logs"
 	"pentlog/pkg/utils"
 	"regexp"
@@ -33,14 +34,12 @@ If no session ID is provided, an interactive session selector will be displayed.
 		if len(args) > 0 {
 			id, err = strconv.Atoi(args[0])
 			if err != nil {
-				fmt.Printf("Invalid session ID: %s\n", args[0])
-				os.Exit(1)
+				errors.NewError(errors.Generic, fmt.Sprintf("Invalid session ID: %s", args[0])).Fatal()
 			}
 		} else {
 			sessions, err := logs.ListSessions()
 			if err != nil {
-				fmt.Printf("Error listing sessions: %v\n", err)
-				os.Exit(1)
+				errors.DatabaseErr("list sessions", err).Fatal()
 			}
 			if len(sessions) == 0 {
 				fmt.Println("No sessions found.")
@@ -69,13 +68,11 @@ If no session ID is provided, an interactive session selector will be displayed.
 
 		session, err := logs.GetSession(id)
 		if err != nil {
-			fmt.Printf("Error: %v\n", err)
-			os.Exit(1)
+			errors.SessionMissing(fmt.Sprintf("%d", id)).Fatal()
 		}
 
 		if session.Path == "" {
-			fmt.Println("Error: session file missing; cannot analyze.")
-			os.Exit(1)
+			errors.NewError(errors.SessionNotFound, "Session file missing; cannot analyze").Fatal()
 		}
 
 		spin := utils.NewSpinner(fmt.Sprintf("Analyzing session %d...", id))
@@ -85,8 +82,7 @@ If no session ID is provided, an interactive session selector will be displayed.
 		spin.Stop()
 
 		if err != nil {
-			fmt.Printf("Error parsing timeline: %v\n", err)
-			os.Exit(1)
+			errors.FromError(errors.Generic, "Error parsing timeline", err).Fatal()
 		}
 
 		if len(timeline.Commands) == 0 {
@@ -97,14 +93,12 @@ If no session ID is provided, an interactive session selector will be displayed.
 		if outputFile != "" {
 			jsonOutput, err := timeline.ToJSON()
 			if err != nil {
-				fmt.Printf("Error generating JSON: %v\n", err)
-				os.Exit(1)
+				errors.FromError(errors.Generic, "Error generating JSON", err).Fatal()
 			}
 
 			err = os.WriteFile(outputFile, []byte(jsonOutput), 0644)
 			if err != nil {
-				fmt.Printf("Error writing to file: %v\n", err)
-				os.Exit(1)
+				errors.FileErr(outputFile, err).Fatal()
 			}
 			fmt.Printf("Timeline saved to %s\n", outputFile)
 			return
