@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [v0.13.0] - 2026-01-26
 ### Added
 - **Quick Note Hotkey System**: Keyboard shortcuts for rapid note/vuln entry during shell sessions
   - `Ctrl+N`: Quick note entry with single-line prompt
