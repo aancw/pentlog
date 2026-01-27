@@ -98,6 +98,7 @@ pentlog search
 | `vuln` | Manage findings and vulnerabilities |
 | **Data Management** ||
 | `archive` | Archive old sessions with optional encryption |
+| `import` | Restore archived sessions back into pentlog |
 | `freeze` | Generate SHA256 hashes of all session logs for integrity |
 | `gif` | Convert sessions to animated GIF (720p/1080p) |
 | `recover` | Recover and manage crashed or stale sessions |

@@ -25,6 +25,13 @@ All notable changes to this project will be documented in this file.
   - Transient right prompt (rprompt) implementation for modern bash shells
   - Session indicator appears at the right side of the terminal, disappearing after each command execution
   - Automatic detection of bash version compatibility
+- **Archive Import**: Restore archived sessions back into pentlog database
+  - New `pentlog import <archive.zip>` command
+  - Auto-detection of metadata from archive structure
+  - Support for encrypted archives with password prompt
+  - Granular import targeting (Client, Engagement, Phase)
+  - Preview mode: `pentlog import list <archive>` to view contents before importing
+  - Overwrite protection and force flags for batch operations
 
 ### Fixed
 - Fixed bash rprompt positioning to show correctly at the right bottom of every prompt

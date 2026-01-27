@@ -106,6 +106,7 @@ This document outlines the current status of `pentlog` and our plans for future 
     - [x] Automatic ZIP compression for archived logs.
     - [x] Granular archiving (Client, Engagement, Phase).
     - [x] **Smart Archive**: Auto-include MD/HTML reports and reuse existing ones.
+    - [x] **Archive Import**: Restore archived sessions back into pentlog database.
     - [ ] Transparent decompression during search/replay.
 - [ ] **Remote Backup**
     - [ ] Backup to SFTP or S3-compatible storage (AWS, R2, MinIO).

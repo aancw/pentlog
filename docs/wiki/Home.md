@@ -336,6 +336,41 @@ pentlog archive list
 
 ---
 
+## 📥 Importing Archives
+
+Restore archived sessions back into your pentlog database.
+
+```bash
+# Import with auto-detected metadata
+pentlog import ~/.pentlog/archive/CLIENT/20260127-192108.zip
+
+# Import encrypted archive (will prompt for password)
+pentlog import ~/.pentlog/archive/encrypted.zip
+
+# Import with specific password
+pentlog import archive.zip --password mysecret
+
+# Import to specific client/engagement/phase (for generic archives)
+pentlog import archive.zip -c ACME -e Q1 -p Initial
+
+# Skip confirmation prompts
+pentlog import archive.zip -y
+
+# Overwrite existing files
+pentlog import archive.zip --overwrite
+
+# Preview archive contents without importing
+pentlog import list archive.zip
+```
+
+**Notes**:
+- Always use the **full path** to the archive file
+- List available archives with `pentlog archive list`
+- Encrypted archives will prompt for password automatically
+- Supports ZIP format (`.tar.gz` archives need conversion)
+
+---
+
 ## 🛡️ Crash Recovery
 
 Pentlog protects your evidence from unexpected session terminations (SSH disconnects, OOM kills, SIGKILL, etc.) with automatic crash detection and recovery.
