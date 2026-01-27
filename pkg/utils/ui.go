@@ -11,7 +11,15 @@ import (
 	"unsafe"
 )
 
-func OpenFile(url string) error {
+func OpenFile(path string) error {
+	return openWithDefault(path)
+}
+
+func OpenURL(url string) error {
+	return openWithDefault(url)
+}
+
+func openWithDefault(target string) error {
 	var cmd string
 	var args []string
 
@@ -24,7 +32,7 @@ func OpenFile(url string) error {
 	default: // "linux", "freebsd", "openbsd", "netbsd"
 		cmd = "xdg-open"
 	}
-	args = append(args, url)
+	args = append(args, target)
 	return exec.Command(cmd, args...).Start()
 }
 

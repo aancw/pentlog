@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -430,6 +431,17 @@ var exportCmd = &cobra.Command{
 					if err := os.MkdirAll(gifsDir, 0755); err != nil {
 						errors.DirErr(gifsDir, err).Print()
 					} else {
+						// Check if any GIFs already exist
+						regenerateGifs := false
+						for _, s := range finalSessions {
+							gifPath := filepath.Join(gifsDir, fmt.Sprintf("session-%d.gif", s.ID))
+							if _, err := os.Stat(gifPath); err == nil {
+								regenIdx := utils.SelectItem("Existing GIFs found. Regenerate?", []string{"No (use existing)", "Yes (regenerate all)"})
+								regenerateGifs = regenIdx == 1
+								break
+							}
+						}
+
 						fmt.Printf("Generating GIF recordings for %d sessions...\n", len(finalSessions))
 
 						for i, s := range finalSessions {
@@ -441,10 +453,12 @@ var exportCmd = &cobra.Command{
 							gifPath := filepath.Join(gifsDir, gifName)
 							relativePath := filepath.Join("gifs", gifName)
 
-							if _, err := os.Stat(gifPath); err == nil {
-								fmt.Printf("  [%d/%d] Session %d: exists, skipping\n", i+1, len(finalSessions), s.ID)
-								gifPaths[s.ID] = relativePath
-								continue
+							if !regenerateGifs {
+								if _, err := os.Stat(gifPath); err == nil {
+									fmt.Printf("  [%d/%d] Session %d: exists, skipping\n", i+1, len(finalSessions), s.ID)
+									gifPaths[s.ID] = relativePath
+									continue
+								}
 							}
 
 							fmt.Printf("  [%d/%d] Session %d: generating... ", i+1, len(finalSessions), s.ID)
@@ -503,8 +517,23 @@ var exportCmd = &cobra.Command{
 
 				fmt.Printf("HTML Report saved to %s\n", fullPath)
 
-				prompt := utils.PromptString("Do you want to open the file? (y/N)", "no")
-				if strings.ToLower(prompt) == "y" || strings.ToLower(prompt) == "yes" {
+				openIdx := utils.SelectItem("Open report?", []string{"No", "Yes (via HTTP server)", "Yes (direct file)"})
+				if openIdx == 1 {
+					// Serve via HTTP and open in browser
+					relativePath := filepath.Join(utils.Slugify(selectedClient), filename)
+					go func() {
+						url := fmt.Sprintf("http://localhost:8080/%s", relativePath)
+						fmt.Printf("\n🌐 Server running at: http://localhost:8080/\n")
+						fmt.Printf("📄 Opening: %s\n", url)
+						fmt.Println("Press Ctrl+C to stop the server.\n")
+						utils.OpenURL(url)
+					}()
+					fs := http.FileServer(http.Dir(reportsBaseDir))
+					http.Handle("/", fs)
+					if err := http.ListenAndServe(":8080", nil); err != nil {
+						errors.FromError(errors.Generic, "Server error", err).Print()
+					}
+				} else if openIdx == 2 {
 					if err := utils.OpenFile(fullPath); err != nil {
 						errors.FileErr(fullPath, err).Print()
 					}
