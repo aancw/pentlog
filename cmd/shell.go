@@ -108,11 +108,24 @@ var shellCmd = &cobra.Command{
 
 		sigChan := make(chan os.Signal, 1)
 		signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
+		
+		var signalReceived bool
+		var mu sync.Mutex
+		
 		go func() {
-			<-sigChan
+			sig := <-sigChan
+			mu.Lock()
+			signalReceived = true
+			mu.Unlock()
+			
 			hbCancel()
-			if sessionID > 0 {
-				updateSessionOnExit(sessionID, logFilePath, false)
+			
+			if c.Process != nil {
+				if c.SysProcAttr != nil && c.SysProcAttr.Setpgid {
+					syscall.Kill(-c.Process.Pid, sig.(syscall.Signal))
+				} else {
+					c.Process.Signal(sig)
+				}
 			}
 		}()
 
@@ -121,9 +134,16 @@ var shellCmd = &cobra.Command{
 		hbCancel()
 		wg.Wait()
 		signal.Stop(sigChan)
+		close(sigChan)
 
+		wasNormalExit := runErr == nil
 		if sessionID > 0 {
-			updateSessionOnExit(sessionID, logFilePath, runErr == nil)
+			mu.Lock()
+			if signalReceived {
+				wasNormalExit = false
+			}
+			mu.Unlock()
+			updateSessionOnExit(sessionID, logFilePath, wasNormalExit)
 		}
 
 		if runErr != nil {
@@ -297,6 +317,7 @@ func startRecording(c *exec.Cmd, env []string, ctx *config.ContextData) error {
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
 	c.Env = env
+	c.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
 	fmt.Println()
 	fmt.Print(Banner)
