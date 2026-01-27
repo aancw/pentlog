@@ -190,6 +190,15 @@ func SyncSessions() error {
 		return err
 	}
 
+	// Backup database before migration
+	backupPath, err := db.BackupDB()
+	if err != nil {
+		// Log warning but continue - backup failure shouldn't block migration
+		fmt.Printf("Warning: Could not backup database: %v\n", err)
+	} else if backupPath != "" {
+		fmt.Printf("Database backed up to: %s\n", backupPath)
+	}
+
 	existsStmt, err := database.Prepare("SELECT id FROM sessions WHERE relative_path = ?")
 	if err != nil {
 		return err

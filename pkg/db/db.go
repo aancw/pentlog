@@ -3,8 +3,10 @@ package db
 import (
 	"database/sql"
 	"fmt"
+	"io"
 	"os"
 	"pentlog/pkg/config"
+	"time"
 
 	_ "modernc.org/sqlite"
 )
@@ -59,4 +61,38 @@ func CloseDB() {
 		dbInstance.Close()
 		dbInstance = nil
 	}
+}
+
+func BackupDB() (string, error) {
+	mgr := config.Manager()
+	dbPath := mgr.GetPaths().DatabaseFile
+
+	if _, err := os.Stat(dbPath); err != nil {
+		return "", nil
+	}
+
+	backupPath := dbPath + ".backup-" + time.Now().Format("20060102-150405")
+
+	src, err := os.Open(dbPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to open database for backup: %w", err)
+	}
+	defer src.Close()
+
+	dst, err := os.OpenFile(backupPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0600)
+	if err != nil {
+		return "", fmt.Errorf("failed to create backup file: %w", err)
+	}
+	defer dst.Close()
+
+	if _, err := io.Copy(dst, src); err != nil {
+		os.Remove(backupPath)
+		return "", fmt.Errorf("failed to backup database: %w", err)
+	}
+
+	if err := os.Chmod(backupPath, 0600); err != nil {
+		return "", fmt.Errorf("failed to set backup permissions: %w", err)
+	}
+
+	return backupPath, nil
 }
