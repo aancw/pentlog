@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"pentlog/pkg/db"
+	"pentlog/pkg/errors"
 	"pentlog/pkg/logs"
 	"pentlog/pkg/system"
 	"time"
@@ -37,14 +38,16 @@ Features include automated hashing (integrity), markdown export, and full shell 
 
 		// Check if setup has run
 		if run, _ := system.IsSetupRun(); !run {
-			fmt.Println("Error: pentlog is not initialized.")
-			fmt.Println("Please run 'pentlog setup' first to initialize the environment.")
-			os.Exit(1)
+			errors.NewError(errors.Generic, "pentlog is not initialized").
+				AddReason("Setup has not been run yet").
+				AddReason("Environment directories and dependencies are missing").
+				AddSolution("$ pentlog setup    # Initialize pentlog environment").
+				Fatal()
 		}
 
 		// Initialize database and run migrations early
 		if _, err := db.GetDB(); err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: Failed to initialize database: %v\n", err)
+			errors.DatabaseErr("init", err).Print()
 		}
 
 		checkForCrashedSessions(cmd.Name())
