@@ -3,6 +3,29 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+### Added
+- **Archive Import**: Restore archived sessions back into pentlog database
+  - New `pentlog import <archive.zip>` command for session recovery
+  - Auto-detect metadata from archive structure and directory hierarchy
+  - Support encrypted archives with password prompt or `--password` flag
+  - Granular import targeting with `-c/--client`, `-e/--engagement`, `-p/--phase`
+  - Preview archive contents with `pentlog import list <archive>` before importing
+  - `--overwrite` flag to replace existing files
+  - `-y/--force` flag to skip confirmation prompts
+  - Reverse operation of `pentlog archive` for complete session recovery
+- **Database Backup Before Migration**: Automatic safety mechanism
+  - Automatic backup of SQLite database before running migrations
+  - Prevents data loss during schema updates
+  - Backup stored with `.backup` suffix in `~/.pentlog/` directory
+
+### Fixed
+- **Signal Handling for Graceful Shutdown**: Properly forward SIGINT/SIGTERM/SIGHUP to subprocess
+  - Subprocess now receives termination signals from parent
+  - Recording files properly flushed before exit
+  - Process group isolation prevents orphaned processes
+  - Session state accurately reflects exit type (CRASHED vs COMPLETED)
+  - Thread-safe signal reception tracking with mutex
+  - All resources (signal channel) properly cleaned up
 
 ## [v0.13.0] - 2026-01-26
 ### Added
@@ -25,13 +48,6 @@ All notable changes to this project will be documented in this file.
   - Transient right prompt (rprompt) implementation for modern bash shells
   - Session indicator appears at the right side of the terminal, disappearing after each command execution
   - Automatic detection of bash version compatibility
-- **Archive Import**: Restore archived sessions back into pentlog database
-  - New `pentlog import <archive.zip>` command
-  - Auto-detection of metadata from archive structure
-  - Support for encrypted archives with password prompt
-  - Granular import targeting (Client, Engagement, Phase)
-  - Preview mode: `pentlog import list <archive>` to view contents before importing
-  - Overwrite protection and force flags for batch operations
 
 ### Fixed
 - Fixed bash rprompt positioning to show correctly at the right bottom of every prompt

@@ -21,6 +21,9 @@ This document outlines the current status of `pentlog` and our plans for future 
     - [x] Verify evidence chain-of-custody.
     - [x] Warn on missing session files during listing.
     - [x] Enforce secure file permissions (0600) for sensitive configs.
+    - [x] **Database Backup Before Migration**: Auto-backup SQLite DB before schema updates.
+      - [x] Prevents data loss during migrations
+      - [x] Backup stored with `.backup` suffix
 - [x] **Crash Recovery**
     - [x] Session state tracking (`active`, `completed`, `crashed`).
     - [x] Periodic heartbeat during recording (30-second interval).
@@ -28,6 +31,11 @@ This document outlines the current status of `pentlog` and our plans for future 
     - [x] Automatic detection of stale sessions (no heartbeat for 5+ minutes).
     - [x] Handle orphaned sessions (database entries with missing files).
     - [x] Startup warning when crashed sessions are detected.
+    - [x] **Signal Handling**: Graceful shutdown with proper signal forwarding to subprocess.
+      - [x] Forward SIGINT/SIGTERM/SIGHUP to subprocess process group.
+      - [x] Process group isolation (Setpgid) prevents orphaned processes.
+      - [x] Recording files properly flushed on termination.
+      - [x] Accurate session state (CRASHED vs COMPLETED).
 - [x] **Notes & Bookmarks**
     - [x] Add real-time notes via `pentlog note add`.
     - [x] List notes interactively with `pentlog note list`.
@@ -107,6 +115,11 @@ This document outlines the current status of `pentlog` and our plans for future 
     - [x] Granular archiving (Client, Engagement, Phase).
     - [x] **Smart Archive**: Auto-include MD/HTML reports and reuse existing ones.
     - [x] **Archive Import**: Restore archived sessions back into pentlog database.
+      - [x] New `pentlog import` command for session recovery
+      - [x] Auto-detect metadata from archive structure
+      - [x] Support encrypted archives with password
+      - [x] Granular import targeting (Client/Engagement/Phase)
+      - [x] Preview mode before importing
     - [ ] Transparent decompression during search/replay.
 - [ ] **Remote Backup**
     - [ ] Backup to SFTP or S3-compatible storage (AWS, R2, MinIO).
