@@ -56,12 +56,31 @@
             <div class="session">
                 <h4>Session {{.ID}} ({{.ModTime}})</h4>
                 {{if .GIFPath}}
-                <div class="gif-player" data-gif="{{.GIFPath}}">
+                <div class="gif-player-container" data-gif="{{.GIFPath}}" data-session-id="{{.ID}}">
                     <div class="gif-placeholder">
                         <div class="gif-play-btn">▶</div>
-                        <span class="gif-label">Click to play session recording</span>
+                        <span class="gif-label">Click to load session recording</span>
                     </div>
-                    <img class="gif-image" alt="Session {{.ID}} Recording"/>
+                    <div class="gif-player-wrapper" style="display: none;">
+                        <canvas class="gif-canvas"></canvas>
+                        <div class="gif-controls">
+                            <button class="gif-ctrl-btn gif-play-pause" title="Play/Pause (Space)">▶</button>
+                            <button class="gif-ctrl-btn gif-step-back" title="Previous Frame (←)">⏮</button>
+                            <button class="gif-ctrl-btn gif-step-fwd" title="Next Frame (→)">⏭</button>
+                            <div class="gif-progress-container">
+                                <input type="range" class="gif-progress" min="0" max="100" value="0" title="Seek">
+                                <span class="gif-frame-info">0 / 0</span>
+                            </div>
+                            <select class="gif-speed" title="Playback Speed">
+                                <option value="0.25">0.25x</option>
+                                <option value="0.5">0.5x</option>
+                                <option value="1" selected>1x</option>
+                                <option value="2">2x</option>
+                                <option value="4">4x</option>
+                            </select>
+                            <button class="gif-ctrl-btn gif-restart" title="Restart (R)">↺</button>
+                        </div>
+                    </div>
                 </div>
                 {{end}}
                 <details class="terminal-details">
@@ -74,26 +93,411 @@
     {{end}}
 
     <script>
-    document.querySelectorAll('.gif-player').forEach(player => {
-        const placeholder = player.querySelector('.gif-placeholder');
-        const img = player.querySelector('.gif-image');
-        const gifSrc = player.dataset.gif;
-        let isPlaying = false;
+    /**
+     * PentLog GIF Player - Frame-by-frame GIF control with full LZW decoder
+     * Supports: Play/Pause, Seek, Speed control, Frame stepping
+     */
+    (function() {
+        'use strict';
 
-        player.addEventListener('click', () => {
-            if (!isPlaying) {
-                img.src = gifSrc;
-                img.style.display = 'block';
-                placeholder.style.display = 'none';
-                isPlaying = true;
-            } else {
-                img.src = '';
-                img.style.display = 'none';
-                placeholder.style.display = 'flex';
-                isPlaying = false;
+        // Minimal GIF decoder - parses GIF binary and extracts frames
+        class GifDecoder {
+            constructor(buffer) {
+                this.data = new Uint8Array(buffer);
+                this.pos = 0;
+                this.frames = [];
+                this.width = 0;
+                this.height = 0;
+                this.globalColorTable = null;
+                this.canvas = null;
+                this.ctx = null;
+                this.lastImageData = null;
             }
+
+            decode() {
+                // Header
+                const header = this.readString(6);
+                if (header !== 'GIF87a' && header !== 'GIF89a') {
+                    throw new Error('Invalid GIF');
+                }
+
+                // Logical Screen Descriptor
+                this.width = this.readUint16();
+                this.height = this.readUint16();
+                const packed = this.readByte();
+                this.readByte(); // bg color
+                this.readByte(); // pixel aspect
+
+                const hasGCT = (packed & 0x80) !== 0;
+                const gctSize = 1 << ((packed & 0x07) + 1);
+
+                if (hasGCT) {
+                    this.globalColorTable = this.readColorTable(gctSize);
+                }
+
+                // Create offscreen canvas
+                this.canvas = document.createElement('canvas');
+                this.canvas.width = this.width;
+                this.canvas.height = this.height;
+                this.ctx = this.canvas.getContext('2d');
+
+                // Parse blocks
+                let frameDelay = 100;
+                let disposalMethod = 0;
+                let transparentIndex = -1;
+
+                while (this.pos < this.data.length) {
+                    const blockType = this.readByte();
+
+                    if (blockType === 0x21) { // Extension
+                        const extType = this.readByte();
+                        if (extType === 0xF9) { // Graphics Control
+                            this.readByte(); // block size (4)
+                            const gcPacked = this.readByte();
+                            disposalMethod = (gcPacked >> 2) & 0x07;
+                            const hasTransparency = (gcPacked & 0x01) !== 0;
+                            frameDelay = this.readUint16() * 10 || 100;
+                            transparentIndex = hasTransparency ? this.readByte() : -1;
+                            if (!hasTransparency) this.readByte();
+                            this.readByte(); // terminator
+                        } else {
+                            this.skipSubBlocks();
+                        }
+                    } else if (blockType === 0x2C) { // Image
+                        const frame = this.decodeFrame(frameDelay, disposalMethod, transparentIndex);
+                        if (frame) this.frames.push(frame);
+                        frameDelay = 100;
+                        disposalMethod = 0;
+                        transparentIndex = -1;
+                    } else if (blockType === 0x3B) { // Trailer
+                        break;
+                    } else {
+                        break;
+                    }
+                }
+
+                return { frames: this.frames, width: this.width, height: this.height };
+            }
+
+            decodeFrame(delay, disposal, transparentIdx) {
+                const x = this.readUint16();
+                const y = this.readUint16();
+                const w = this.readUint16();
+                const h = this.readUint16();
+                const packed = this.readByte();
+
+                const hasLCT = (packed & 0x80) !== 0;
+                const interlaced = (packed & 0x40) !== 0;
+                const lctSize = 1 << ((packed & 0x07) + 1);
+
+                const colorTable = hasLCT ? this.readColorTable(lctSize) : this.globalColorTable;
+                if (!colorTable) return null;
+
+                // Handle disposal
+                if (disposal === 2) {
+                    this.ctx.clearRect(x, y, w, h);
+                } else if (disposal === 3 && this.lastImageData) {
+                    this.ctx.putImageData(this.lastImageData, 0, 0);
+                }
+
+                // Save for disposal method 3
+                if (disposal === 3) {
+                    this.lastImageData = this.ctx.getImageData(0, 0, this.width, this.height);
+                }
+
+                // Decode LZW
+                const minCodeSize = this.readByte();
+                const imageData = this.decodeLZW(minCodeSize, w, h, colorTable, transparentIdx, interlaced);
+
+                // Draw frame
+                const frameImageData = this.ctx.createImageData(w, h);
+                frameImageData.data.set(imageData);
+                this.ctx.putImageData(frameImageData, x, y);
+
+                // Capture complete frame
+                const completeFrame = this.ctx.getImageData(0, 0, this.width, this.height);
+                
+                return { imageData: completeFrame, delay: delay };
+            }
+
+            decodeLZW(minCodeSize, width, height, colorTable, transparentIdx, interlaced) {
+                const clearCode = 1 << minCodeSize;
+                const eoiCode = clearCode + 1;
+                let codeSize = minCodeSize + 1;
+                let codeMask = (1 << codeSize) - 1;
+                let nextCode = eoiCode + 1;
+
+                // Read all sub-blocks
+                const blocks = [];
+                let blockSize;
+                while ((blockSize = this.readByte()) !== 0) {
+                    for (let i = 0; i < blockSize; i++) {
+                        blocks.push(this.readByte());
+                    }
+                }
+
+                // Initialize code table
+                let codeTable = [];
+                for (let i = 0; i < clearCode; i++) {
+                    codeTable[i] = [i];
+                }
+                codeTable[clearCode] = [];
+                codeTable[eoiCode] = [];
+
+                // Decode
+                const pixels = new Uint8Array(width * height * 4);
+                let pixelIdx = 0;
+                let bitBuf = 0;
+                let bitCount = 0;
+                let byteIdx = 0;
+                let prevCode = -1;
+
+                const output = (indices) => {
+                    for (const idx of indices) {
+                        if (pixelIdx >= width * height) return;
+                        const row = interlaced ? this.interlaceRow(Math.floor(pixelIdx / width), height) : Math.floor(pixelIdx / width);
+                        const col = pixelIdx % width;
+                        const pos = (row * width + col) * 4;
+                        
+                        if (idx === transparentIdx) {
+                            pixels[pos] = 0;
+                            pixels[pos + 1] = 0;
+                            pixels[pos + 2] = 0;
+                            pixels[pos + 3] = 0;
+                        } else {
+                            const color = colorTable[idx] || [0, 0, 0];
+                            pixels[pos] = color[0];
+                            pixels[pos + 1] = color[1];
+                            pixels[pos + 2] = color[2];
+                            pixels[pos + 3] = 255;
+                        }
+                        pixelIdx++;
+                    }
+                };
+
+                while (byteIdx < blocks.length) {
+                    while (bitCount < codeSize && byteIdx < blocks.length) {
+                        bitBuf |= blocks[byteIdx++] << bitCount;
+                        bitCount += 8;
+                    }
+
+                    const code = bitBuf & codeMask;
+                    bitBuf >>= codeSize;
+                    bitCount -= codeSize;
+
+                    if (code === clearCode) {
+                        codeSize = minCodeSize + 1;
+                        codeMask = (1 << codeSize) - 1;
+                        nextCode = eoiCode + 1;
+                        codeTable = codeTable.slice(0, eoiCode + 1);
+                        prevCode = -1;
+                        continue;
+                    }
+
+                    if (code === eoiCode) break;
+
+                    let entry;
+                    if (code < nextCode) {
+                        entry = codeTable[code];
+                    } else if (code === nextCode && prevCode !== -1) {
+                        entry = [...codeTable[prevCode], codeTable[prevCode][0]];
+                    } else {
+                        break;
+                    }
+
+                    output(entry);
+
+                    if (prevCode !== -1 && nextCode < 4096) {
+                        codeTable[nextCode++] = [...codeTable[prevCode], entry[0]];
+                        if (nextCode > codeMask && codeSize < 12) {
+                            codeSize++;
+                            codeMask = (1 << codeSize) - 1;
+                        }
+                    }
+
+                    prevCode = code;
+                }
+
+                return pixels;
+            }
+
+            interlaceRow(logicalRow, height) {
+                const pass1Rows = Math.ceil(height / 8);
+                const pass2Rows = Math.ceil((height - 4) / 8);
+                const pass3Rows = Math.ceil((height - 2) / 4);
+                
+                if (logicalRow < pass1Rows) return logicalRow * 8;
+                logicalRow -= pass1Rows;
+                if (logicalRow < pass2Rows) return logicalRow * 8 + 4;
+                logicalRow -= pass2Rows;
+                if (logicalRow < pass3Rows) return logicalRow * 4 + 2;
+                logicalRow -= pass3Rows;
+                return logicalRow * 2 + 1;
+            }
+
+            readByte() { return this.data[this.pos++] || 0; }
+            readUint16() { return this.readByte() | (this.readByte() << 8); }
+            readString(len) { let s = ''; for (let i = 0; i < len; i++) s += String.fromCharCode(this.readByte()); return s; }
+            readColorTable(size) { const t = []; for (let i = 0; i < size; i++) t.push([this.readByte(), this.readByte(), this.readByte()]); return t; }
+            skipSubBlocks() { let size; while ((size = this.readByte()) !== 0) this.pos += size; }
+        }
+
+        class GifPlayer {
+            constructor(container) {
+                this.container = container;
+                this.gifUrl = container.dataset.gif;
+                this.canvas = container.querySelector('.gif-canvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.frames = [];
+                this.currentFrame = 0;
+                this.isPlaying = false;
+                this.speed = 1;
+                this.animationId = null;
+                this.lastFrameTime = 0;
+                this.loaded = false;
+
+                this.controls = {
+                    playPause: container.querySelector('.gif-play-pause'),
+                    stepBack: container.querySelector('.gif-step-back'),
+                    stepFwd: container.querySelector('.gif-step-fwd'),
+                    progress: container.querySelector('.gif-progress'),
+                    frameInfo: container.querySelector('.gif-frame-info'),
+                    speed: container.querySelector('.gif-speed'),
+                    restart: container.querySelector('.gif-restart')
+                };
+
+                this.bindEvents();
+            }
+
+            bindEvents() {
+                this.controls.playPause.addEventListener('click', () => this.togglePlay());
+                this.controls.stepBack.addEventListener('click', () => this.stepFrame(-1));
+                this.controls.stepFwd.addEventListener('click', () => this.stepFrame(1));
+                this.controls.progress.addEventListener('input', (e) => this.seekTo(parseInt(e.target.value)));
+                this.controls.speed.addEventListener('change', (e) => this.setSpeed(parseFloat(e.target.value)));
+                this.controls.restart.addEventListener('click', () => this.restart());
+                this.container.addEventListener('keydown', (e) => this.handleKeyboard(e));
+                this.container.setAttribute('tabindex', '0');
+            }
+
+            handleKeyboard(e) {
+                switch(e.key) {
+                    case ' ': e.preventDefault(); this.togglePlay(); break;
+                    case 'ArrowLeft': e.preventDefault(); this.stepFrame(-1); break;
+                    case 'ArrowRight': e.preventDefault(); this.stepFrame(1); break;
+                    case 'r': case 'R': this.restart(); break;
+                    case 'ArrowUp': e.preventDefault(); this.adjustSpeed(1); break;
+                    case 'ArrowDown': e.preventDefault(); this.adjustSpeed(-1); break;
+                }
+            }
+
+            async load() {
+                if (this.loaded) return;
+                try {
+                    const response = await fetch(this.gifUrl);
+                    const buffer = await response.arrayBuffer();
+                    const decoder = new GifDecoder(buffer);
+                    const result = decoder.decode();
+                    
+                    this.canvas.width = result.width;
+                    this.canvas.height = result.height;
+                    this.frames = result.frames;
+                    this.loaded = true;
+                    this.updateUI();
+                    this.renderFrame(0);
+                } catch (error) {
+                    console.error('Failed to load GIF:', error);
+                    this.container.querySelector('.gif-label').textContent = 'Failed to load: ' + error.message;
+                }
+            }
+
+            renderFrame(index) {
+                if (index >= 0 && index < this.frames.length) {
+                    this.currentFrame = index;
+                    this.ctx.putImageData(this.frames[index].imageData, 0, 0);
+                    this.updateUI();
+                }
+            }
+
+            updateUI() {
+                const total = this.frames.length;
+                this.controls.progress.max = total - 1;
+                this.controls.progress.value = this.currentFrame;
+                this.controls.frameInfo.textContent = `${this.currentFrame + 1} / ${total}`;
+                this.controls.playPause.textContent = this.isPlaying ? '⏸' : '▶';
+            }
+
+            togglePlay() { this.isPlaying ? this.pause() : this.play(); }
+
+            play() {
+                if (!this.loaded || this.frames.length === 0) return;
+                this.isPlaying = true;
+                this.lastFrameTime = performance.now();
+                this.animate();
+                this.updateUI();
+            }
+
+            pause() {
+                this.isPlaying = false;
+                if (this.animationId) cancelAnimationFrame(this.animationId);
+                this.updateUI();
+            }
+
+            animate() {
+                if (!this.isPlaying) return;
+                const now = performance.now();
+                const delay = (this.frames[this.currentFrame]?.delay || 100) / this.speed;
+                if (now - this.lastFrameTime >= delay) {
+                    this.currentFrame = (this.currentFrame + 1) % this.frames.length;
+                    this.renderFrame(this.currentFrame);
+                    this.lastFrameTime = now;
+                }
+                this.animationId = requestAnimationFrame(() => this.animate());
+            }
+
+            stepFrame(delta) {
+                this.pause();
+                let newFrame = this.currentFrame + delta;
+                if (newFrame < 0) newFrame = this.frames.length - 1;
+                if (newFrame >= this.frames.length) newFrame = 0;
+                this.renderFrame(newFrame);
+            }
+
+            seekTo(frame) { this.renderFrame(frame); }
+            setSpeed(speed) { this.speed = speed; }
+
+            adjustSpeed(dir) {
+                const speeds = [0.25, 0.5, 1, 2, 4];
+                const idx = Math.max(0, Math.min(speeds.length - 1, speeds.indexOf(this.speed) + dir));
+                this.speed = speeds[idx];
+                this.controls.speed.value = this.speed;
+            }
+
+            restart() {
+                this.renderFrame(0);
+                if (!this.isPlaying) this.play();
+            }
+        }
+
+        // Initialize on placeholder click
+        document.querySelectorAll('.gif-player-container').forEach(container => {
+            const placeholder = container.querySelector('.gif-placeholder');
+            const wrapper = container.querySelector('.gif-player-wrapper');
+            let player = null;
+
+            placeholder.addEventListener('click', async () => {
+                placeholder.querySelector('.gif-label').textContent = 'Decoding GIF frames...';
+                if (!player) {
+                    player = new GifPlayer(container);
+                    await player.load();
+                }
+                placeholder.style.display = 'none';
+                wrapper.style.display = 'block';
+                container.focus();
+                player.play();
+            });
         });
-    });
+    })();
     </script>
 </body>
 </html>
