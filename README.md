@@ -101,6 +101,7 @@ pentlog search
 | `import` | Restore archived sessions back into pentlog |
 | `freeze` | Generate SHA256 hashes of all session logs for integrity |
 | `gif` | Convert sessions to animated GIF (720p/1080p) |
+| `serve` | Start HTTP server to view HTML reports with GIF players |
 | `recover` | Recover and manage crashed or stale sessions |
 | **Utilities** ||
 | `replay` | Replay a recorded session with full fidelity |

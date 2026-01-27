@@ -79,6 +79,9 @@ This document outlines the current status of `pentlog` and our plans for future 
         - [x] List existing reports interactively before generation.
         - [x] Prompt on overwrite with timestamp check.
         - [x] Open existing reports directly from the menu.
+        - [x] GIF regeneration prompt when existing GIFs found.
+        - [x] HTTP server option for viewing HTML reports with GIF players.
+    - [x] **Report Server**: `pentlog serve` command for local HTTP serving of reports.
 - [x] **AI Analysis**
     - [x] Integration with Google Gemini.
     - [x] Integration with Ollama for local LLMs.

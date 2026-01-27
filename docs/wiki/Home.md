@@ -278,6 +278,22 @@ pentlog gif --cols 200 --rows 60
 - **Multiple Modes**: Single session, merged sessions, or direct file conversion
 - **Native Rendering**: Pure Go implementation using `vt100` terminal emulator
 
+### 11. Serve Reports
+View HTML reports with embedded GIF players via local HTTP server.
+
+```bash
+# Interactive mode: select report to view
+pentlog serve
+
+# Use specific port
+pentlog serve --port 8080
+
+# Auto-opens browser with selected report
+```
+
+**Why use serve?**
+HTML reports with embedded GIF players require HTTP access to load GIF files. Opening reports directly via `file://` protocol fails due to browser security restrictions. The serve command provides a simple solution by starting a local HTTP server.
+
 ---
 
 ## 🧠 AI Analysis

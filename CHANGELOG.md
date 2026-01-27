@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 ### Added
+- **Report Server**: New `pentlog serve` command for viewing HTML reports with GIF players
+  - Starts local HTTP server to serve reports directory
+  - Solves CORS/file:// issues when loading embedded GIF recordings
+  - Interactive report selection with auto-open in browser
+  - Configurable port with `--port` flag (default: random available port)
+- **HTTP Server in Export Flow**: Option to serve report via HTTP after saving HTML
+  - New "Yes (via HTTP server)" option when opening HTML reports
+  - Starts server on port 8080 and opens report in browser
+- **GIF Regeneration Prompt**: Ask before regenerating existing GIFs during export
+  - Detects existing GIF files and prompts: "No (use existing)" or "Yes (regenerate all)"
+  - Saves time by reusing previously generated GIFs
 - **Archive Import**: Restore archived sessions back into pentlog database
   - New `pentlog import <archive.zip>` command for session recovery
   - Auto-detect metadata from archive structure and directory hierarchy
