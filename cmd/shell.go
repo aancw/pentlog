@@ -317,7 +317,11 @@ func startRecording(c *exec.Cmd, env []string, ctx *config.ContextData) error {
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
 	c.Env = env
-	c.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	c.SysProcAttr = &syscall.SysProcAttr{
+		Setpgid:    true,
+		Foreground: true,
+		Ctty:       int(os.Stdin.Fd()),
+	}
 
 	fmt.Println()
 	fmt.Print(Banner)
