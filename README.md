@@ -1,8 +1,10 @@
 # PentLog 🔐
 
-**Evidence-First Penetration Testing Logging Tool**
+**Evidence-First Pentest Logger — Capture every command, find anything, prove everything.**
 
-Capture shell activity as high-fidelity terminal logs backed by `ttyrec`. Perfect for **OSCP**, **HTB**, **Real-World Engagements**, and compliance audits.
+High-fidelity terminal logs with AI analysis, searchable content, interactive timelines, and compliance-ready reports. Built on `ttyrec`.
+
+Perfect for **Real-World Engagements**, **Compliance & Audits**, **OSCP**, and **HackTheBox**.
 
 <p align="center">
   <img src="pentlog.png" width="500">
@@ -23,57 +25,85 @@ Capture shell activity as high-fidelity terminal logs backed by `ttyrec`. Perfec
 
 ## ✨ Why PentLog?
 
-Traditional logging (`script`, `tmux`) isn't built for professional engagements. PentLog fills the gap:
+### The Problem with Traditional Logging
 
-- **No Root Required**: Start recorded shells as a normal user; logs land in your home directory.
-- **Context-Aware**: Tracks metadata and stamps every log. Flexible support for **Client Engagements** and **Exam/Labs** (OSCP, HTB, etc.).
-- **Terminal-Perfect Logs**: Built-in **Virtual Terminal Emulator** guarantees that what you see in the search viewer matches exactly what you saw in your shell—preserving colors, handling overwrites/edits/redraws correctly, and eliminating ghost text.
-- **Interactive Workflows**: Seamlessly create engagements, switch phases, and search logs using intuitive TUI menus.
-- **Replayable**: Timing files enable faithful playback via `ttyplay`.
-- **Export Friendly**: Export structured Markdown and **customizable HTML** reports for any phase with an interactive preview/save menu.
-- **Integrity Ready**: Freeze command hashes every log for evidence packaging.
-- **AI Analysis**: Analyze your reports with AI to get a summary of the findings.
-- **Shell Completion**: Generate and install shell completion scripts for bash and zsh.
+Using `script`, `tmux`, or basic shell redirection during pentests creates **fragmented, unsearchable, unmaintainable evidence**:
+
+- 🔴 **Lost commands** — Mixed with noise, impossible to extract context
+- 🔴 **No integrity** — How do you prove logs weren't tampered with?
+- 🔴 **Manual reports** — Hours spent copying/pasting into documents
+- 🔴 **Evidence gaps** — ANSI codes, terminal artifacts, overwrites break readability
+- 🔴 **Compliance nightmares** — No audit trails, no encrypted archives
+
+### How PentLog Solves It
+
+- ✅ **Evidence-First Design** — Every command + output captured with perfect fidelity using Virtual Terminal Emulator (handles colors, overwrites, redraws—what you see matches what happened)
+- ✅ **Context & Metadata** — Automatic timestamps, operator tracking, client/engagement organization from day one
+- ✅ **Searchable Everything** — Find any command across all sessions with regex + boolean operators in seconds
+- ✅ **Compliance-Ready** — Integrity hashes, AES-256 encrypted archives, detailed audit trails
+- ✅ **Reports in Minutes** — Auto-generate Markdown/HTML with AI-powered summaries (no manual copy/paste)
+- ✅ **No Root Required** — Works as normal user; logs land safely in `~/.pentlog/`
+- ✅ **Interactive Workflows** — Intuitive TUI for engagement creation, phase switching, searching, and notes
+- ✅ **Replayable** — Faithful session playback with `ttyplay` preserves exact timing
+- ✅ **Integrity Protection** — `pentlog freeze` generates SHA256 hashes for evidence packaging
 
 ---
 
 ## 🚀 Quick Start
 
 ```bash
-# 1. Install (macOS/Linux)
+# 1. Install (macOS/Linux) — ~30 seconds
 curl -sSf https://raw.githubusercontent.com/aancw/pentlog/main/install.sh | sh
 
-# 2. Setup (one-time)
+# 2. Setup (one-time) — Verify dependencies
 pentlog setup
 
-# 3. Create engagement
+# 3. Create engagement — Interactive wizard
 pentlog create
 
-# 4. Start recording
+# 4. Start recording — Shell with ttyrec running
 pentlog shell
+# → You now have high-fidelity logs in ~/.pentlog/logs/
+# → Logs are indexed in SQLite, ready to search
 
-# 5. Search logs
+# 5. Search logs — Find commands across all sessions
 pentlog search
+
+# 6. Export report — Generate Markdown/HTML for client
+pentlog export
 ```
+
+**What you get after 5 minutes**:
+- ✅ Searchable terminal logs with perfect fidelity (ANSI colors, overwrites, etc.)
+- ✅ Timestamped commands organized by Client → Engagement → Phase
+- ✅ Compliance-ready HTML reports with AI summaries
+- ✅ Encrypted archives for secure client delivery
 
 ---
 
 ## 📋 Key Features
 
+### 🌟 **Top 5 Features** (What sets PentLog apart)
+
+| Feature | Why It Matters |
+|---------|----------------|
+| 🎬 **High-Fidelity Recording** | Every keystroke + output captured with perfect terminal accuracy (ANSI colors, overwrites, redraws preserved) |
+| 🔍 **Interactive Search** | Find any command across all sessions instantly with regex and boolean operators—no more grep chaos |
+| 📊 **Virtual Terminal Emulator** | What you see in the viewer is *exactly* what you saw in your shell (unlike `script` or `tmux` which break on special chars) |
+| 💾 **Compliance-Ready Export** | Generate Markdown/HTML reports with AI summaries, integrity hashes, and encrypted archives in seconds |
+| 📝 **Automatic Context** | Every command timestamped and organized by Client → Engagement → Phase—no manual naming or organizing |
+
+### 📚 **Additional Features**
+
 | Feature | Description |
 |---------|-------------|
-| 🎬 **High-Fidelity Recording** | Captures full terminal output with timing using `ttyrec` |
-| 🔍 **Interactive Search** | Search logs with regex and boolean operators across all sessions |
-| 📊 **Virtual Terminal Emulator** | Guarantees what you see matches what happened (handles colors, overwrites, etc.) |
-| 📝 **Context Awareness** | Tracks Client, Engagement, Phase, Operator, Timestamp automatically |
-| 💾 **Structured Export** | Export to Markdown and customizable HTML reports |
-| 🔐 **AES-256 Archive** | Compress and encrypt sessions for evidence packaging |
-| 🤖 **AI Analysis** | Summarize findings with Google Gemini or Ollama |
-| 🎯 **Timeline Extraction** | Browse command history with interactive timeline browser |
-| 📌 **Notes & Bookmarks** | Add timestamped notes to sessions |
+| 🤖 **AI Analysis** | Summarize findings with Google Gemini or Ollama (local LLM) |
+| 🎯 **Timeline Extraction** | Interactive timeline browser to reconstruct your attack sequence |
+| 📌 **Notes & Bookmarks** | Add timestamped annotations to sessions for later review |
 | ⌨️ **Quick Hotkeys** | Ctrl+N for notes, Ctrl+G for vulns during shell sessions |
-| 🔄 **Full Replay** | Faithful playback with `ttyplay` |
+| 🔄 **Full Replay** | Faithful playback with `ttyplay` preserves exact timing |
 | 🛡️ **Crash Recovery** | Protect evidence from SSH disconnects, OOM kills, and unexpected crashes |
+| 🔐 **AES-256 Archive** | Password-protected encrypted archives for secure client delivery |
 
 ---
 
@@ -159,6 +189,23 @@ pentlog setup  # Auto-installs on macOS, Ubuntu, Fedora, Alpine
 - **Database Permissions**: Sensitive files are created with 0600 permissions automatically
 - **Evidence Integrity**: Use `pentlog freeze` before archiving for compliance audits
 
+---
+
+## 📊 Comparison: PentLog vs Alternatives
+
+| Feature | `script` | `tmux` | PentLog |
+|---------|----------|--------|---------|
+| **Terminal Fidelity** | ❌ Breaks on special chars | ⚠️ Lossy (missing redraws) | ✅ Perfect (Virtual Terminal Emulator) |
+| **Searchable Logs** | ❌ Manual grep chaos | ❌ Session-by-session only | ✅ Full-text search + regex + boolean operators |
+| **Automatic Organization** | ❌ Manual naming | ❌ Manual naming | ✅ Client → Engagement → Phase auto-organized |
+| **Timestamps** | ⚠️ Only start/end | ❌ No timestamps | ✅ Every command timestamped |
+| **Compliance Ready** | ❌ No integrity | ❌ No integrity | ✅ Hashes + encryption + audit trails |
+| **Replay** | ❌ No timing info | ⚠️ Live sessions only | ✅ Faithful playback with `ttyplay` |
+| **Reports** | ❌ Manual copy/paste | ❌ Manual copy/paste | ✅ Auto-generate Markdown/HTML + AI summaries |
+| **Database** | ❌ Just files | ❌ Just files | ✅ Indexed SQLite for fast searching |
+| **Root Required** | ❌ Works as user | ⚠️ Often needs sudo | ✅ Works as normal user |
+| **Crash Recovery** | ❌ Logs lost | ⚠️ May lose session | ✅ Protected from SSH/OOM crashes |
+
 ## 📖 Documentation
 
 ### Getting Started
@@ -180,25 +227,41 @@ pentlog setup  # Auto-installs on macOS, Ubuntu, Fedora, Alpine
 
 ## 💡 Use Cases
 
-### Penetration Testing Engagements
-- Document every command and output for professional reports
-- Maintain metadata and context throughout the engagement
-- Generate evidence-ready documentation with AI summaries
+### 🔴 **Penetration Testing Engagements** (Real-World)
+**Problem**: Client demands evidence of every command. Your manual notes + tmux logs are a mess.
 
-### Certifications (OSCP, HTB)
-- Track all activity for writeups with perfect terminal fidelity
-- Search across all sessions to find specific commands
-- Export clean Markdown reports for documentation
+**Solution**:
+- Auto-capture everything with perfect terminal fidelity
+- Organize by Client → Engagement → Phase automatically
+- Export compliance-ready HTML reports with AI summaries in minutes
+- Archive with encryption for secure client delivery
 
-### Compliance & Audits
-- Create tamper-proof logs with SHA256 integrity verification
-- Archive evidence with AES-256 encryption
-- Maintain detailed audit trails with timestamps
+### 🟡 **Compliance & Audits**
+**Problem**: Regulators need tamper-proof logs, audit trails, and encryption. Your shell history isn't enough.
 
-### Security Research
-- Record terminal sessions with precise timing for reproducibility
-- Extract command timelines for analysis
-- Replay sessions exactly as they happened
+**Solution**:
+- Generate integrity hashes with `pentlog freeze` before archiving
+- Encrypt sessions with AES-256 for secure evidence packaging
+- Maintain detailed audit trails with timestamps and operator tracking
+- Create audit-ready reports with searchable content
+
+### 🟢 **Certifications (OSCP, HTB, etc.)**
+**Problem**: Need to document every step for writeups. Fighting with formatting and missing commands.
+
+**Solution**:
+- Search across all sessions to find any command instantly
+- Export clean Markdown reports with proper formatting
+- Perfect terminal fidelity means what you see is what you get
+- Timeline browser helps reconstruct your attack flow
+
+### 🔵 **Security Research & Red Teaming**
+**Problem**: Need reproducible, timestamped terminal sessions for analysis and playback.
+
+**Solution**:
+- Record sessions with precise timing for faithful `ttyplay` replay
+- Extract command timelines for detailed activity analysis
+- Search across historical sessions for patterns and techniques
+- Generate GIF recordings for documentation and presentations
 
 ---
 
