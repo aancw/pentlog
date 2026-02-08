@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [v0.14.0] - 2026-02-08
 ### Added
 - **Report Server**: New `pentlog serve` command for viewing HTML reports with GIF players
   - Starts local HTTP server to serve reports directory
@@ -30,6 +30,11 @@ All notable changes to this project will be documented in this file.
   - Backup stored with `.backup` suffix in `~/.pentlog/` directory
 
 ### Fixed
+- **Shell Hang on Start (SIGTTIN)**: Fix `pentlog shell` hanging after banner on macOS and Linux
+  - `Setpgid: true` without `Foreground: true` placed ttyrec in a background process group
+  - Kernel sent SIGTTIN when the child shell tried to read stdin, suspending it
+  - Added `Foreground: true` with `Ctty` to make the child the foreground process group
+  - Regression introduced in `c20323c` (signal handling for graceful shutdown)
 - **Signal Handling for Graceful Shutdown**: Properly forward SIGINT/SIGTERM/SIGHUP to subprocess
   - Subprocess now receives termination signals from parent
   - Recording files properly flushed before exit
