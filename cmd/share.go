@@ -286,6 +286,7 @@ func startShareServerDaemon(logFilePath string) {
 	srv.Stop()
 	hub.Stop()
 	removeShareSession()
+	fmt.Println("Share server stopped.")
 }
 
 func getShareSessionPath() string {

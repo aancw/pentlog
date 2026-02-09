@@ -184,7 +184,11 @@ var shellCmd = &cobra.Command{
 			return
 		}
 
-		fmt.Println("\nLeaving pentlog shell session.")
+		exitMsg := "\nLeaving pentlog shell session."
+		if shellShare {
+			exitMsg += " (share server stopped)"
+		}
+		fmt.Println(exitMsg)
 	},
 }
 
@@ -392,7 +396,11 @@ func startRecording(c *exec.Cmd, env []string, ctx *config.ContextData) error {
 	if err := c.Run(); err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
 			if exitError.ExitCode() != 0 {
-				fmt.Println("\nLeaving pentlog shell session.")
+				exitMsg := "\nLeaving pentlog shell session."
+				if shellShare {
+					exitMsg += " (share server stopped)"
+				}
+				fmt.Println(exitMsg)
 				return nil
 			}
 		}
