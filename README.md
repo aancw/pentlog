@@ -103,6 +103,7 @@ pentlog export
 | ⌨️ **Quick Hotkeys** | Ctrl+N for notes, Ctrl+G for vulns during shell sessions |
 | 🔄 **Full Replay** | Faithful playback with `ttyplay` preserves exact timing |
 | 🛡️ **Crash Recovery** | Protect evidence from SSH disconnects, OOM kills, and unexpected crashes |
+| 📡 **Live Share** | Share terminal sessions in real-time via browser with dark-themed viewer |
 | 🔐 **AES-256 Archive** | Password-protected encrypted archives for secure client delivery |
 
 ---
@@ -115,6 +116,8 @@ pentlog export
 | **Session Management** ||
 | `create` | Initialize a new engagement context (Interactive) |
 | `shell` | Start a recorded shell with the engagement context loaded |
+| `shell --share` | Start a recorded shell with live browser sharing enabled |
+| `share` | Share a live or recorded session for read-only viewing |
 | `sessions` | List and manage recorded sessions |
 | `switch` | Switch to a different pentest phase |
 | **Analysis & Search** ||
@@ -204,6 +207,7 @@ pentlog setup  # Auto-installs on macOS, Ubuntu, Fedora, Alpine
 | **Reports** | ❌ Manual copy/paste | ❌ Manual copy/paste | ✅ Auto-generate Markdown/HTML + AI summaries |
 | **Database** | ❌ Just files | ❌ Just files | ✅ Indexed SQLite for fast searching |
 | **Root Required** | ❌ Works as user | ⚠️ Often needs sudo | ✅ Works as normal user |
+| **Live Sharing** | ❌ Not supported | ❌ Not supported | ✅ Real-time browser viewer with scrollback |
 | **Crash Recovery** | ❌ Logs lost | ⚠️ May lose session | ✅ Protected from SSH/OOM crashes |
 
 ## 📖 Documentation

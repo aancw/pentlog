@@ -104,7 +104,7 @@ Examples:
 		fmt.Printf("\n📁 Serving reports from: %s\n", reportsDir)
 		fmt.Printf("🌐 Server running at: http://localhost:%d/\n", port)
 		fmt.Printf("📄 Opening: %s\n", url)
-		fmt.Println("\nPress Ctrl+C to stop the server.\n")
+		fmt.Println("\nPress Ctrl+C to stop the server.")
 
 		go func() {
 			if err := utils.OpenURL(url); err != nil {

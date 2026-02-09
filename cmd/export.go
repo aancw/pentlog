@@ -525,7 +525,7 @@ var exportCmd = &cobra.Command{
 						url := fmt.Sprintf("http://localhost:8080/%s", relativePath)
 						fmt.Printf("\n🌐 Server running at: http://localhost:8080/\n")
 						fmt.Printf("📄 Opening: %s\n", url)
-						fmt.Println("Press Ctrl+C to stop the server.\n")
+						fmt.Println("Press Ctrl+C to stop the server.")
 						utils.OpenURL(url)
 					}()
 					fs := http.FileServer(http.Dir(reportsBaseDir))

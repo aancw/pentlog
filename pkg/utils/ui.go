@@ -62,8 +62,10 @@ func CenterBlock(lines []string) []string {
 
 	maxLen := 0
 	for _, line := range lines {
-		if len(line) > maxLen {
-			maxLen = len(line)
+		// Strip ANSI codes before measuring length
+		strippedLen := len(StripANSI(line))
+		if strippedLen > maxLen {
+			maxLen = strippedLen
 		}
 	}
 

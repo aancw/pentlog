@@ -11,6 +11,7 @@ Welcome to the official documentation for **pentlog**.
 - [Reporting](#-reporting)
 - [Archiving](#-archiving)
 - [Crash Recovery](#-crash-recovery)
+- [Live Sharing](#-live-sharing)
 - [Advanced Configuration](#️-advanced-configuration)
 - [Storage Layout](#-storage-layout)
 
@@ -464,6 +465,66 @@ $ pentlog replay 42
 ```
 
 **Note**: The recovery feature marks sessions as reviewed - your TTY recordings are preserved on disk even after crashes.
+
+---
+
+## 📡 Live Sharing
+
+Share your terminal session in real-time with teammates or reviewers via a browser-based viewer.
+
+### Starting a Shared Session
+
+```bash
+# Start shell with live sharing enabled
+pentlog shell --share
+
+# Custom port and bind address
+pentlog shell --share --share-port 8080 --share-bind 0.0.0.0
+```
+
+The share URL is displayed in the shell banner. Viewers open it in any browser to watch your session in real-time (read-only).
+
+### Sharing an Existing Session
+
+```bash
+# Share a recorded session by ID
+pentlog share <session-id>
+
+# Share with custom port
+pentlog share <session-id> --port 8080
+
+# Check share status (viewers, IPs)
+pentlog share status
+
+# Stop sharing
+pentlog share stop
+```
+
+### Share Status
+
+```bash
+$ pentlog share status
+
+  PentLog Live Share (Active)
+  ──────────────────────────────────────────
+  URL:     http://192.168.1.13:44143/watch?token=...
+  PID:     12345
+  Viewers: 2
+           - 192.168.1.10:52341
+           - 192.168.1.20:48823
+  ──────────────────────────────────────────
+```
+
+### Features
+
+| Feature | Description |
+|---------|-------------|
+| **Dark Theme Viewer** | Modern dark-themed terminal viewer using xterm.js |
+| **Session Persistence** | Late-joining viewers see full session history (scrollback buffer) |
+| **Viewer Tracking** | Monitor connected viewers and their IPs |
+| **Read-Only** | Viewers can only watch, no input accepted |
+| **Auto-Reconnect** | Browser viewer automatically reconnects on connection loss |
+| **Token Auth** | Each session uses a unique token for access control |
 
 ---
 

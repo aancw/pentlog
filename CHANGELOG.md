@@ -2,6 +2,43 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+### Added
+- **Live Share via Shell**: `pentlog shell --share` flag to start live sharing directly from a shell session
+  - Embedded WebSocket share server runs in-process alongside the recording
+  - Share URL displayed centered in shell banner on session start
+  - Share session file saved so `pentlog share status` works with both `shell --share` and `pentlog share`
+  - `--share-port` and `--share-bind` flags for network configuration
+- **Share Status API**: New `/status` endpoint on share server for live session metadata
+  - Returns connected viewer count and client IP addresses as JSON
+  - Used by `pentlog share status` to display live viewer information
+- **Viewer Tracking**: Track connected viewer IPs in share server
+  - `pentlog share status` now shows viewer count and connected IP addresses
+  - Supports `X-Forwarded-For` header for proxied connections
+- **Session Scrollback Buffer**: Persist terminal output for late-joining viewers
+  - New viewers and reconnecting clients receive full session history on connect
+  - Scrollback capped at 50MB with automatic front-trimming
+  - Data sent as single concatenated blob to preserve terminal escape sequence integrity
+
+### Changed
+- **Share HTML Viewer**: Complete dark theme redesign for the live watch page
+  - GitHub-dark color scheme (#0d1117 background, #e6edf3 foreground)
+  - Terminal-style SVG logo with green accent color
+  - Pill-shaped status badges (connected/disconnected/read-only)
+  - Dark xterm.js terminal theme with matching scrollbar styling
+  - Footer with "Powered by PentLog" branding
+  - JetBrains Mono / Fira Code font preference
+- **Share Info Centering**: Fixed share info block centering in shell banner
+  - Each line now centered individually using `runewidth.StringWidth` for proper Unicode width calculation
+  - Fixes misalignment caused by multi-byte UTF-8 box-drawing characters (─)
+- **CenterBlock ANSI Handling**: `utils.CenterBlock` now strips ANSI codes before measuring line width
+
+### Fixed
+- **Share Status Discovery**: `pentlog shell --share` now saves `.share_session` file so `pentlog share status` detects active sessions
+- **Viewer Reconnect Alignment**: Fixed terminal output misalignment on browser refresh/reconnect
+  - `fitAddon.fit()` now runs before WebSocket connection to ensure correct terminal dimensions
+  - Scrollback replayed as single blob instead of individual frames to prevent dropped escape sequences
+
 ## [v0.14.0] - 2026-02-08
 ### Added
 - **Report Server**: New `pentlog serve` command for viewing HTML reports with GIF players

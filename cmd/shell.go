@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -12,16 +13,25 @@ import (
 	"pentlog/pkg/deps"
 	"pentlog/pkg/errors"
 	"pentlog/pkg/logs"
+	"pentlog/pkg/share"
 	"pentlog/pkg/system"
 	"pentlog/pkg/utils"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
 
+	"github.com/mattn/go-runewidth"
 	"github.com/spf13/cobra"
 )
 
 const heartbeatInterval = 30 * time.Second
+
+var (
+	shellShare     bool
+	shellSharePort int
+	shellShareBind string
+)
 
 var shellCmd = &cobra.Command{
 	Use:   "shell",
@@ -106,20 +116,33 @@ var shellCmd = &cobra.Command{
 			}()
 		}
 
+		var shareCancel context.CancelFunc
+		var shareSrv *share.Server
+		var shareHub *share.Hub
+		if shellShare {
+			shareHub, shareSrv, shareCancel = startShareServer(logFilePath)
+			if shareCancel != nil {
+				defer shareCancel()
+			}
+		}
+
 		sigChan := make(chan os.Signal, 1)
 		signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
-		
+
 		var signalReceived bool
 		var mu sync.Mutex
-		
+
 		go func() {
-			sig := <-sigChan
+			sig, ok := <-sigChan
+			if !ok || sig == nil {
+				return
+			}
 			mu.Lock()
 			signalReceived = true
 			mu.Unlock()
-			
+
 			hbCancel()
-			
+
 			if c.Process != nil {
 				if c.SysProcAttr != nil && c.SysProcAttr.Setpgid {
 					syscall.Kill(-c.Process.Pid, sig.(syscall.Signal))
@@ -135,6 +158,16 @@ var shellCmd = &cobra.Command{
 		wg.Wait()
 		signal.Stop(sigChan)
 		close(sigChan)
+
+		if shareCancel != nil {
+			shareCancel()
+		}
+		if shareSrv != nil {
+			shareSrv.Stop()
+		}
+		if shareHub != nil {
+			shareHub.Stop()
+		}
 
 		wasNormalExit := runErr == nil
 		if sessionID > 0 {
@@ -340,18 +373,27 @@ func startRecording(c *exec.Cmd, env []string, ctx *config.ContextData) error {
 	utils.PrintBox("Active Session", summary)
 
 	fmt.Println()
-	fmt.Println("⚠️  WARNING: All input (including passwords) is logged.")
+	utils.PrintCenteredBlock([]string{"⚠️  WARNING: All input (including passwords) is logged."})
 	fmt.Println()
-	utils.PrintCenteredBlock([]string{
+	hints := []string{
 		"Type 'exit' or Ctrl+D to stop recording.",
 		"Hotkeys: Ctrl+N = Quick Note | Ctrl+G = Quick Vuln",
-	})
+	}
+	utils.PrintCenteredBlock(hints)
+
+	if shellShare {
+		shareURL := os.Getenv("PENTLOG_SHARE_URL")
+		if shareURL != "" {
+			fmt.Println()
+			printShareInfo(shareURL)
+		}
+	}
 
 	if err := c.Run(); err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
 			if exitError.ExitCode() != 0 {
 				fmt.Println("\nLeaving pentlog shell session.")
-				return nil // Expected exit
+				return nil
 			}
 		}
 		return err
@@ -359,7 +401,81 @@ func startRecording(c *exec.Cmd, env []string, ctx *config.ContextData) error {
 	return nil
 }
 
+func printShareInfo(shareURL string) {
+	width := utils.GetTerminalWidth()
+
+	lines := []string{
+		"PentLog Live Share",
+		"──────────────────────────────────────────",
+		fmt.Sprintf("URL:   %s", shareURL),
+		"──────────────────────────────────────────",
+		"",
+		"Live sharing is active — viewers can watch this session.",
+	}
+
+	for _, line := range lines {
+		strippedLen := runewidth.StringWidth(utils.StripANSI(line))
+		padding := (width - strippedLen) / 2
+		if padding < 0 {
+			padding = 0
+		}
+		fmt.Println(strings.Repeat(" ", padding) + line)
+	}
+}
+
+func startShareServer(logFilePath string) (*share.Hub, *share.Server, context.CancelFunc) {
+	token, err := share.GenerateToken()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: Could not start share server: %v\n", err)
+		return nil, nil, nil
+	}
+
+	hub := share.NewHub()
+	go hub.Run()
+
+	srv := share.NewServer(hub, token)
+	listenAddr := fmt.Sprintf("%s:%d", shellShareBind, shellSharePort)
+	boundAddr, err := srv.Start(listenAddr)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: Could not start share server: %v\n", err)
+		hub.Stop()
+		return nil, nil, nil
+	}
+
+	displayAddr := boundAddr
+	if shellShareBind == "0.0.0.0" {
+		if ip := getOutboundIP(); ip != "" {
+			_, port, _ := net.SplitHostPort(boundAddr)
+			displayAddr = net.JoinHostPort(ip, port)
+		}
+	}
+
+	shareURL := fmt.Sprintf("http://%s/watch?token=%s", displayAddr, token)
+	os.Setenv("PENTLOG_SHARE_URL", shareURL)
+
+	_, portStr, _ := net.SplitHostPort(boundAddr)
+	port := 0
+	fmt.Sscanf(portStr, "%d", &port)
+
+	session := &ShareSession{
+		PID:     os.Getpid(),
+		LogFile: logFilePath,
+		Token:   token,
+		URL:     displayAddr,
+		Port:    port,
+	}
+	saveShareSession(session)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	go runTailBroadcast(ctx, hub, logFilePath)
+
+	return hub, srv, cancel
+}
+
 func init() {
+	shellCmd.Flags().BoolVar(&shellShare, "share", false, "Enable live sharing via browser")
+	shellCmd.Flags().IntVar(&shellSharePort, "share-port", 0, "Port for share server (0 = random)")
+	shellCmd.Flags().StringVar(&shellShareBind, "share-bind", "0.0.0.0", "Bind address for share server")
 	rootCmd.AddCommand(shellCmd)
 }
 
@@ -393,6 +509,8 @@ func runHeartbeat(ctx context.Context, sessionID int64, logFilePath string) {
 }
 
 func updateSessionOnExit(sessionID int64, logFilePath string, normalExit bool) {
+	stopShareIfActive()
+
 	state := logs.SessionStateCompleted
 	if !normalExit {
 		state = logs.SessionStateCrashed
@@ -405,4 +523,10 @@ func updateSessionOnExit(sessionID int64, logFilePath string, normalExit bool) {
 	if info, err := os.Stat(logFilePath); err == nil {
 		logs.UpdateSessionSize(sessionID, info.Size())
 	}
+}
+
+func stopShareIfActive() {
+	configMgr := config.Manager()
+	shareSessionPath := filepath.Join(configMgr.GetPaths().Home, ".share_session")
+	os.Remove(shareSessionPath)
 }
