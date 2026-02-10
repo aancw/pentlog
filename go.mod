@@ -18,7 +18,7 @@ require (
 	github.com/yeka/zip v0.0.0-20231116150916-03d6312748a9
 	golang.org/x/image v0.35.0
 	gopkg.in/yaml.v2 v2.4.0
-	modernc.org/sqlite v1.44.3
+	modernc.org/sqlite v1.45.0
 )
 
 require (
