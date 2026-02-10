@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 ### Added
+- **Auto-Resume Crashed Sessions**: Interactive prompt to resume crashed sessions on shell startup
+  - New `GetCrashedSessionsForContext()` to query crashed sessions by context
+  - New `ResumeSession()` to transition session state from crashed to active
+  - User can choose "Resume most recent" or "Start new session"
+  - Resumed sessions append to existing .tty file using ttyrec -a flag
+  - Prevents evidence fragmentation from network disconnects and crashes
+- **Resume Marker in TTY Files**: Visual separator inserted when resuming crashed sessions
+  - Inserts yellow banner "Session Resumed" into .tty file at resume point
+  - Adjusts timestamp to skip idle time (prevents long waits during replay)
+  - Timestamp set to 1 second after last frame instead of actual resume time
+  - Clear visual indicator in replay showing where session was interrupted
+- **Replay Pagination**: Browse session history beyond first 15 sessions
+  - "Load More" option to load next 15 sessions
+  - `--all/-a` flag to display all sessions without pagination
+  - Session counter showing current range (e.g. "showing 1-15 of 86")
 - **Live Share via Shell**: `pentlog shell --share` flag to start live sharing directly from a shell session
   - Embedded WebSocket share server runs in-process alongside the recording
   - Share URL displayed centered in shell banner on session start
@@ -34,10 +49,19 @@ All notable changes to this project will be documented in this file.
 - **CenterBlock ANSI Handling**: `utils.CenterBlock` now strips ANSI codes before measuring line width
 
 ### Fixed
+- **Replay Session Ordering**: Fixed bug where replay showed oldest 15 sessions instead of newest
+  - Changed from `sessions[len-15:]` to `sessions[:15]` for DESC ordered results
+  - Log Only sessions (phase=N/A) now appear correctly in replay list
 - **Share Status Discovery**: `pentlog shell --share` now saves `.share_session` file so `pentlog share status` detects active sessions
 - **Viewer Reconnect Alignment**: Fixed terminal output misalignment on browser refresh/reconnect
   - `fitAddon.fit()` now runs before WebSocket connection to ensure correct terminal dimensions
   - Scrollback replayed as single blob instead of individual frames to prevent dropped escape sequences
+- **Resume Session Timestamp Normalization**: Fixed missing "Session Resumed" banner and timestamp gap
+  - `InsertResumeMarker()` was never called during session resume (causing normalization to silently skip)
+  - Added missing call in `startResumedSession()` to insert banner before recording resumes
+  - `NormalizeResumedSession()` now correctly detects banner, removes it, and compresses the idle gap
+  - Replay shows seamless 3-second transition instead of hours of idle time
+- **Dependency Management**: Moved `github.com/gorilla/websocket` from indirect to direct dependency in go.mod
 
 ## [v0.14.0] - 2026-02-08
 ### Added

@@ -15,6 +15,7 @@ import (
 )
 
 var replaySpeed float64
+var replayAll bool
 
 var replayCmd = &cobra.Command{
 	Use:   "replay [id]",
@@ -46,24 +47,50 @@ var replayCmd = &cobra.Command{
 				return
 			}
 
-			startIdx := 0
-			if len(sessions) > 15 {
-				startIdx = len(sessions) - 15
-			}
-			displaySessions := sessions[startIdx:]
-
-			var items []string
-			for _, s := range displaySessions {
-				items = append(items, fmt.Sprintf("ID %d | %s | %s", s.ID, s.ModTime, s.DisplayPath))
+			offset := 0
+			pageSize := 15
+			if replayAll {
+				pageSize = len(sessions)
 			}
 
-			fmt.Println("Recent Sessions:")
-			idx := utils.SelectItem("Select Session to Replay:", items)
-			if idx == -1 {
-				fmt.Println("Selection canceled.")
-				return
+			for {
+				end := offset + pageSize
+				if end > len(sessions) {
+					end = len(sessions)
+				}
+
+				displaySessions := sessions[offset:end]
+				var items []string
+
+				for _, s := range displaySessions {
+					items = append(items, fmt.Sprintf("ID %d | %s | %s", s.ID, s.ModTime, s.DisplayPath))
+				}
+
+				if end < len(sessions) {
+					remaining := len(sessions) - end
+					items = append(items, fmt.Sprintf("--- Load More (%d more sessions) ---", remaining))
+				}
+
+				if !replayAll && len(sessions) > pageSize {
+					fmt.Printf("Recent Sessions (showing %d-%d of %d):\n", offset+1, end, len(sessions))
+				} else {
+					fmt.Println("Recent Sessions:")
+				}
+
+				idx := utils.SelectItem("Select Session to Replay:", items)
+				if idx == -1 {
+					fmt.Println("Selection canceled.")
+					return
+				}
+
+				if idx == len(displaySessions) && end < len(sessions) {
+					offset = end
+					continue
+				}
+
+				id = displaySessions[idx].ID
+				break
 			}
-			id = displaySessions[idx].ID
 		}
 
 		session, err := logs.GetSession(id)
@@ -121,5 +148,6 @@ var replayCmd = &cobra.Command{
 
 func init() {
 	replayCmd.Flags().Float64VarP(&replaySpeed, "speed", "s", 1.0, "Replay speed (e.g. 2.0 for 2x, 0.5 for half speed)")
+	replayCmd.Flags().BoolVarP(&replayAll, "all", "a", false, "Show all sessions without pagination")
 	rootCmd.AddCommand(replayCmd)
 }

@@ -434,6 +434,88 @@ func GetSessionsByState(state SessionState) ([]Session, error) {
 	return sessions, nil
 }
 
+func GetCrashedSessionsForContext(client, engagement, phase string) ([]Session, error) {
+	database, err := db.GetDB()
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := database.Query(`
+		SELECT id, client, engagement, scope, operator, phase, timestamp, filename, relative_path, size, state, last_sync_at
+		FROM sessions
+		WHERE state = ? AND client = ? AND engagement = ? AND phase = ?
+		ORDER BY timestamp DESC
+	`, string(SessionStateCrashed), client, engagement, phase)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var sessions []Session
+	mgr := config.Manager()
+	rootDir := mgr.GetPaths().LogsDir
+
+	for rows.Next() {
+		var s Session
+		var client, engagement, scope, operator, phase, timestamp, filename, relPath string
+		var size int64
+		var id int
+		var stateStr, lastSyncAt sql.NullString
+
+		if err := rows.Scan(&id, &client, &engagement, &scope, &operator, &phase, &timestamp, &filename, &relPath, &size, &stateStr, &lastSyncAt); err != nil {
+			continue
+		}
+
+		s.ID = id
+		s.Filename = filename
+		s.Path = filepath.Join(rootDir, relPath)
+		s.DisplayPath = relPath
+		s.Size = size
+		s.Metadata = SessionMetadata{
+			Client:     client,
+			Engagement: engagement,
+			Scope:      scope,
+			Operator:   operator,
+			Phase:      phase,
+			Timestamp:  timestamp,
+		}
+		s.MetaPath = strings.Replace(s.Path, ".tty", ".json", 1)
+		s.NotesPath = strings.Replace(s.Path, ".tty", ".notes.json", 1)
+
+		if stateStr.Valid {
+			s.State = SessionState(stateStr.String)
+		} else {
+			s.State = SessionStateCompleted
+		}
+		if lastSyncAt.Valid {
+			s.LastSyncAt = lastSyncAt.String
+		}
+
+		if ts, err := time.Parse(time.RFC3339, timestamp); err == nil {
+			s.ModTime = ts.Format("2006-01-02 15:04:05")
+			s.SortKey = ts
+		} else {
+			s.ModTime = timestamp
+		}
+
+		sessions = append(sessions, s)
+	}
+
+	return sessions, nil
+}
+
+func ResumeSession(sessionID int64) error {
+	database, err := db.GetDB()
+	if err != nil {
+		return err
+	}
+
+	now := time.Now().Format(time.RFC3339)
+	_, err = database.Exec(`UPDATE sessions SET state = ?, last_sync_at = ? WHERE id = ?`,
+		string(SessionStateActive), now, sessionID)
+	return err
+}
+
 func MarkStaleSessions(timeout time.Duration) (int, error) {
 	database, err := db.GetDB()
 	if err != nil {

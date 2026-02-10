@@ -21,6 +21,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/manifoldco/promptui"
 	"github.com/mattn/go-runewidth"
 	"github.com/spf13/cobra"
 )
@@ -51,6 +52,15 @@ var shellCmd = &cobra.Command{
 		if err != nil {
 			errors.NoContext().Print()
 			os.Exit(1)
+		}
+
+		crashed, err := logs.GetCrashedSessionsForContext(ctx.Client, ctx.Engagement, ctx.Phase)
+		if err == nil && len(crashed) > 0 {
+			resumeSession := promptResumeSession(crashed)
+			if resumeSession != nil {
+				startResumedSession(ctx, resumeSession)
+				return
+			}
 		}
 
 		logDir, err := system.EnsureLogDir()
@@ -478,6 +488,178 @@ func startShareServer(logFilePath string) (*share.Hub, *share.Server, context.Ca
 	go runTailBroadcast(ctx, hub, logFilePath)
 
 	return hub, srv, cancel
+}
+
+func promptResumeSession(crashed []logs.Session) *logs.Session {
+	if len(crashed) == 0 {
+		return nil
+	}
+
+	fmt.Println()
+	fmt.Println("⚠️  Found crashed session(s) for this context:")
+	fmt.Println()
+
+	for i, s := range crashed {
+		lastSync := "unknown"
+		if s.LastSyncAt != "" {
+			if t, err := time.Parse(time.RFC3339, s.LastSyncAt); err == nil {
+				lastSync = utils.FormatRelativeTime(t)
+			}
+		}
+		fileSize := s.Size
+		if info, err := os.Stat(s.Path); err == nil {
+			fileSize = info.Size()
+		}
+
+		fmt.Printf("  [%d] Session ID: %d\n", i+1, s.ID)
+		fmt.Printf("      File: %s (%s)\n", s.Filename, utils.FormatSize(fileSize))
+		fmt.Printf("      Crashed: %s\n", lastSync)
+		if i < len(crashed)-1 {
+			fmt.Println()
+		}
+	}
+
+	fmt.Println()
+
+	prompt := promptui.Select{
+		Label: "Resume crashed session or start new?",
+		Items: []string{"Resume most recent", "Start new session"},
+	}
+
+	idx, _, err := prompt.Run()
+	if err != nil || idx == 1 {
+		return nil
+	}
+
+	return &crashed[0]
+}
+
+func startResumedSession(ctx *config.ContextData, session *logs.Session) {
+	fmt.Printf("\n✓ Resuming session ID: %d\n", session.ID)
+	fmt.Printf("  File: %s\n", session.Path)
+	fmt.Println()
+
+	if err := logs.ResumeSession(int64(session.ID)); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: Failed to update session state: %v\n", err)
+	}
+
+	markerFile := session.Path + ".resume_marker"
+	if err := os.WriteFile(markerFile, []byte(fmt.Sprintf("%d", time.Now().Unix())), 0644); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: Failed to create resume marker: %v\n", err)
+	}
+
+	// Insert the "Session Resumed" banner into the tty file
+	if err := logs.InsertResumeMarker(session.Path); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: Failed to insert resume marker: %v\n", err)
+	}
+
+	sessionDir := filepath.Dir(session.Path)
+
+	newEnv, tempDir, shellArgs, err := prepareShellEnv(ctx, sessionDir, session.MetaPath, session.Path)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error preparing shell environment: %v\n", err)
+		os.Exit(1)
+	}
+	if tempDir != "" {
+		defer os.RemoveAll(tempDir)
+	}
+
+	recorder := system.NewRecorder()
+	c, err := recorder.BuildCommand("", session.Path, shellArgs...)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating recorder command: %v\n", err)
+		os.Exit(1)
+	}
+
+	hbCtx, hbCancel := context.WithCancel(context.Background())
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		runHeartbeat(hbCtx, int64(session.ID), session.Path)
+	}()
+
+	var shareCancel context.CancelFunc
+	var shareSrv *share.Server
+	var shareHub *share.Hub
+	if shellShare {
+		shareHub, shareSrv, shareCancel = startShareServer(session.Path)
+		if shareCancel != nil {
+			defer shareCancel()
+		}
+	}
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
+
+	var signalReceived bool
+	var mu sync.Mutex
+
+	go func() {
+		sig, ok := <-sigChan
+		if !ok || sig == nil {
+			return
+		}
+		mu.Lock()
+		signalReceived = true
+		mu.Unlock()
+
+		hbCancel()
+
+		if c.Process != nil {
+			if c.SysProcAttr != nil && c.SysProcAttr.Setpgid {
+				syscall.Kill(-c.Process.Pid, sig.(syscall.Signal))
+			} else {
+				c.Process.Signal(sig)
+			}
+		}
+	}()
+
+	runErr := startRecording(c, newEnv, ctx)
+
+	hbCancel()
+	wg.Wait()
+	signal.Stop(sigChan)
+	close(sigChan)
+
+	if shareCancel != nil {
+		shareCancel()
+	}
+	if shareSrv != nil {
+		shareSrv.Stop()
+	}
+	if shareHub != nil {
+		shareHub.Stop()
+	}
+
+	wasNormalExit := runErr == nil
+	mu.Lock()
+	if signalReceived {
+		wasNormalExit = false
+	}
+	mu.Unlock()
+
+	markerFile = session.Path + ".resume_marker"
+	if _, statErr := os.Stat(markerFile); statErr == nil {
+		if normErr := logs.NormalizeResumedSession(session.Path); normErr != nil {
+			fmt.Fprintf(os.Stderr, "Warning: Failed to normalize session timestamps: %v\n", normErr)
+		}
+		os.Remove(markerFile)
+	}
+
+	updateSessionOnExit(int64(session.ID), session.Path, wasNormalExit)
+
+	if runErr != nil {
+		fmt.Fprintf(os.Stderr, "Error running recorder: %v\n", runErr)
+		return
+	}
+
+	exitMsg := "\nLeaving pentlog shell session."
+	if shellShare {
+		exitMsg += " (share server stopped)"
+	}
+	fmt.Println(exitMsg)
 }
 
 func init() {
