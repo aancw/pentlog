@@ -11,10 +11,10 @@ Perfect for **Real-World Engagements**, **Compliance & Audits**, **OSCP**, and *
 </p>
 
 <p align="center">
-  <a href="https://github.com/aancw/pentlog/releases"><img alt="Release" src="https://img.shields.io/github/v/release/aancw/pentlog?style=flat-square&color=blue"></a>
-  <a href="https://golang.org"><img alt="Go" src="https://img.shields.io/github/go-mod/go-version/aancw/pentlog?style=flat-square&color=blue"></a>
-  <a href="https://github.com/aancw/pentlog/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/aancw/pentlog/total?style=flat-square&color=blue"></a>
-  <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/License-MIT-blue?style=flat-square"></a>
+  <a href="https://github.com/aancw/pentlog/releases"><img alt="Release" src="https://img.shields.io/github/v/release/aancw/pentlog?color=blue"></a>
+  <a href="https://golang.org"><img alt="Go" src="https://img.shields.io/github/go-mod/go-version/aancw/pentlog?color=blue"></a>
+  <a href="https://github.com/aancw/pentlog/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/aancw/pentlog/total?color=blue"></a>
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/License-MIT-blue"></a>
 </p>
 
 <p align="center">
