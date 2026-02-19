@@ -47,6 +47,9 @@ All notable changes to this project will be documented in this file.
   - Each line now centered individually using `runewidth.StringWidth` for proper Unicode width calculation
   - Fixes misalignment caused by multi-byte UTF-8 box-drawing characters (─)
 - **CenterBlock ANSI Handling**: `utils.CenterBlock` now strips ANSI codes before measuring line width
+- **Sessions Pagination Default**: `pentlog sessions` now shows the 20 most recent sessions and prompts to load more
+  - Interactive "Show more? (Y/n)" prompt for pagination
+  - `--limit` and `--offset` continue to provide non-interactive pagination
 
 ### Fixed
 - **Replay Session Ordering**: Fixed bug where replay showed oldest 15 sessions instead of newest
@@ -62,6 +65,8 @@ All notable changes to this project will be documented in this file.
   - `NormalizeResumedSession()` now correctly detects banner, removes it, and compresses the idle gap
   - Replay shows seamless 3-second transition instead of hours of idle time
 - **Dependency Management**: Moved `github.com/gorilla/websocket` from indirect to direct dependency in go.mod
+- **Import Session Sizes**: Imported sessions now update their recorded size after insertion
+  - Prevents `pentlog sessions` from showing 0-byte sizes for imported `.tty` files
 
 ## [v0.14.0] - 2026-02-08
 ### Added
