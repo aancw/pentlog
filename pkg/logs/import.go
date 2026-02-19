@@ -234,6 +234,9 @@ func ImportFromPentlogArchive(archivePath string, opts ImportOptions) (*ImportRe
 		if err != nil {
 			result.Errors = append(result.Errors, fmt.Sprintf("failed to add session to DB: %v", err))
 		} else {
+			if info, statErr := os.Stat(destPath); statErr == nil {
+				UpdateSessionSize(sessionID, info.Size())
+			}
 			session, _ := GetSession(int(sessionID))
 			if session != nil {
 				result.ImportedSessions = append(result.ImportedSessions, *session)
@@ -421,6 +424,9 @@ func ImportFromGenericArchive(archivePath string, opts ImportOptions) (*ImportRe
 		if err != nil {
 			result.Errors = append(result.Errors, fmt.Sprintf("failed to add session to DB: %v", err))
 		} else {
+			if info, statErr := os.Stat(destPath); statErr == nil {
+				UpdateSessionSize(sessionID, info.Size())
+			}
 			session, _ := GetSession(int(sessionID))
 			if session != nil {
 				result.ImportedSessions = append(result.ImportedSessions, *session)
