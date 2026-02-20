@@ -44,3 +44,4 @@ sample_data
 !ROADMAP.md
 !docs/wiki/Home.md
 !.github/**/*.md
+!docs/web/**/*.md
