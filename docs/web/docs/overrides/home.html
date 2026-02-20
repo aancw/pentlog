@@ -1,0 +1,833 @@
+{% extends "main.html" %} {% block tabs %} {{ super() }}
+
+<style>
+    .mdx-hero-wrap {
+        position: relative;
+        overflow: hidden;
+        padding: 3.5rem 0 4.5rem;
+        background:
+            radial-gradient(
+                900px 600px at 12% 10%,
+                rgba(69, 210, 158, 0.18),
+                transparent 60%
+            ),
+            radial-gradient(
+                700px 500px at 90% 15%,
+                rgba(245, 193, 98, 0.22),
+                transparent 55%
+            ),
+            linear-gradient(
+                180deg,
+                var(--pentlog-bg) 0%,
+                var(--pentlog-surface-2) 65%,
+                var(--md-default-bg-color) 100%
+            );
+    }
+
+    [data-md-color-scheme="slate"] .mdx-hero-wrap {
+        background:
+            radial-gradient(
+                900px 600px at 12% 10%,
+                rgba(69, 210, 158, 0.22),
+                transparent 60%
+            ),
+            radial-gradient(
+                700px 500px at 90% 15%,
+                rgba(245, 193, 98, 0.2),
+                transparent 55%
+            ),
+            linear-gradient(
+                180deg,
+                #0b1415 0%,
+                #0f1b1d 60%,
+                var(--md-default-bg-color) 100%
+            );
+    }
+
+    .mdx-hero-wrap::after {
+        content: "";
+        position: absolute;
+        inset: 12% 8% auto auto;
+        width: 260px;
+        height: 260px;
+        background: conic-gradient(
+            from 140deg,
+            rgba(69, 210, 158, 0.25),
+            rgba(122, 209, 255, 0.2),
+            rgba(245, 193, 98, 0.25)
+        );
+        filter: blur(80px);
+        opacity: 0.7;
+        pointer-events: none;
+    }
+
+    .md-header {
+        position: initial;
+    }
+
+    .mdx-hero {
+        display: grid;
+        gap: 2.5rem;
+        align-items: center;
+    }
+
+    .mdx-hero__content {
+        text-align: left;
+        color: var(--pentlog-ink);
+        animation: mdx-rise 0.6s ease-out both;
+    }
+
+    .mdx-hero__mark {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.35rem 0.75rem;
+        border-radius: 999px;
+        background: rgba(69, 210, 158, 0.12);
+        border: 1px solid rgba(69, 210, 158, 0.2);
+        font-size: 0.75rem;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--pentlog-ink);
+        margin-bottom: 1.25rem;
+    }
+
+    [data-md-color-scheme="default"] .mdx-hero__mark {
+        background: rgba(26, 162, 122, 0.12);
+        border-color: rgba(26, 162, 122, 0.2);
+    }
+
+    .mdx-hero__mark img {
+        width: 28px;
+        height: 28px;
+    }
+
+    .mdx-hero__content h1 {
+        margin-bottom: 0.5rem;
+        font-family: "Fraunces", "Space Grotesk", serif;
+        font-size: clamp(2.6rem, 4vw, 4rem);
+        font-weight: 700;
+        color: currentColor;
+    }
+
+    .mdx-hero__content h2 {
+        font-weight: 500;
+        font-size: 1.2rem;
+        opacity: 0.85;
+        border: none;
+        padding: 0;
+        margin: 0 0 1rem;
+        color: currentColor;
+    }
+
+    .mdx-hero__content p {
+        max-width: 560px;
+        font-size: 1rem;
+        opacity: 0.78;
+        line-height: 1.6;
+        margin: 0 0 1.5rem;
+    }
+
+    .mdx-hero__actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .mdx-hero__actions .md-button {
+        border-radius: 999px;
+        padding: 0.6rem 1.4rem;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+    }
+
+    .mdx-hero__actions .md-button--primary {
+        background: var(--pentlog-accent-2);
+        border-color: var(--pentlog-accent-2);
+        color: #121a1b;
+        box-shadow: 0 14px 30px rgba(17, 23, 23, 0.2);
+    }
+
+    .mdx-hero__badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .mdx-hero__badges span {
+        padding: 0.35rem 0.7rem;
+        border-radius: 999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--pentlog-ink);
+    }
+
+    [data-md-color-scheme="default"] .mdx-hero__badges span {
+        border-color: rgba(11, 31, 42, 0.12);
+        background: rgba(11, 31, 42, 0.06);
+    }
+
+    .mdx-hero__visual {
+        position: relative;
+        animation: mdx-float 9s ease-in-out infinite;
+    }
+
+    .mdx-terminal {
+        background: var(--pentlog-surface);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: var(--pentlog-radius-xl);
+        padding: 1.2rem 1.5rem 1.4rem;
+        box-shadow: var(--pentlog-shadow-soft);
+        position: relative;
+        overflow: hidden;
+    }
+
+    [data-md-color-scheme="default"] .mdx-terminal {
+        border-color: rgba(11, 31, 42, 0.12);
+        box-shadow: 0 16px 40px rgba(16, 32, 28, 0.12);
+    }
+
+    .mdx-terminal::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+            120deg,
+            rgba(69, 210, 158, 0.08),
+            transparent 40%,
+            rgba(122, 209, 255, 0.08)
+        );
+        opacity: 0.6;
+        pointer-events: none;
+    }
+
+    .mdx-terminal__bar {
+        display: flex;
+        gap: 0.35rem;
+        margin-bottom: 1rem;
+    }
+
+    .mdx-terminal__bar span {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: rgba(245, 193, 98, 0.9);
+    }
+
+    .mdx-terminal__bar span:nth-child(2) {
+        background: rgba(122, 209, 255, 0.9);
+    }
+
+    .mdx-terminal__bar span:nth-child(3) {
+        background: rgba(69, 210, 158, 0.9);
+    }
+
+    .mdx-terminal__body {
+        font-family: var(--md-code-font);
+        font-size: 0.85rem;
+        line-height: 1.6;
+        position: relative;
+        z-index: 1;
+    }
+
+    .mdx-terminal__line {
+        display: block;
+        margin-bottom: 0.35rem;
+        color: var(--pentlog-ink);
+    }
+
+    .mdx-terminal__line.muted {
+        opacity: 0.7;
+    }
+
+    .mdx-terminal__line.accent {
+        color: var(--pentlog-accent);
+        font-weight: 600;
+    }
+
+    .mdx-terminal__line .prompt {
+        color: var(--pentlog-accent-3);
+        font-weight: 600;
+        margin-right: 0.35rem;
+    }
+
+    .mdx-hero__signal {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        position: absolute;
+        left: -1.5rem;
+        bottom: -1.2rem;
+    }
+
+    .mdx-signal-pill {
+        padding: 0.35rem 0.8rem;
+        border-radius: 999px;
+        background: var(--pentlog-accent);
+        color: #071413;
+        font-weight: 600;
+        font-size: 0.75rem;
+        letter-spacing: 0.03em;
+        box-shadow: 0 8px 18px rgba(8, 20, 18, 0.2);
+    }
+
+    .mdx-signal-pill--alt {
+        background: var(--pentlog-accent-2);
+    }
+
+    .mdx-signal-pill--alt2 {
+        background: var(--pentlog-accent-3);
+    }
+
+    .mdx-section {
+        padding: 2.5rem 0 0;
+    }
+
+    .mdx-section__header {
+        max-width: 640px;
+        margin-bottom: 1.8rem;
+    }
+
+    .mdx-eyebrow {
+        text-transform: uppercase;
+        letter-spacing: 0.18em;
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: var(--pentlog-accent-3);
+        margin-bottom: 0.5rem;
+    }
+
+    .mdx-section__header h2 {
+        font-size: clamp(1.6rem, 2.5vw, 2.4rem);
+        margin: 0 0 0.6rem;
+    }
+
+    .mdx-section__header p {
+        margin: 0;
+        opacity: 0.7;
+    }
+
+    .mdx-features {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 1.1rem;
+    }
+
+    .mdx-feature-card {
+        position: relative;
+        padding: 1.15rem 1.2rem 1.3rem;
+        border-radius: var(--pentlog-radius-lg);
+        background: var(--pentlog-surface);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 0 10px 24px rgba(7, 18, 18, 0.12);
+        transition:
+            transform 0.3s ease,
+            box-shadow 0.3s ease,
+            border-color 0.3s ease;
+        animation: mdx-rise 0.6s ease-out both;
+        --accent: var(--pentlog-accent);
+    }
+
+    [data-md-color-scheme="default"] .mdx-feature-card {
+        border-color: rgba(11, 31, 42, 0.12);
+        box-shadow: 0 12px 28px rgba(20, 33, 32, 0.12);
+    }
+
+    .mdx-feature-card:nth-child(3n + 1) {
+        --accent: var(--pentlog-accent);
+    }
+
+    .mdx-feature-card:nth-child(3n + 2) {
+        --accent: var(--pentlog-accent-2);
+    }
+
+    .mdx-feature-card:nth-child(3n + 3) {
+        --accent: var(--pentlog-accent-3);
+    }
+
+    .mdx-feature-card::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        border-top: 3px solid var(--accent);
+        opacity: 0.9;
+        pointer-events: none;
+    }
+
+    .mdx-feature-card:hover {
+        transform: translateY(-6px);
+        box-shadow: var(--pentlog-shadow-raise);
+        border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    [data-md-color-scheme="default"] .mdx-feature-card:hover {
+        border-color: rgba(11, 31, 42, 0.18);
+    }
+
+    .mdx-feature-card__index {
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.2em;
+        color: var(--accent);
+        margin-bottom: 0.6rem;
+    }
+
+    .mdx-feature-card h3 {
+        margin: 0 0 0.45rem;
+        font-size: 1rem;
+    }
+
+    .mdx-feature-card p {
+        margin: 0;
+        font-size: 0.86rem;
+        line-height: 1.45;
+        opacity: 0.72;
+        display: -webkit-box;
+        -webkit-line-clamp: 4;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .mdx-workflow {
+        display: grid;
+        gap: 1.2rem;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    }
+
+    .mdx-workflow__step {
+        padding: 1.4rem;
+        border-radius: var(--pentlog-radius-lg);
+        background: var(--pentlog-surface-2);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    [data-md-color-scheme="default"] .mdx-workflow__step {
+        border-color: rgba(11, 31, 42, 0.1);
+    }
+
+    .mdx-workflow__num {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 12px;
+        background: rgba(69, 210, 158, 0.15);
+        color: var(--pentlog-accent);
+        font-weight: 700;
+        margin-bottom: 0.8rem;
+    }
+
+    [data-md-color-scheme="default"] .mdx-workflow__num {
+        background: rgba(26, 162, 122, 0.15);
+    }
+
+    .mdx-workflow__step h3 {
+        margin: 0 0 0.5rem;
+        font-size: 1.05rem;
+    }
+
+    .mdx-workflow__step p {
+        margin: 0;
+        opacity: 0.75;
+    }
+
+    .mdx-cta {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1.5rem;
+        padding: 2rem 2.2rem;
+        border-radius: var(--pentlog-radius-xl);
+        background: linear-gradient(
+            120deg,
+            rgba(69, 210, 158, 0.18),
+            rgba(122, 209, 255, 0.16)
+        );
+        border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    [data-md-color-scheme="default"] .mdx-cta {
+        border-color: rgba(11, 31, 42, 0.12);
+    }
+
+    .mdx-cta__actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+
+    .mdx-cta__actions .md-button {
+        border-radius: 999px;
+        padding: 0.6rem 1.3rem;
+    }
+
+    .mdx-cta__actions .md-button--primary {
+        background: var(--pentlog-accent);
+        border-color: var(--pentlog-accent);
+        color: #061412;
+    }
+
+    .mdx-signal-grid,
+    .mdx-resource-grid {
+        display: grid;
+        gap: 1.1rem;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        margin: 2.5rem 0;
+    }
+
+    .mdx-signal-card,
+    .mdx-resource-card {
+        padding: 1.3rem 1.4rem;
+        border-radius: var(--pentlog-radius-lg);
+        background: var(--pentlog-surface);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        transition:
+            transform 0.3s ease,
+            box-shadow 0.3s ease,
+            border-color 0.3s ease;
+    }
+
+    [data-md-color-scheme="default"] .mdx-signal-card,
+    [data-md-color-scheme="default"] .mdx-resource-card {
+        border-color: rgba(11, 31, 42, 0.12);
+    }
+
+    .mdx-resource-card {
+        text-decoration: none;
+        color: var(--pentlog-ink);
+    }
+
+    .mdx-resource-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--pentlog-shadow-raise);
+        border-color: rgba(69, 210, 158, 0.4);
+    }
+
+    .mdx-split {
+        display: grid;
+        gap: 1.8rem;
+        align-items: center;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        margin: 2.5rem 0;
+    }
+
+    .mdx-code-card {
+        background: var(--pentlog-surface);
+        border-radius: var(--pentlog-radius-lg);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 1.4rem;
+        box-shadow: 0 12px 30px rgba(7, 18, 18, 0.12);
+        width: 120%;
+        margin-left: -21%;
+    }
+
+    .mdx-code-card pre {
+        margin: 0;
+        background: transparent;
+        box-shadow: none;
+    }
+
+    .mdx-code-card code {
+        background: transparent;
+        padding: 0;
+    }
+
+    [data-md-color-scheme="default"] .mdx-code-card {
+        border-color: rgba(11, 31, 42, 0.12);
+    }
+
+    .mdx-code-card__label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.18em;
+        font-weight: 700;
+        color: var(--pentlog-muted);
+        margin-bottom: 0.75rem;
+    }
+
+    .mdx-inline-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-top: 1rem;
+    }
+
+    .mdx-inline-links .md-button {
+        border-radius: 999px;
+        padding: 0.55rem 1.2rem;
+    }
+
+    .mdx-footnote {
+        margin: 2.5rem 0 0;
+        padding: 1.2rem 1.4rem;
+        border-radius: var(--pentlog-radius-md);
+        background: var(--pentlog-surface-2);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        font-size: 0.9rem;
+    }
+
+    [data-md-color-scheme="default"] .mdx-footnote {
+        border-color: rgba(11, 31, 42, 0.12);
+    }
+
+    @media screen and (min-width: 960px) {
+        .md-sidebar--secondary {
+            display: none;
+        }
+
+        .mdx-hero {
+            grid-template-columns: 1.1fr 0.9fr;
+        }
+
+        .mdx-hero__content {
+            padding-bottom: 1rem;
+        }
+    }
+
+    @media screen and (max-width: 1200px) {
+        .mdx-features {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media screen and (max-width: 760px) {
+        .mdx-features {
+            grid-template-columns: minmax(0, 1fr);
+        }
+    }
+
+    @media screen and (max-width: 720px) {
+        .mdx-hero__signal {
+            position: static;
+            margin-top: 1rem;
+        }
+    }
+
+    @keyframes mdx-rise {
+        from {
+            opacity: 0;
+            transform: translateY(12px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes mdx-float {
+        0%,
+        100% {
+            transform: translateY(0);
+        }
+        50% {
+            transform: translateY(-8px);
+        }
+    }
+
+    .mdx-feature-card:nth-child(1) {
+        animation-delay: 0.05s;
+    }
+
+    .mdx-feature-card:nth-child(2) {
+        animation-delay: 0.1s;
+    }
+
+    .mdx-feature-card:nth-child(3) {
+        animation-delay: 0.15s;
+    }
+
+    .mdx-feature-card:nth-child(4) {
+        animation-delay: 0.2s;
+    }
+
+    .mdx-feature-card:nth-child(5) {
+        animation-delay: 0.25s;
+    }
+
+    .mdx-feature-card:nth-child(6) {
+        animation-delay: 0.3s;
+    }
+
+    .mdx-feature-card:nth-child(7) {
+        animation-delay: 0.35s;
+    }
+
+    .mdx-feature-card:nth-child(8) {
+        animation-delay: 0.4s;
+    }
+
+    .mdx-feature-card:nth-child(9) {
+        animation-delay: 0.45s;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .mdx-hero__content,
+        .mdx-hero__visual,
+        .mdx-feature-card {
+            animation: none;
+        }
+    }
+</style>
+
+<section class="mdx-hero-wrap">
+    <div class="md-grid md-typeset">
+        <div class="mdx-hero">
+            <div class="mdx-hero__content">
+                <div class="mdx-hero__mark">
+                    <img
+                        src="/assets/logo.png"
+                        alt="PentLog"
+                        draggable="false"
+                    />
+                    Evidence-First Logger
+                </div>
+                <h1>{{ page.meta.hero.title }}</h1>
+                <h2>{{ page.meta.hero.subtitle }}</h2>
+                <p>{{ page.meta.hero.description }}</p>
+                <div class="mdx-hero__actions">
+                    <a
+                        href="{{ 'getting-started/quickstart/' | url }}"
+                        title="Getting Started"
+                        class="md-button md-button--primary"
+                    >
+                        {{ page.meta.hero.install_button }}
+                    </a>
+                    <a
+                        href="{{ 'getting-started/installation/' | url }}"
+                        title="Installation"
+                        class="md-button"
+                    >
+                        Installation
+                    </a>
+                </div>
+                <div class="mdx-hero__badges">
+                    <span>TTYREC Fidelity</span>
+                    <span>SQLite + JSON</span>
+                    <span>Audit-Ready Reports</span>
+                </div>
+            </div>
+            <div class="mdx-hero__visual">
+                <div class="mdx-terminal">
+                    <div class="mdx-terminal__bar">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                    <div class="mdx-terminal__body">
+                        <span class="mdx-terminal__line">
+                            <span class="prompt">$</span>pentlog create
+                        </span>
+                        <span class="mdx-terminal__line muted">
+                            Context: ACME / Red Team / Phase 2
+                        </span>
+                        <span class="mdx-terminal__line">
+                            <span class="prompt">$</span>pentlog shell
+                        </span>
+                        <span class="mdx-terminal__line muted">
+                            Recording session... ttyrec-2026-02-20-1732
+                        </span>
+                        <span class="mdx-terminal__line accent">
+                            Integrity hash: 3f2a1d9b...c1b9
+                        </span>
+                    </div>
+                </div>
+                <div class="mdx-hero__signal">
+                    <div class="mdx-signal-pill">Live Evidence</div>
+                    <div class="mdx-signal-pill mdx-signal-pill--alt">
+                        Searchable
+                    </div>
+                    <div class="mdx-signal-pill mdx-signal-pill--alt2">
+                        Encrypted
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %} {% block content %} {{ super() }}
+
+<section class="mdx-section mdx-section--features">
+    <div class="mdx-section__header">
+        <div class="mdx-eyebrow">Capabilities</div>
+        <h2>Everything you need, without the noise</h2>
+        <p>
+            Purpose-built to capture, organize, and prove your findings from
+            first command to final report.
+        </p>
+    </div>
+    <div class="mdx-features">
+        {% for feature in page.meta.features %}
+        <div class="mdx-feature-card">
+            <div class="mdx-feature-card__index">0{{ loop.index }}</div>
+            <h3>{{ feature.title }}</h3>
+            <p>{{ feature.description }}</p>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+
+<section class="mdx-section mdx-section--workflow">
+    <div class="mdx-section__header">
+        <div class="mdx-eyebrow">Workflow</div>
+        <h2>From engagement to evidence in three steps</h2>
+    </div>
+    <div class="mdx-workflow">
+        <div class="mdx-workflow__step">
+            <span class="mdx-workflow__num">01</span>
+            <h3>Set context</h3>
+            <p>
+                Create client, engagement, and phase metadata once. PentLog
+                tracks the rest.
+            </p>
+        </div>
+        <div class="mdx-workflow__step">
+            <span class="mdx-workflow__num">02</span>
+            <h3>Record everything</h3>
+            <p>
+                Use <code>pentlog shell</code> to capture full terminal state,
+                including ANSI, cursor moves, and redraws.
+            </p>
+        </div>
+        <div class="mdx-workflow__step">
+            <span class="mdx-workflow__num">03</span>
+            <h3>Search and report</h3>
+            <p>
+                Find any command, extract timelines, and export reports with
+                integrity hashes.
+            </p>
+        </div>
+    </div>
+</section>
+
+<section class="mdx-section mdx-section--cta">
+    <div class="mdx-cta">
+        <div>
+            <div class="mdx-eyebrow">Ready to begin?</div>
+            <h2>Capture defensible evidence in minutes</h2>
+            <p>
+                Install PentLog, start a session, and ship a report the same
+                day.
+            </p>
+        </div>
+        <div class="mdx-cta__actions">
+            <a
+                href="{{ 'getting-started/quickstart/' | url }}"
+                class="md-button md-button--primary"
+            >
+                Quickstart
+            </a>
+            <a href="{{ 'guide/sessions/' | url }}" class="md-button">
+                User Guide
+            </a>
+        </div>
+    </div>
+</section>
+
+{% endblock %}

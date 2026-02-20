@@ -1,249 +1,88 @@
 ---
-title: PentLog - Evidence-First Pentest Logger
-description: High-fidelity terminal logging with AI analysis, searchable content, and compliance-ready reports for penetration testers.
+template: home.html
+title: PentLog — Evidence-First Pentest Logger
+hide:
+  - navigation
+  - toc
+hero:
+  title: PentLog
+  subtitle: Evidence-first penetration testing logger.
+  description: Capture every command, find anything, prove everything. High-fidelity terminal logging with AI analysis, searchable content, and compliance-ready reports.
+  install_button: Getting Started
+features:
+  - title: High-Fidelity Recording
+    description: Full-fidelity ttyrec capture with ANSI color, cursor moves, and redraws preserved.
+  - title: Powerful Search
+    description: Regex + boolean search across logs and notes with fast incremental results.
+  - title: Compliance Reports
+    description: Markdown and HTML reports with hashes, audit trails, and AES-256 archives.
+  - title: AI Analysis
+    description: Summaries and vulnerability insights from Gemini or local Ollama models.
+  - title: Live Sharing
+    description: Stream sessions in real time with an xterm.js viewer and full history.
+  - title: Crash Recovery
+    description: Heartbeats and stale-session detection protect evidence from crashes.
+  - title: Timeline Browser
+    description: Browse chronological command timelines, view output, and export JSON.
+  - title: Context-Aware Sessions
+    description: Organize by client, engagement, and phase with auto metadata tracking.
+  - title: Vulnerability Management
+    description: Track findings with severity, remediation notes, and session traceability.
 ---
 
-# PentLog
-
-**Evidence-first penetration testing logger.** Capture every command, find anything, prove everything.
-
----
-
-## Quick Install
-
-Get started in under a minute:
-
-```bash
-curl -sSf https://raw.githubusercontent.com/aancw/pentlog/main/install.sh | sh
+<div class="mdx-split">
+  <div class="mdx-split__content">
+    <h2>Start in minutes</h2>
+    <p>Install once, create a context, and begin recording. </p>
+    <p>The same workflow scales from labs to full client engagements.</p>
+    <div class="mdx-inline-links">
+      <a href="getting-started/quickstart/" class="md-button md-button--primary">Quickstart</a>
+      <a href="getting-started/installation/" class="md-button">Installation</a>
+    </div>
+  </div>
+  <div class="mdx-code-card">
+    <h4 class="mdx-code-card__label">Install + first session</h4>
+    <pre><code class="language-bash">curl -sSf https://raw.githubusercontent.com/aancw/pentlog/main/install.sh | sh
 pentlog setup
 pentlog create
-pentlog shell
-```
-
-[:octicons-rocket-16: Full Installation Guide](getting-started/installation.md){ .md-button .md-button--primary }
-[:octicons-book-16: Quick Start Tutorial](getting-started/quickstart.md){ .md-button }
-
----
-
-## What is PentLog?
-
-PentLog is a **professional terminal logging tool** designed for penetration testers, security researchers, and compliance auditors. Built on `ttyrec` technology with a modern Virtual Terminal Emulator, it captures every command and output with perfect fidelity — preserving ANSI colors, cursor movements, and terminal state for **flawless evidence**.
-
----
-
-## Features
-
-<div class="feature-grid">
-  <div class="feature-card">
-    <div class="feature-card__icon">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="10"></circle>
-        <circle cx="12" cy="12" r="3"></circle>
-      </svg>
-    </div>
-    <h3 class="feature-card__title">High-Fidelity Recording</h3>
-    <p class="feature-card__desc">Capture every keystroke with Virtual Terminal Emulator. ANSI colors, cursor movements, and redraws preserved perfectly.</p>
-  </div>
-  <div class="feature-card">
-    <div class="feature-card__icon">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="11" cy="11" r="8"></circle>
-        <path d="m21 21-4.35-4.35"></path>
-        <path d="M11 8v6"></path>
-        <path d="M8 11h6"></path>
-      </svg>
-    </div>
-    <h3 class="feature-card__title">Powerful Search</h3>
-    <p class="feature-card__desc">Find any command across all sessions instantly. Regex support, boolean operators (AND, OR, NOT), and live incremental search.</p>
-  </div>
-  <div class="feature-card">
-    <div class="feature-card__icon">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-        <polyline points="14 2 14 8 20 8"></polyline>
-        <line x1="16" y1="13" x2="8" y2="13"></line>
-        <line x1="16" y1="17" x2="8" y2="17"></line>
-        <polyline points="10 9 9 9 8 9"></polyline>
-      </svg>
-    </div>
-    <h3 class="feature-card__title">Compliance Reports</h3>
-    <p class="feature-card__desc">Generate Markdown/HTML reports with integrity hashes, encrypted archives, and detailed audit trails ready for delivery.</p>
-  </div>
-  <div class="feature-card">
-    <div class="feature-card__icon">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-        <circle cx="8.5" cy="8.5" r="1.5"></circle>
-        <polyline points="21 15 16 10 5 21"></polyline>
-      </svg>
-    </div>
-    <h3 class="feature-card__title">AI Analysis</h3>
-    <p class="feature-card__desc">Summarize findings with Google Gemini or local Ollama LLM. Get executive summaries and vulnerability insights automatically.</p>
-  </div>
-  <div class="feature-card">
-    <div class="feature-card__icon">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-        <circle cx="9" cy="7" r="4"></circle>
-        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-      </svg>
-    </div>
-    <h3 class="feature-card__title">Live Sharing</h3>
-    <p class="feature-card__desc">Share terminal sessions in real-time via browser. Viewers see full history with dark-themed xterm.js viewer.</p>
-  </div>
-  <div class="feature-card">
-    <div class="feature-card__icon">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-        <path d="m9 12 2 2 4-4"></path>
-      </svg>
-    </div>
-    <h3 class="feature-card__title">Crash Recovery</h3>
-    <p class="feature-card__desc">Protect evidence from SSH disconnects, OOM kills, and unexpected crashes. Automatic heartbeat and stale session detection.</p>
+pentlog shell</code></pre>
   </div>
 </div>
 
----
-
-## Why PentLog?
-
-### The Problem with Traditional Logging
-
-Using `script`, `tmux`, or basic shell redirection during pentests creates **fragmented, unsearchable, unmaintainable evidence**:
-
-| Issue | Impact |
-|-------|--------|
-| :material-close-circle:{ .red } **Lost commands** | Mixed with noise, impossible to extract context |
-| :material-close-circle:{ .red } **No integrity** | How do you prove logs weren't tampered with? |
-| :material-close-circle:{ .red } **Manual reports** | Hours spent copying/pasting into documents |
-| :material-close-circle:{ .red } **Evidence gaps** | ANSI codes, terminal artifacts, overwrites break readability |
-| :material-close-circle:{ .red } **Compliance nightmares** | No audit trails, no encrypted archives |
-
-### How PentLog Solves It
-
-| Solution | Benefit |
-|----------|---------|
-| :material-check-circle:{ .green } **Evidence-First Design** | Every command + output captured with perfect fidelity |
-| :material-check-circle:{ .green } **Context & Metadata** | Automatic timestamps, operator tracking, client/engagement organization |
-| :material-check-circle:{ .green } **Searchable Everything** | Find any command across all sessions with regex + boolean operators |
-| :material-check-circle:{ .green } **Compliance-Ready** | Integrity hashes, AES-256 encrypted archives, detailed audit trails |
-| :material-check-circle:{ .green } **Reports in Minutes** | Auto-generate Markdown/HTML with AI-powered summaries |
-
----
-
-## Who is PentLog For?
-
-<div class="grid cards" markdown>
-
--   :material-bullseye-arrow:{ .lg .middle } __Penetration Testers__
-
-    ---
-
-    Capture every command during client engagements. Generate compliance-ready reports with perfect terminal fidelity. Organize by Client → Engagement → Phase.
-
--   :material-shield-check:{ .lg .middle } __Compliance Auditors__
-
-    ---
-
-    Maintain tamper-proof logs with integrity hashes. Create AES-256 encrypted archives for secure evidence delivery. Detailed audit trails for regulators.
-
--   :material-certificate:{ .lg .middle } __Certification Students__
-
-    ---
-
-    Document every step for OSCP, PNPT, HTB writeups. Search across sessions to find any command. Export clean Markdown reports instantly.
-
--   :material-incognito:{ .lg .middle } __Red Teamers__
-
-    ---
-
-    Record reproducible, timestamped sessions. Replay with exact timing. Share live sessions with teammates via browser.
-
+<div class="mdx-signal-grid">
+  <div class="mdx-signal-card">
+    <h3>Evidence Chain</h3>
+    <p>Full-fidelity ttyrec recordings, context metadata, and integrity hashes keep your chain of custody intact.</p>
+  </div>
+  <div class="mdx-signal-card">
+    <h3>Session Intelligence</h3>
+    <p>Search across logs and notes, extract timelines, and pinpoint exactly what happened and when.</p>
+  </div>
+  <div class="mdx-signal-card">
+    <h3>Delivery Ready</h3>
+    <p>Generate Markdown or HTML reports, archive with AES-256 encryption, and ship in client-ready format.</p>
+  </div>
 </div>
 
----
-
-## Architecture Overview
-
-```mermaid
-flowchart TB
-    subgraph Input["User Input"]
-        Shell["Shell Session"]
-        Notes["Notes & Bookmarks"]
-        Vulns["Vulnerability Markers"]
-    end
-
-    subgraph Core["PentLog Core"]
-        TTY["TTY Recorder"]
-        VTE["Virtual Terminal Emulator"]
-        DB[(SQLite Database)]
-    end
-
-    subgraph Output["Output & Analysis"]
-        Search["Search Engine"]
-        Export["Report Export"]
-        AI["AI Analysis"]
-        Archive["Encrypted Archives"]
-    end
-
-    Shell --> TTY
-    TTY --> VTE
-    VTE --> DB
-    Notes --> DB
-    Vulns --> DB
-    DB --> Search
-    DB --> Export
-    Export --> AI
-    Export --> Archive
-```
-
----
-
-## Community & Support
-
-<div class="grid cards" markdown>
-
--   :material-github: __GitHub Repository__
-
-    ---
-
-    Star us, report issues, and contribute to the project.
-
-    [:octicons-arrow-right-24: github.com/aancw/pentlog](https://github.com/aancw/pentlog)
-
--   :material-bug: __Issue Tracker__
-
-    ---
-
-    Found a bug? Have a feature request? Let us know!
-
-    [:octicons-arrow-right-24: Open an Issue](https://github.com/aancw/pentlog/issues)
-
--   :material-forum: __Discussions__
-
-    ---
-
-    Ask questions, share ideas, and connect with the community.
-
-    [:octicons-arrow-right-24: Join Discussion](https://github.com/aancw/pentlog/discussions)
-
+<div class="mdx-resource-grid">
+  <a class="mdx-resource-card" href="getting-started/quickstart/">
+    <h3>Getting Started</h3>
+    <p>Learn the core workflow and create your first context.</p>
+  </a>
+  <a class="mdx-resource-card" href="guide/sessions/">
+    <h3>User Guide</h3>
+    <p>Sessions, search, notes, timeline, export, and AI analysis.</p>
+  </a>
+  <a class="mdx-resource-card" href="advanced/archiving/">
+    <h3>Advanced</h3>
+    <p>Archiving, crash recovery, configuration, and storage layout.</p>
+  </a>
+  <a class="mdx-resource-card" href="reference/commands/">
+    <h3>Reference</h3>
+    <p>CLI commands, flags, and tool comparisons.</p>
+  </a>
 </div>
 
----
-
-**Made for professionals. Evidence-first. No compromises.** — Documentation built with [Zensical](https://zensical.org).
-
-<script>
-// Add entrance animation for feature cards
-document.querySelectorAll('.feature-card').forEach((card, index) => {
-  card.style.opacity = '0';
-  card.style.transform = 'translateY(20px)';
-  card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
-
-  setTimeout(() => {
-    card.style.opacity = '1';
-    card.style.transform = 'translateY(0)';
-  }, 100 + (index * 100));
-});
-</script>
+<div class="mdx-footnote">
+  <p>Found a bug or want a feature? <a href="https://github.com/aancw/pentlog/issues">Open an issue</a>. PentLog is licensed under the MIT License.</p>
+</div>
