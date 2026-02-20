@@ -1,11 +1,11 @@
 site_name: PentLog
 site_description: Evidence-first pentest logging tool — Capture every command, find anything, prove everything.
 site_author: An (@petruknisme)
-site_url: https://pentlog.pages.dev
+site_url: https://pentlog.petruknisme.com
 
 repo_name: aancw/pentlog
 repo_url: https://github.com/aancw/pentlog
-edit_uri: blob/main/docs/
+edit_uri: blob/main/docs/web/docs/
 
 theme:
   name: material
@@ -17,17 +17,17 @@ theme:
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
-      primary: blue-grey
+      primary: blue grey
       accent: teal
       toggle:
-        icon: material/brightness-7
+        icon: lucide/sun
         name: Switch to dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
-      primary: blue-grey
+      primary: blue grey
       accent: teal
       toggle:
-        icon: material/brightness-4
+        icon: lucide/moon
         name: Switch to light mode
   features:
     # Navigation
@@ -38,7 +38,7 @@ theme:
     - navigation.top
     - navigation.tracking
     - navigation.path
-    - navigation.indexes
+    - navigation.instant
     # Search
     - search.suggest
     - search.highlight
@@ -59,12 +59,6 @@ plugins:
   - search:
       lang: en
       separator: '[\s\-,:!=\[\]()"/]+|\.(?!\d)|&[lg]t;|(?!\b)(?=[A-Z][a-z])'
-  - minify:
-      minify_html: true
-      minify_js: true
-      minify_css: true
-      htmlmin_opts:
-        remove_comments: true
 
 markdown_extensions:
   # Python Markdown
@@ -140,28 +134,28 @@ extra_javascript:
 copyright: |
   &copy; 2026 <a href="https://github.com/aancw" target="_blank" rel="noopener">An (@petruknisme)</a> |
   PentLog Project |
-  <a href="#__consent">Change cookie settings</a>
+  Built with <a href="https://zensical.org" target="_blank" rel="noopener">Zensical</a>
 
 nav:
   - Home: index.md
   - Getting Started:
-    - getting-started/index.md
-    - Quick Start: getting-started/quickstart.md
-    - Installation: getting-started/installation.md
-    - Core Concepts: getting-started/concepts.md
+      - getting-started/index.md
+      - Quick Start: getting-started/quickstart.md
+      - Installation: getting-started/installation.md
+      - Core Concepts: getting-started/concepts.md
   - User Guide:
-    - guide/sessions.md
-    - guide/search.md
-    - guide/notes.md
-    - guide/timeline.md
-    - guide/export.md
-    - guide/ai-analysis.md
-    - guide/live-share.md
+      - guide/sessions.md
+      - guide/search.md
+      - guide/notes.md
+      - guide/timeline.md
+      - guide/export.md
+      - guide/ai-analysis.md
+      - guide/live-share.md
   - Advanced:
-    - advanced/archiving.md
-    - advanced/crash-recovery.md
-    - advanced/configuration.md
-    - advanced/storage.md
+      - advanced/archiving.md
+      - advanced/crash-recovery.md
+      - advanced/configuration.md
+      - advanced/storage.md
   - Reference:
-    - reference/commands.md
-    - reference/comparison.md
+      - reference/commands.md
+      - reference/comparison.md

@@ -1,77 +1,37 @@
 ---
 title: PentLog - Evidence-First Pentest Logger
 description: High-fidelity terminal logging with AI analysis, searchable content, and compliance-ready reports for penetration testers.
-hide:
-  - navigation
-  - toc
 ---
 
-<!-- Hero Section -->
-<div class="pentlog-hero">
-  <div class="pentlog-hero__content">
-    <div class="pentlog-hero__logo">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-        <line x1="12" y1="16" x2="12" y2="16"></line>
-      </svg>
-    </div>
-    <h1 class="pentlog-hero__title">PentLog</h1>
-    <p class="pentlog-hero__tagline">
-      Evidence-first pentest logging tool — Capture every command, find anything, prove everything.
-    </p>
-    <div class="pentlog-hero__badges">
-      <span class="pentlog-hero__badge">
-        <span class="twemoji">:octicons-terminal-16:</span>
-        High-Fidelity Recording
-      </span>
-      <span class="pentlog-hero__badge">
-        <span class="twemoji">:octicons-search-16:</span>
-        Powerful Search
-      </span>
-      <span class="pentlog-hero__badge">
-        <span class="twemoji">:octicons-shield-check-16:</span>
-        Compliance Ready
-      </span>
-    </div>
-    <div class="pentlog-hero__actions">
-      <a href="getting-started/quickstart/" class="pentlog-hero__btn pentlog-hero__btn--primary">
-        <span class="twemoji">:octicons-rocket-16:</span>
-        Get Started
-      </a>
-      <a href="https://github.com/aancw/pentlog" class="pentlog-hero__btn pentlog-hero__btn--secondary" target="_blank">
-        <span class="twemoji">:fontawesome-brands-github:</span>
-        View on GitHub
-      </a>
-    </div>
-  </div>
-</div>
+# PentLog
 
-<!-- Stats Bar -->
-<div class="stats-bar">
-  <div class="stat-item">
-    <div class="stat-value">5 min</div>
-    <div class="stat-label">Quick Setup</div>
-  </div>
-  <div class="stat-item">
-    <div class="stat-value">100%</div>
-    <div class="stat-label">Terminal Fidelity</div>
-  </div>
-  <div class="stat-item">
-    <div class="stat-value">AES-256</div>
-    <div class="stat-label">Encryption</div>
-  </div>
-  <div class="stat-item">
-    <div class="stat-value">∞</div>
-    <div class="stat-label">Searchable History</div>
-  </div>
-</div>
+**Evidence-first penetration testing logger.** Capture every command, find anything, prove everything.
+
+---
+
+## Quick Install
+
+Get started in under a minute:
+
+```bash
+curl -sSf https://raw.githubusercontent.com/aancw/pentlog/main/install.sh | sh
+pentlog setup
+pentlog create
+pentlog shell
+```
+
+[:octicons-rocket-16: Full Installation Guide](getting-started/installation.md){ .md-button .md-button--primary }
+[:octicons-book-16: Quick Start Tutorial](getting-started/quickstart.md){ .md-button }
+
+---
 
 ## What is PentLog?
 
-PentLog is a **professional terminal logging tool** designed for penetration testers, security researchers, and compliance auditors. It captures every command and output with perfect fidelity, making it easy to search, analyze, and report on your activities.
+PentLog is a **professional terminal logging tool** designed for penetration testers, security researchers, and compliance auditors. Built on `ttyrec` technology with a modern Virtual Terminal Emulator, it captures every command and output with perfect fidelity — preserving ANSI colors, cursor movements, and terminal state for **flawless evidence**.
 
-Built on `ttyrec` technology with a modern Virtual Terminal Emulator, PentLog preserves ANSI colors, cursor movements, and terminal state—giving you **perfect evidence** for client reports and compliance audits.
+---
+
+## Features
 
 <div class="feature-grid">
   <div class="feature-card">
@@ -172,33 +132,6 @@ Using `script`, `tmux`, or basic shell redirection during pentests creates **fra
 
 ---
 
-## Quick Start
-
-Get PentLog running in under 5 minutes:
-
-```bash title="Install PentLog"
-# 1. Install (macOS/Linux)
-curl -sSf https://raw.githubusercontent.com/aancw/pentlog/main/install.sh | sh
-
-# 2. Setup dependencies
-pentlog setup
-
-# 3. Create your first engagement
-pentlog create
-
-# 4. Start recording
-pentlog shell
-
-# 5. Search and export
-pentlog search
-pentlog export
-```
-
-[:octicons-arrow-right-24: Installation Guide](getting-started/installation.md){ .md-button .md-button--primary }
-[:octicons-arrow-right-24: Quick Start Tutorial](getting-started/quickstart.md){ .md-button }
-
----
-
 ## Who is PentLog For?
 
 <div class="grid cards" markdown>
@@ -267,50 +200,6 @@ flowchart TB
 
 ---
 
-## Documentation Structure
-
-<div class="grid" markdown>
-
--   **Getting Started**
-
-    ---
-
-    - [Installation](getting-started/installation.md)
-    - [Quick Start](getting-started/quickstart.md)
-    - [Core Concepts](getting-started/concepts.md)
-
--   **User Guide**
-
-    ---
-
-    - [Session Management](guide/sessions.md)
-    - [Search & Analysis](guide/search.md)
-    - [Notes & Bookmarks](guide/notes.md)
-    - [Timeline & Replay](guide/timeline.md)
-    - [Export & Reports](guide/export.md)
-    - [AI Analysis](guide/ai-analysis.md)
-    - [Live Sharing](guide/live-share.md)
-
--   **Advanced Topics**
-
-    ---
-
-    - [Archiving](advanced/archiving.md)
-    - [Crash Recovery](advanced/crash-recovery.md)
-    - [Configuration](advanced/configuration.md)
-    - [Storage Layout](advanced/storage.md)
-
--   **Reference**
-
-    ---
-
-    - [CLI Commands](reference/commands.md)
-    - [Tool Comparison](reference/comparison.md)
-
-</div>
-
----
-
 ## Community & Support
 
 <div class="grid cards" markdown>
@@ -343,7 +232,7 @@ flowchart TB
 
 ---
 
-**Made for professionals. Evidence-first. No compromises.**
+**Made for professionals. Evidence-first. No compromises.** — Documentation built with [Zensical](https://zensical.org).
 
 <script>
 // Add entrance animation for feature cards
