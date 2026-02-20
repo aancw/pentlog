@@ -1,6 +1,7 @@
 # PentLog Documentation
 
 Documentation site for PentLog — Evidence-first pentest logging tool.
+Source content lives in this repository under `docs/web/docs/` and is served via Zensical.
 
 **Live Site:** https://pentlog.petruknisme.com
 
@@ -13,8 +14,8 @@ Documentation site for PentLog — Evidence-first pentest logging tool.
 pip install zensical
 
 # Clone repository
-git clone https://github.com/aancw/pentlog-docs.git
-cd pentlog-docs
+git clone https://github.com/aancw/pentlog.git
+cd pentlog/docs/web
 
 # Serve locally
 zensical serve --dev-addr 0.0.0.0:8000
@@ -46,7 +47,7 @@ mkdocs build
 ## Structure
 
 ```
-docs/
+docs/web/docs/
 ├── index.md                    # Home page
 ├── getting-started/            # Getting started guides
 ├── guide/                      # User guides
