@@ -2,7 +2,7 @@
 
 Documentation site for PentLog — Evidence-first pentest logging tool.
 
-**Live Site:** https://pentlog.pages.dev
+**Live Site:** https://pentlog.petruknisme.com
 
 ## Quick Start
 
