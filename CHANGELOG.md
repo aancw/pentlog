@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 ### Added
+- **Engagement Timeline Dashboard**: New `pentlog dashboard timeline` view
+  - Single time axis for sessions, phase changes, notes, and vulnerabilities
+  - Interactive scope prompt to select current context, client, or all engagements
+  - Client grouping headers when showing all engagements
+
+## [v0.15.0] - 2026-02-24
+### Added
 - **Auto-Resume Crashed Sessions**: Interactive prompt to resume crashed sessions on shell startup
   - New `GetCrashedSessionsForContext()` to query crashed sessions by context
   - New `ResumeSession()` to transition session state from crashed to active
