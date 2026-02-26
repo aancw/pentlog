@@ -11,7 +11,7 @@ require (
 	github.com/google/go-github/v80 v80.0.0
 	github.com/gorilla/websocket v1.5.3
 	github.com/manifoldco/promptui v0.9.0
-	github.com/mattn/go-runewidth v0.0.19
+	github.com/mattn/go-runewidth v0.0.20
 	github.com/muesli/termenv v0.16.0
 	github.com/spf13/cobra v1.10.2
 	github.com/vito/vt100 v0.1.2
