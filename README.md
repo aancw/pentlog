@@ -183,7 +183,7 @@ pentlog setup  # Auto-installs on macOS, Ubuntu, Fedora, Alpine
 **Manual Installation**:
 - **macOS**: `brew install ttyrec`
 - **Ubuntu/Debian/WSL**: `sudo apt-get install ttyrec`
-- **Fedora**: `sudo dnf install ttyrec`
+- **Fedora**: `sudo dnf install https://github.com/ovh/ovh-ttyrec/releases/download/v1.1.7.1/ovh-ttyrec-1.1.7.1-1.x86_64.rpm`
 - **Alpine**: `sudo apk add ttyrec`
 
 ### ⚠️ Security Best Practices

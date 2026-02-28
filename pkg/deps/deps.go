@@ -26,7 +26,7 @@ func NewManager() *Manager {
 					"darwin":  {"brew", "install", "ttyrec"},
 					"ubuntu":  {"sudo", "apt-get", "install", "-y", "ttyrec"},
 					"debian":  {"sudo", "apt-get", "install", "-y", "ttyrec"},
-					"fedora":  {"sudo", "dnf", "install", "-y", "ttyrec"},
+					"fedora":  {"sudo", "dnf", "install", "-y", "https://github.com/ovh/ovh-ttyrec/releases/download/v1.1.7.1/ovh-ttyrec-1.1.7.1-1.x86_64.rpm"},
 					"alpine":  {"sudo", "apk", "add", "ttyrec"},
 					"unknown": nil, // Manual install required
 				},
@@ -41,7 +41,6 @@ func NewManager() *Manager {
 					"alpine": {"sudo", "apk", "add", "ttyrec"},
 				},
 			},
-
 		},
 	}
 }
@@ -67,6 +66,14 @@ func (m *Manager) Install(name string) error {
 	}
 
 	if !ok || len(cmdParts) == 0 {
+		if name == "ttyrec" {
+			return fmt.Errorf(
+				"no install command found for %s on %s/%s. Please install ttyrec manually for your distro (see https://github.com/ovh/ovh-ttyrec/releases/tag/v1.1.7.1) or open a PentLog issue to request support",
+				name,
+				runtime.GOOS,
+				distro,
+			)
+		}
 		return fmt.Errorf("no install command found for %s on %s/%s", name, runtime.GOOS, distro)
 	}
 
