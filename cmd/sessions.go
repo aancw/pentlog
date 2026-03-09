@@ -96,7 +96,7 @@ func printSessionsTable(sessions []logs.Session) {
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
 	fmt.Fprintln(w, "ID\tTIME\tSIZE\tFILE")
 	for _, s := range sessions {
-		fmt.Fprintf(w, "%d\t%s\t%d\t%s\n", s.ID, s.ModTime, s.Size, s.DisplayPath)
+		fmt.Fprintf(w, "%d\t%s\t%s\t%s\n", s.ID, s.ModTime, utils.FormatBytes(s.Size), s.DisplayPath)
 	}
 	w.Flush()
 }
