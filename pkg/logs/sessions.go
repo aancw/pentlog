@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"pentlog/pkg/config"
 	"pentlog/pkg/db"
+	"pentlog/pkg/logger"
 	"sort"
 	"strings"
 	"time"
@@ -187,16 +188,15 @@ func SyncSessions() error {
 
 	database, err := db.GetDB()
 	if err != nil {
+		logger.Error("failed to get database for session sync", "error", err)
 		return err
 	}
 
-	// Backup database before migration
 	backupPath, err := db.BackupDB()
 	if err != nil {
-		// Log warning but continue - backup failure shouldn't block migration
-		fmt.Printf("Warning: Could not backup database: %v\n", err)
+		logger.Warn("could not backup database", "error", err)
 	} else if backupPath != "" {
-		fmt.Printf("Database backed up to: %s\n", backupPath)
+		logger.Info("database backed up before migration", "path", backupPath)
 	}
 
 	existsStmt, err := database.Prepare("SELECT id FROM sessions WHERE relative_path = ?")
@@ -214,8 +214,7 @@ func SyncSessions() error {
 	}
 	defer insertStmt.Close()
 
-	fmt.Println("Detected legacy session storage (JSON).")
-	fmt.Println("Migrating session metadata to the new database...")
+	logger.Info("detected legacy session storage, starting migration")
 
 	seenContexts := make(map[string]bool)
 
@@ -275,7 +274,7 @@ func SyncSessions() error {
 		if err == nil {
 			contextKey := fmt.Sprintf("%s/%s/%s", meta.Client, meta.Engagement, meta.Phase)
 			if !seenContexts[contextKey] {
-				fmt.Printf(" [+] Migrating context: %s\n", contextKey)
+				logger.Info("migrating context", "context", contextKey)
 				seenContexts[contextKey] = true
 			}
 		}
@@ -284,11 +283,11 @@ func SyncSessions() error {
 	})
 
 	if err != nil {
+		logger.Error("session migration failed", "error", err)
 		return err
 	}
 
-	fmt.Println(" [✓] Migration complete.")
-	fmt.Println("--------------------------------------------------")
+	logger.Info("session migration complete")
 
 	_, err = database.Exec("INSERT OR REPLACE INTO schema_info (key, value) VALUES ('legacy_import_complete', 'true')")
 	return err
@@ -683,7 +682,7 @@ func ListSessionsByTag(tag string) ([]Session, error) {
 		s.Path = filepath.Join(rootDir, relPath)
 		s.DisplayPath = relPath
 		s.Size = size
-		
+
 		scopeVal := ""
 		if scope.Valid {
 			scopeVal = scope.String
@@ -692,7 +691,7 @@ func ListSessionsByTag(tag string) ([]Session, error) {
 		if operator.Valid {
 			operatorVal = operator.String
 		}
-		
+
 		s.Metadata = SessionMetadata{
 			Client:     client,
 			Engagement: engagement,

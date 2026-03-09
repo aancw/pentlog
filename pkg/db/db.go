@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"pentlog/pkg/config"
+	"pentlog/pkg/logger"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -30,29 +31,37 @@ func InitDB() error {
 	dir := mgr.GetPaths().Home
 
 	if err := os.MkdirAll(dir, 0700); err != nil {
+		logger.Error("failed to create pentlog directory", "path", dir, "error", err)
 		return fmt.Errorf("failed to create pentlog dir: %w", err)
 	}
 
 	dbPath := mgr.GetPaths().DatabaseFile
 	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
+		logger.Error("failed to open database", "path", dbPath, "error", err)
 		return fmt.Errorf("failed to open database: %w", err)
 	}
 
 	if err := db.Ping(); err != nil {
+		logger.Error("failed to ping database", "path", dbPath, "error", err)
 		return fmt.Errorf("failed to ping database: %w", err)
 	}
 
-	// Ensure only owner can read/write the DB file
+	db.SetMaxOpenConns(25)
+	db.SetMaxIdleConns(5)
+	db.SetConnMaxLifetime(5 * time.Minute)
+
 	if err := os.Chmod(dbPath, 0600); err != nil {
-		return fmt.Errorf("failed to restrict database permissions: %w", err)
+		logger.Warn("failed to restrict database permissions", "path", dbPath, "error", err)
 	}
 
 	if err := createSchema(db); err != nil {
+		logger.Error("failed to create database schema", "error", err)
 		return fmt.Errorf("failed to create schema: %w", err)
 	}
 
 	dbInstance = db
+	logger.Info("database initialized", "path", dbPath)
 	return nil
 }
 

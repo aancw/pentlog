@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"gopkg.in/yaml.v2"
+	"pentlog/pkg/logger"
 )
 
 type AppConfig struct {
@@ -85,24 +86,32 @@ func (cm *ConfigManager) Load() error {
 	cfg := &AppConfig{}
 
 	if err := cm.loadDefaults(cfg); err != nil {
+		logger.Error("failed to load config defaults", "error", err)
 		return fmt.Errorf("failed to load defaults: %w", err)
 	}
 
+	if err := logger.InitWithHome(cfg.Paths.Home); err != nil {
+		logger.Warn("failed to initialize file logging, continuing with stderr only", "error", err)
+	}
+
 	if err := cm.loadFromEnv(cfg); err != nil {
+		logger.Error("failed to load config from environment", "error", err)
 		return fmt.Errorf("failed to load from environment: %w", err)
 	}
 
 	if _, err := os.Stat(cfg.Paths.AIConfigFile); err == nil {
 		if err := cm.loadAIConfig(cfg); err != nil {
-			return fmt.Errorf("failed to load AI config: %w", err)
+			logger.Warn("failed to load AI config, using defaults", "error", err)
 		}
 	}
 
 	if err := cm.validate(cfg); err != nil {
+		logger.Error("configuration validation failed", "error", err)
 		return fmt.Errorf("configuration validation failed: %w", err)
 	}
 
 	cm.config = cfg
+	logger.Info("configuration loaded", "home", cfg.Paths.Home, "db", cfg.Paths.DatabaseFile)
 	return nil
 }
 

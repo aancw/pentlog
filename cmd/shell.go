@@ -12,6 +12,7 @@ import (
 	"pentlog/pkg/config"
 	"pentlog/pkg/deps"
 	"pentlog/pkg/errors"
+	"pentlog/pkg/logger"
 	"pentlog/pkg/logs"
 	"pentlog/pkg/share"
 	"pentlog/pkg/system"
@@ -50,8 +51,7 @@ var shellCmd = &cobra.Command{
 		mgr := config.Manager()
 		ctx, err := mgr.LoadContext()
 		if err != nil {
-			errors.NoContext().Print()
-			os.Exit(1)
+			errors.NoContext().Fatal()
 		}
 
 		crashed, err := logs.GetCrashedSessionsForContext(ctx.Client, ctx.Engagement, ctx.Phase)
@@ -65,14 +65,12 @@ var shellCmd = &cobra.Command{
 
 		logDir, err := system.EnsureLogDir()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error preparing log dir: %v\n", err)
-			os.Exit(1)
+			errors.FromError(errors.DirectoryNotFound, "failed to prepare log directory", err).Fatal()
 		}
 
 		sessionDir := getSessionDir(logDir, ctx)
 		if err := os.MkdirAll(sessionDir, 0700); err != nil {
-			fmt.Fprintf(os.Stderr, "Error creating session dir: %v\n", err)
-			os.Exit(1)
+			errors.FromError(errors.PermissionDenied, "failed to create session directory", err).Fatal()
 		}
 
 		timestamp := time.Now().Format("20060102-150405")
@@ -90,19 +88,17 @@ var shellCmd = &cobra.Command{
 		}
 
 		if err := writeMetadata(metaFilePath, meta); err != nil {
-			fmt.Fprintf(os.Stderr, "Error writing metadata: %v\n", err)
-			os.Exit(1)
+			errors.FromError(errors.FileNotFound, "failed to write session metadata", err).Fatal()
 		}
 
 		sessionID, err := logs.AddSessionToDB(meta, logFilePath)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: Failed to add session to DB: %v\n", err)
+			logger.Warn("failed to add session to database", "error", err)
 		}
 
 		newEnv, tempDir, shellArgs, err := prepareShellEnv(ctx, sessionDir, metaFilePath, logFilePath)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error preparing shell environment: %v\n", err)
-			os.Exit(1)
+			errors.FromError(errors.Generic, "failed to prepare shell environment", err).Fatal()
 		}
 		if tempDir != "" {
 			defer os.RemoveAll(tempDir)
@@ -111,8 +107,7 @@ var shellCmd = &cobra.Command{
 		recorder := system.NewRecorder()
 		c, err := recorder.BuildCommand("", logFilePath, shellArgs...)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error creating recorder command: %v\n", err)
-			os.Exit(1)
+			errors.FromError(errors.Generic, "failed to create recorder command", err).Fatal()
 		}
 
 		hbCtx, hbCancel := context.WithCancel(context.Background())
@@ -571,8 +566,7 @@ func startResumedSession(ctx *config.ContextData, session *logs.Session) {
 
 	newEnv, tempDir, shellArgs, err := prepareShellEnv(ctx, sessionDir, session.MetaPath, session.Path)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error preparing shell environment: %v\n", err)
-		os.Exit(1)
+		errors.FromError(errors.Generic, "failed to prepare shell environment for resumed session", err).Fatal()
 	}
 	if tempDir != "" {
 		defer os.RemoveAll(tempDir)
@@ -581,8 +575,7 @@ func startResumedSession(ctx *config.ContextData, session *logs.Session) {
 	recorder := system.NewRecorder()
 	c, err := recorder.BuildCommand("", session.Path, shellArgs...)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error creating recorder command: %v\n", err)
-		os.Exit(1)
+		errors.FromError(errors.Generic, "failed to create recorder command for resumed session", err).Fatal()
 	}
 
 	hbCtx, hbCancel := context.WithCancel(context.Background())

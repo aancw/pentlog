@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 ### Added
+- **Structured Logging**: New logging package with file output support
+  - Logs written to `~/.pentlog/pentlog.log` automatically at startup
+  - Uses Go's built-in `log/slog` for structured logging
+  - Dual output: both stderr (terminal) and file simultaneously
+  - JSON/text output options via `SetJSONOutput()`
+  - User-friendly output wrappers: `Success()`, `Warning()`, `Error()`, `InfoMsg()`
+- **Database Connection Pooling**: Added connection limits for SQLite
+  - `SetMaxOpenConns(25)`, `SetMaxIdleConns(5)`, `SetConnMaxLifetime(5min)`
+  - Prevents resource exhaustion under heavy load
+
+### Changed
+- **Error Handling**: Consistent use of `errors.Fatal()` across shell command
+  - Replaced mixed `fmt.Fprintf() + os.Exit(1)` with structured error handling
+  - Better error context for debugging
+
+### Added
 - **Session Tags**: Flexible tagging system for session organization
   - Add multiple tags to sessions: `pentlog sessions tag <id> "important" "dc-01"`
   - Remove tags: `pentlog sessions untag <id> "tag-name"`
