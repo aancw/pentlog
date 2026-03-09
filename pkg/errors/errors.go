@@ -27,16 +27,17 @@ const (
 	ArchiveNotFound
 	ArchiveCorrupted
 	ArchiveEncrypted
+	InvalidInput
 	Generic
 )
 
 type Error struct {
-	Type        ErrorType
-	Message     string
-	Reasons     []string
-	Solutions   []string
-	Original    error
-	Details     string
+	Type      ErrorType
+	Message   string
+	Reasons   []string
+	Solutions []string
+	Original  error
+	Details   string
 }
 
 func NewError(errType ErrorType, message string) *Error {
