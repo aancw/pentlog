@@ -112,6 +112,19 @@ pentlog note add "Found SQLi"
 pentlog note list
 ```
 
+### Session Size Monitoring
+PentLog automatically monitors session file sizes to prevent performance issues:
+
+- **Warning at 5MB**: Alerts when approaching limits
+- **Critical at 10MB**: Suggests splitting session
+- **Why**: Ensures fast replay, search, export, and GIF generation
+
+```bash
+# When you see the alert, exit and start new session
+exit
+pentlog shell
+```
+
 ### Quick Hotkeys (Inside `pentlog shell`)
 
 During a shell session, use keyboard shortcuts for rapid note/vuln entry:

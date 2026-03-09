@@ -26,20 +26,31 @@ pentlog start [flags]
 | `--encrypt` | false | Enable encryption |
 | `--output` | `~/.pentlog/sessions` | Output directory |
 
-### `pentlog list`
+### `pentlog sessions`
 
-List all recorded sessions.
+Manage recorded sessions.
 
 ```bash
-pentlog list [flags]
+# List sessions
+pentlog sessions list
+
+# Delete a session
+pentlog sessions delete <id>
 ```
 
-**Flags:**
+**Subcommands:**
+
+| Command | Description |
+|---------|-------------|
+| `list` | List all recorded sessions |
+| `delete` | Delete a session by ID |
+
+**List Flags:**
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--format` | table | Output format (table, json, yaml) |
-| `--all` | false | Include archived sessions |
+| `--limit` | 0 | Maximum sessions to display |
+| `--offset` | 0 | Number of sessions to skip |
 
 ### `pentlog export`
 

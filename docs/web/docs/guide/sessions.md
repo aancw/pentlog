@@ -92,14 +92,46 @@ pentlog switch
 ## Listing Sessions
 
 ```bash
-pentlog sessions
+pentlog sessions list
 ```
 
 Shows:
 - Active and completed sessions
 - Session metadata (client, engagement, phase)
-- File sizes and timestamps
+- File sizes and timestamps (human-readable: KB/MB/GB)
 - Session states (active/completed/crashed)
+
+### Pagination
+
+```bash
+# Show first 20 sessions
+pentlog sessions list --limit 20
+
+# Skip first 10 sessions
+pentlog sessions list --offset 10
+```
+
+## Deleting Sessions
+
+Remove sessions and their associated files:
+
+```bash
+# Delete by ID
+pentlog sessions delete 65
+
+# Interactive mode (shows list and prompts)
+pentlog sessions delete
+```
+
+**What gets deleted:**
+- `.tty` recording file
+- `.json` metadata file  
+- `.notes.json` notes file
+
+**Safety features:**
+- Confirmation prompt with session details
+- Validates session ID exists
+- Shows file size in confirmation
 
 ## Session States
 
@@ -108,6 +140,38 @@ Shows:
 | `active` | Currently recording | None |
 | `completed` | Ended normally | None |
 | `crashed` | Terminated unexpectedly | Run `pentlog recover` |
+
+## Session Size Monitoring
+
+PentLog monitors session file sizes to prevent performance issues with large recordings:
+
+### How It Works
+
+- **Background monitoring** every 30 seconds during shell sessions
+- **Warning at 5MB**: "⚡ Session size: 5.0 MB - Approaching limit"
+- **Alert at 10MB**: "⚠️ Session size: 10.0 MB - Consider splitting session"
+- **5-minute cooldown** between alerts (prevents spam)
+
+### Why These Thresholds?
+
+The 5MB/10MB limits optimize performance for:
+- **Replay**: Fast ttyplay parsing
+- **Search**: Quick log scanning
+- **Export**: Efficient report generation
+- **GIF Generation**: Smooth frame extraction
+
+### Managing Large Sessions
+
+When you see the alert:
+```bash
+# Exit current session
+exit
+
+# Start a new session (creates separate .tty file)
+pentlog shell
+```
+
+This keeps individual session files manageable and ensures fast processing.
 
 ## Resetting Context
 
