@@ -100,7 +100,34 @@ pentlog switch
 pentlog switch -
 ```
 
-### 4. Notes & Bookmarks
+### 4. Session Tags
+Organize and filter sessions using flexible tags (useful for marking important findings).
+
+```bash
+# Add tags to a session
+pentlog sessions tag 5 "important" "dc-01" "initial-access"
+
+# Remove tags
+pentlog sessions untag 5 "dc-01"
+
+# View tags for a specific session
+pentlog sessions tags 5
+
+# List all tags in use
+pentlog sessions tags
+
+# Filter sessions by tag
+pentlog sessions list --tag "important"
+```
+
+**Example Use Cases:**
+- `"important"` - Mark critical findings
+- `"contains-creds"` - Sessions with credentials discovered
+- `"machine-1"` / `"machine-2"` - Track by target
+- `"initial-access"` / `"privesc"` / `"persistence"` - Track by attack phase
+- `"critical"` - High-priority evidence
+
+### 5. Notes & Bookmarks
 Add timestamped notes during your session without leaving the terminal.
 
 ```bash
@@ -147,7 +174,7 @@ Description (optional): POST /login endpoint vulnerable to blind SQLi
 ✓ Vuln saved: V-abc123 [High] SQL Injection in login form
 ```
 
-### 5. Search
+### 6. Search
 All commands function interactively.
 
 ```bash
@@ -162,21 +189,21 @@ pentlog search
 pentlog search "vulnerability" --regex --after 15012026
 ```
 
-### 6. Integrity
+### 7. Integrity
 Generate SHA256 hashes of all logs for evidence integrity.
 
 ```bash
 pentlog freeze
 ```
 
-### 7. Dashboard
+### 8. Dashboard
 View an interactive executive summary of your engagement logic, including evidence size, recent findings, and statistical breakdowns.
 
 ```bash
 pentlog dashboard
 ```
 
-### 8. Versioning & Updates
+### 9. Versioning & Updates
 Keep your tool up to date.
 
 ```bash

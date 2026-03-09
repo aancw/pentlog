@@ -585,6 +585,166 @@ func DeleteSession(sessionID int) error {
 	return err
 }
 
+// AddTag adds a tag to a session
+func AddTag(sessionID int, tag string) error {
+	database, err := db.GetDB()
+	if err != nil {
+		return err
+	}
+
+	_, err = database.Exec(
+		`INSERT OR IGNORE INTO session_tags (session_id, tag) VALUES (?, ?)`,
+		sessionID, tag,
+	)
+	return err
+}
+
+// RemoveTag removes a tag from a session
+func RemoveTag(sessionID int, tag string) error {
+	database, err := db.GetDB()
+	if err != nil {
+		return err
+	}
+
+	_, err = database.Exec(
+		`DELETE FROM session_tags WHERE session_id = ? AND tag = ?`,
+		sessionID, tag,
+	)
+	return err
+}
+
+// GetSessionTags returns all tags for a session
+func GetSessionTags(sessionID int) ([]string, error) {
+	database, err := db.GetDB()
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := database.Query(
+		`SELECT tag FROM session_tags WHERE session_id = ? ORDER BY tag`,
+		sessionID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var tags []string
+	for rows.Next() {
+		var tag string
+		if err := rows.Scan(&tag); err != nil {
+			continue
+		}
+		tags = append(tags, tag)
+	}
+
+	return tags, nil
+}
+
+// ListSessionsByTag returns all sessions with a specific tag
+func ListSessionsByTag(tag string) ([]Session, error) {
+	database, err := db.GetDB()
+	if err != nil {
+		return nil, err
+	}
+
+	query := `
+		SELECT s.id, s.client, s.engagement, s.scope, s.operator, s.phase, s.timestamp, 
+		       s.filename, s.relative_path, s.size
+		FROM sessions s
+		INNER JOIN session_tags st ON s.id = st.session_id
+		WHERE st.tag = ?
+		ORDER BY s.timestamp DESC
+	`
+
+	rows, err := database.Query(query, tag)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var sessions []Session
+	mgr := config.Manager()
+	rootDir := mgr.GetPaths().LogsDir
+
+	for rows.Next() {
+		var s Session
+		var client, engagement, phase, timestamp, filename, relPath string
+		var scope, operator sql.NullString
+		var size int64
+		var id int
+
+		if err := rows.Scan(&id, &client, &engagement, &scope, &operator, &phase, &timestamp, &filename, &relPath, &size); err != nil {
+			continue
+		}
+
+		s.ID = id
+		s.Filename = filename
+		s.Path = filepath.Join(rootDir, relPath)
+		s.DisplayPath = relPath
+		s.Size = size
+		
+		scopeVal := ""
+		if scope.Valid {
+			scopeVal = scope.String
+		}
+		operatorVal := ""
+		if operator.Valid {
+			operatorVal = operator.String
+		}
+		
+		s.Metadata = SessionMetadata{
+			Client:     client,
+			Engagement: engagement,
+			Scope:      scopeVal,
+			Operator:   operatorVal,
+			Phase:      phase,
+			Timestamp:  timestamp,
+		}
+
+		s.MetaPath = strings.Replace(s.Path, ".tty", ".json", 1)
+		s.NotesPath = strings.Replace(s.Path, ".tty", ".notes.json", 1)
+
+		if ts, err := time.Parse(time.RFC3339, timestamp); err == nil {
+			s.ModTime = ts.Format("2006-01-02 15:04:05")
+			s.SortKey = ts
+		} else {
+			s.ModTime = timestamp
+		}
+
+		sessions = append(sessions, s)
+	}
+
+	return sessions, nil
+}
+
+// ListAllTags returns all tags used in the system
+func ListAllTags() ([]string, error) {
+	database, err := db.GetDB()
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := database.Query(
+		`SELECT DISTINCT tag FROM session_tags ORDER BY tag`,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var tags []string
+	for rows.Next() {
+		var tag string
+		if err := rows.Scan(&tag); err != nil {
+			continue
+		}
+		tags = append(tags, tag)
+	}
+
+	return tags, nil
+}
+
 func loadMetadata(path string) (SessionMetadata, error) {
 	var meta SessionMetadata
 	f, err := os.Open(path)

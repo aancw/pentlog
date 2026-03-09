@@ -26,6 +26,18 @@ func createSchema(db *sql.DB) error {
 	CREATE INDEX IF NOT EXISTS idx_sessions_engagement ON sessions(engagement);
 	CREATE INDEX IF NOT EXISTS idx_sessions_timestamp ON sessions(timestamp);
 
+	CREATE TABLE IF NOT EXISTS session_tags (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		session_id INTEGER NOT NULL,
+		tag TEXT NOT NULL,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE,
+		UNIQUE(session_id, tag)
+	);
+	
+	CREATE INDEX IF NOT EXISTS idx_session_tags_session_id ON session_tags(session_id);
+	CREATE INDEX IF NOT EXISTS idx_session_tags_tag ON session_tags(tag);
+
 	CREATE TABLE IF NOT EXISTS schema_info (
 		key TEXT PRIMARY KEY,
 		value TEXT NOT NULL

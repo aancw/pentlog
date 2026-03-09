@@ -17,6 +17,7 @@ import (
 var (
 	sessionsLimit  int
 	sessionsOffset int
+	sessionsTag    string
 )
 
 const defaultSessionsPageSize = 20
@@ -33,6 +34,23 @@ var sessionsListCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		var sessions []logs.Session
 		var err error
+
+		// If tag filter is specified, use it
+		if sessionsTag != "" {
+			sessions, err = logs.ListSessionsByTag(sessionsTag)
+			if err != nil {
+				errors.DatabaseErr("list sessions by tag", err).Fatal()
+			}
+
+			if len(sessions) == 0 {
+				fmt.Printf("No sessions found with tag '%s'.\n", sessionsTag)
+				return
+			}
+
+			printSessionsTable(sessions)
+			fmt.Printf("\nShowing %d session(s) with tag '%s'\n", len(sessions), sessionsTag)
+			return
+		}
 
 		if sessionsLimit > 0 || sessionsOffset > 0 {
 			sessions, err = logs.ListSessionsPaginated(sessionsLimit, sessionsOffset)
@@ -191,13 +209,132 @@ var sessionsDeleteCmd = &cobra.Command{
 	},
 }
 
+var sessionsTagCmd = &cobra.Command{
+	Use:   "tag [session-id] [tag1] [tag2] ...",
+	Short: "Add tags to a session",
+	Long:  `Add one or more tags to a session for organization. Use 'sessions list' to find the ID.`,
+	Args:  cobra.MinimumNArgs(2),
+	Run: func(cmd *cobra.Command, args []string) {
+		sessionID, err := strconv.Atoi(args[0])
+		if err != nil {
+			errors.NewError(errors.InvalidInput, "Invalid session ID").WithDetails("Session ID must be a number").Fatal()
+		}
+
+		// Verify session exists
+		if _, err := logs.GetSession(sessionID); err != nil {
+			errors.DatabaseErr("get session", err).Fatal()
+		}
+
+		tags := args[1:]
+		successCount := 0
+
+		for _, tag := range tags {
+			if err := logs.AddTag(sessionID, tag); err != nil {
+				fmt.Printf("✗ Failed to add tag '%s': %v\n", tag, err)
+			} else {
+				fmt.Printf("✓ Added tag '%s' to session %d\n", tag, sessionID)
+				successCount++
+			}
+		}
+
+		if successCount > 0 {
+			fmt.Printf("\n✓ Successfully tagged %d tag(s)\n", successCount)
+		}
+	},
+}
+
+var sessionsListTagsCmd = &cobra.Command{
+	Use:   "tags [session-id]",
+	Short: "List tags for a session",
+	Long:  `Display all tags associated with a session. If no session ID provided, list all tags in use.`,
+	Args:  cobra.MaximumNArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) == 0 {
+			// List all tags
+			tags, err := logs.ListAllTags()
+			if err != nil {
+				errors.DatabaseErr("list tags", err).Fatal()
+			}
+
+			if len(tags) == 0 {
+				fmt.Println("No tags found.")
+				return
+			}
+
+			fmt.Println("Tags in use:")
+			for _, tag := range tags {
+				fmt.Printf("  - %s\n", tag)
+			}
+			return
+		}
+
+		sessionID, err := strconv.Atoi(args[0])
+		if err != nil {
+			errors.NewError(errors.InvalidInput, "Invalid session ID").WithDetails("Session ID must be a number").Fatal()
+		}
+
+		tags, err := logs.GetSessionTags(sessionID)
+		if err != nil {
+			errors.DatabaseErr("get tags", err).Fatal()
+		}
+
+		if len(tags) == 0 {
+			fmt.Printf("Session %d has no tags.\n", sessionID)
+			return
+		}
+
+		fmt.Printf("Tags for session %d:\n", sessionID)
+		for _, tag := range tags {
+			fmt.Printf("  - %s\n", tag)
+		}
+	},
+}
+
+var sessionsRemoveTagCmd = &cobra.Command{
+	Use:   "untag [session-id] [tag1] [tag2] ...",
+	Short: "Remove tags from a session",
+	Long:  `Remove one or more tags from a session.`,
+	Args:  cobra.MinimumNArgs(2),
+	Run: func(cmd *cobra.Command, args []string) {
+		sessionID, err := strconv.Atoi(args[0])
+		if err != nil {
+			errors.NewError(errors.InvalidInput, "Invalid session ID").WithDetails("Session ID must be a number").Fatal()
+		}
+
+		// Verify session exists
+		if _, err := logs.GetSession(sessionID); err != nil {
+			errors.DatabaseErr("get session", err).Fatal()
+		}
+
+		tags := args[1:]
+		successCount := 0
+
+		for _, tag := range tags {
+			if err := logs.RemoveTag(sessionID, tag); err != nil {
+				fmt.Printf("✗ Failed to remove tag '%s': %v\n", tag, err)
+			} else {
+				fmt.Printf("✓ Removed tag '%s' from session %d\n", tag, sessionID)
+				successCount++
+			}
+		}
+
+		if successCount > 0 {
+			fmt.Printf("\n✓ Successfully removed %d tag(s)\n", successCount)
+		}
+	},
+}
+
 func init() {
 	sessionsListCmd.Flags().IntVarP(&sessionsLimit, "limit", "l", 0, "Maximum number of sessions to display")
 	sessionsListCmd.Flags().IntVarP(&sessionsOffset, "offset", "o", 0, "Number of sessions to skip (for pagination)")
+	sessionsListCmd.Flags().StringVarP(&sessionsTag, "tag", "t", "", "Filter sessions by tag")
 
 	rootCmd.AddCommand(sessionsCmd)
 	sessionsCmd.AddCommand(sessionsListCmd)
 	sessionsCmd.AddCommand(sessionsDeleteCmd)
+	sessionsCmd.AddCommand(sessionsTagCmd)
+	sessionsCmd.AddCommand(sessionsListTagsCmd)
+	sessionsCmd.AddCommand(sessionsRemoveTagCmd)
 }
 
 func printSessionsTable(sessions []logs.Session) {

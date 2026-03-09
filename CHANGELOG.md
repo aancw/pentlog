@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 ### Added
+- **Session Tags**: Flexible tagging system for session organization
+  - Add multiple tags to sessions: `pentlog sessions tag <id> "important" "dc-01"`
+  - Remove tags: `pentlog sessions untag <id> "tag-name"`
+  - View tags for session: `pentlog sessions tags <id>`
+  - List all tags in use: `pentlog sessions tags`
+  - Filter sessions by tag: `pentlog sessions list --tag "important"`
+  - Useful for marking sessions (e.g., "contains-creds", "critical", "machine-1", "initial-access")
+  - Automatic deduplication (duplicate tags ignored)
+  - Tags cascade-deleted when session is deleted
+  - Full database integration with indexes for fast queries
 - **Session Size Monitoring and Alerts**: Background monitoring to prevent large session files
   - Monitors session .tty file size every 30 seconds during shell sessions
   - Warning alert at 5MB: "⚡ Session size: 5.0 MB - Approaching limit"
