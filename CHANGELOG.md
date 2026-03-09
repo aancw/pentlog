@@ -12,6 +12,11 @@ All notable changes to this project will be documented in this file.
   - Works for both new and resumed sessions
   - Configurable thresholds via `config.Manager().GetMonitor()`
   - Optimized 5MB/10MB thresholds ensure fast .tty processing for replay, search, export, and GIF generation
+- **Session Delete Command**: `pentlog sessions delete <id>` to remove sessions and associated files
+  - Interactive mode: `pentlog sessions delete` shows list and prompts for ID
+  - Deletes .tty, .json, and .notes.json files
+  - Confirmation prompt with session details (path, size)
+  - Validates session ID exists before deletion
 - **Engagement Timeline Dashboard**: New `pentlog dashboard timeline` view
   - Single time axis for sessions, phase changes, notes, and vulnerabilities
   - Interactive scope prompt to select current context, client, or all engagements
