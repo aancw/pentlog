@@ -118,6 +118,17 @@ var shellCmd = &cobra.Command{
 		hbCtx, hbCancel := context.WithCancel(context.Background())
 		var wg sync.WaitGroup
 
+		// Start session size monitoring
+		cfg := mgr.GetMonitor()
+		monitorConfig := logs.MonitorConfig{
+			WarnThreshold:  int64(cfg.WarnThresholdMB) * 1024 * 1024,
+			AlertThreshold: int64(cfg.AlertThresholdMB) * 1024 * 1024,
+			CheckInterval:  time.Duration(cfg.CheckIntervalSec) * time.Second,
+			AlertCooldown:  time.Duration(cfg.AlertCooldownMin) * time.Minute,
+		}
+		sessionMonitor := logs.NewSessionMonitor(logFilePath, monitorConfig)
+		sessionMonitor.Start()
+
 		if sessionID > 0 {
 			wg.Add(1)
 			go func() {
@@ -168,6 +179,9 @@ var shellCmd = &cobra.Command{
 		wg.Wait()
 		signal.Stop(sigChan)
 		close(sigChan)
+
+		// Stop session monitoring
+		sessionMonitor.Stop()
 
 		if shareCancel != nil {
 			shareCancel()
@@ -574,6 +588,18 @@ func startResumedSession(ctx *config.ContextData, session *logs.Session) {
 	hbCtx, hbCancel := context.WithCancel(context.Background())
 	var wg sync.WaitGroup
 
+	// Start session size monitoring for resumed session
+	cfgMgr := config.Manager()
+	cfg := cfgMgr.GetMonitor()
+	monitorConfig := logs.MonitorConfig{
+		WarnThreshold:  int64(cfg.WarnThresholdMB) * 1024 * 1024,
+		AlertThreshold: int64(cfg.AlertThresholdMB) * 1024 * 1024,
+		CheckInterval:  time.Duration(cfg.CheckIntervalSec) * time.Second,
+		AlertCooldown:  time.Duration(cfg.AlertCooldownMin) * time.Minute,
+	}
+	sessionMonitor := logs.NewSessionMonitor(session.Path, monitorConfig)
+	sessionMonitor.Start()
+
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -622,6 +648,9 @@ func startResumedSession(ctx *config.ContextData, session *logs.Session) {
 	wg.Wait()
 	signal.Stop(sigChan)
 	close(sigChan)
+
+	// Stop session monitoring
+	sessionMonitor.Stop()
 
 	if shareCancel != nil {
 		shareCancel()

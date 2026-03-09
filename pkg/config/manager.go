@@ -11,22 +11,30 @@ import (
 )
 
 type AppConfig struct {
-	Paths  PathsConfig
-	Env    EnvConfig
-	AI     AIConfig
-	System SystemConfig
+	Paths   PathsConfig
+	Env     EnvConfig
+	AI      AIConfig
+	System  SystemConfig
+	Monitor MonitorConfig
+}
+
+type MonitorConfig struct {
+	WarnThresholdMB  int // Warning threshold in MB (default: 50)
+	AlertThresholdMB int // Alert threshold in MB (default: 100)
+	CheckIntervalSec int // How often to check in seconds (default: 30)
+	AlertCooldownMin int // Minimum time between alerts in minutes (default: 5)
 }
 
 type PathsConfig struct {
-	Home      string
-	LogsDir   string
-	ReportsDir string
-	ArchiveDir string
-	HashesDir  string
-	ExtractsDir string
+	Home         string
+	LogsDir      string
+	ReportsDir   string
+	ArchiveDir   string
+	HashesDir    string
+	ExtractsDir  string
 	TemplatesDir string
-	ContextFile string
-	HistoryFile string
+	ContextFile  string
+	HistoryFile  string
 	DatabaseFile string
 	AIConfigFile string
 }
@@ -105,17 +113,17 @@ func (cm *ConfigManager) loadDefaults(cfg *AppConfig) error {
 	}
 
 	cfg.Paths = PathsConfig{
-		Home:          home,
-		LogsDir:       filepath.Join(home, LogsDirName),
-		ReportsDir:    filepath.Join(home, ReportsDirName),
-		ArchiveDir:    filepath.Join(home, ArchiveDirName),
-		HashesDir:     filepath.Join(home, HashesDirName),
-		ExtractsDir:   filepath.Join(home, ExtractsDirName),
-		TemplatesDir:  filepath.Join(home, TemplatesDirName),
-		ContextFile:   filepath.Join(home, ContextFileName),
-		HistoryFile:   filepath.Join(home, "history.jsonl"),
-		DatabaseFile:  filepath.Join(home, "pentlog.db"),
-		AIConfigFile:  filepath.Join(home, "ai_config.yaml"),
+		Home:         home,
+		LogsDir:      filepath.Join(home, LogsDirName),
+		ReportsDir:   filepath.Join(home, ReportsDirName),
+		ArchiveDir:   filepath.Join(home, ArchiveDirName),
+		HashesDir:    filepath.Join(home, HashesDirName),
+		ExtractsDir:  filepath.Join(home, ExtractsDirName),
+		TemplatesDir: filepath.Join(home, TemplatesDirName),
+		ContextFile:  filepath.Join(home, ContextFileName),
+		HistoryFile:  filepath.Join(home, "history.jsonl"),
+		DatabaseFile: filepath.Join(home, "pentlog.db"),
+		AIConfigFile: filepath.Join(home, "ai_config.yaml"),
 	}
 
 	cfg.Env = EnvConfig{
@@ -130,6 +138,13 @@ func (cm *ConfigManager) loadDefaults(cfg *AppConfig) error {
 
 	cfg.System = SystemConfig{
 		DBPath: cfg.Paths.DatabaseFile,
+	}
+
+	cfg.Monitor = MonitorConfig{
+		WarnThresholdMB:  5,
+		AlertThresholdMB: 10,
+		CheckIntervalSec: 30,
+		AlertCooldownMin: 5,
 	}
 
 	return nil
@@ -243,6 +258,12 @@ func (cm *ConfigManager) GetEnv() EnvConfig {
 	cm.mu.RLock()
 	defer cm.mu.RUnlock()
 	return cm.config.Env
+}
+
+func (cm *ConfigManager) GetMonitor() MonitorConfig {
+	cm.mu.RLock()
+	defer cm.mu.RUnlock()
+	return cm.config.Monitor
 }
 
 func (cm *ConfigManager) LoadContext() (*ContextData, error) {
@@ -367,11 +388,11 @@ func (cm *ConfigManager) EnsureDirectories() error {
 func (cm *ConfigManager) Refresh() error {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
-	
+
 	// Reset the singleton to force reload
 	once = sync.Once{}
 	manager = nil
-	
+
 	return Manager().Load()
 }
 
