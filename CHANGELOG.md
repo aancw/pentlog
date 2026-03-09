@@ -4,10 +4,24 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 ### Added
+- **Session Size Monitoring and Alerts**: Background monitoring to prevent large session files
+  - Monitors session .tty file size every 30 seconds during shell sessions
+  - Warning alert at 5MB: "⚡ Session size: 5.0 MB - Approaching limit"
+  - Critical alert at 10MB: "⚠️ Session size: 10.0 MB - Consider splitting session"
+  - Alert cooldown (5 minutes) prevents notification spam
+  - Works for both new and resumed sessions
+  - Configurable thresholds via `config.Manager().GetMonitor()`
+  - Optimized 5MB/10MB thresholds ensure fast .tty processing for replay, search, export, and GIF generation
 - **Engagement Timeline Dashboard**: New `pentlog dashboard timeline` view
   - Single time axis for sessions, phase changes, notes, and vulnerabilities
   - Interactive scope prompt to select current context, client, or all engagements
   - Client grouping headers when showing all engagements
+
+### Changed
+- **Human-Readable Session Sizes**: `pentlog sessions` now displays sizes in KB/MB/GB
+  - Replaces raw byte counts (e.g., 4660415) with human-readable format (e.g., 4.5 MB)
+  - Uses standard KB/MB/GB notation instead of KiB/MiB/GiB
+  - Improves readability when reviewing session list
 
 ## [v0.15.0] - 2026-02-24
 ### Added
