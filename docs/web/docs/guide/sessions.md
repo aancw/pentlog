@@ -47,6 +47,50 @@ Features:
 - Automatic ttyrec recording
 - Hotkeys for notes and vulnerabilities
 - Graceful exit handling
+- **Pause/Resume support** for breaks without session fragmentation
+
+### Pausing and Resuming Sessions
+
+Take breaks without creating multiple disjointed sessions:
+
+```bash
+# Pause recording (while staying in shell)
+pentlog pause
+```
+
+Output:
+```
+⏸️  Session paused successfully!
+   Time: 2026-03-12 23:21:38
+
+   Recording is paused. The shell remains active.
+   Run 'pentlog resume' to continue recording.
+```
+
+```bash
+# Resume recording
+pentlog resume
+```
+
+Output:
+```
+▶️  Session resumed successfully!
+   Time: 2026-03-12 23:25:15
+   Paused for: 3m37s
+
+   Recording is now active.
+```
+
+**Use Cases:**
+- **OSCP Exams**: Take breaks without creating multiple sessions
+- **Client Engagements**: Pause before entering sensitive environments
+- **Clean Evidence**: Single continuous session per engagement phase
+
+**How It Works:**
+- Pause/resume markers are embedded in the ttyrec file with timestamps
+- Markers display as formatted banners during replay
+- The `.pause_marker` file tracks pause state on disk
+- Shell remains active during pause (you can still run commands, but they're not recorded)
 
 ### Custom PS1 Format
 

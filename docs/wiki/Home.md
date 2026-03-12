@@ -174,6 +174,36 @@ Description (optional): POST /login endpoint vulnerable to blind SQLi
 ✓ Vuln saved: V-abc123 [High] SQL Injection in login form
 ```
 
+### Session Pause/Resume
+
+Take breaks without creating multiple disjointed sessions:
+
+```bash
+# Pause recording (shell stays active)
+$ pentlog pause
+⏸️  Session paused successfully!
+   Time: 2026-03-12 23:21:38
+   Recording is paused. The shell remains active.
+   Run 'pentlog resume' to continue recording.
+
+# Resume recording
+$ pentlog resume
+▶️  Session resumed successfully!
+   Time: 2026-03-12 23:25:15
+   Paused for: 3m37s
+   Recording is now active.
+```
+
+**Use Cases:**
+- **OSCP Exams**: Take breaks without session fragmentation
+- **Client Engagements**: Pause before sensitive operations
+- **Clean Evidence**: Single continuous session per phase
+
+**How It Works:**
+- Pause/resume markers embedded in ttyrec file with timestamps
+- Visual banners display during replay
+- Shell remains active during pause (commands run but aren't recorded)
+
 ### 6. Search
 All commands function interactively.
 

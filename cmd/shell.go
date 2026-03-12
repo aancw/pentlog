@@ -96,7 +96,7 @@ var shellCmd = &cobra.Command{
 			logger.Warn("failed to add session to database", "error", err)
 		}
 
-		newEnv, tempDir, shellArgs, err := prepareShellEnv(ctx, sessionDir, metaFilePath, logFilePath)
+		newEnv, tempDir, shellArgs, err := prepareShellEnv(ctx, sessionDir, metaFilePath, logFilePath, sessionID)
 		if err != nil {
 			errors.FromError(errors.Generic, "failed to prepare shell environment", err).Fatal()
 		}
@@ -223,7 +223,7 @@ func getSessionDir(logDir string, ctx *config.ContextData) string {
 	)
 }
 
-func prepareShellEnv(ctx *config.ContextData, sessionDir, metaFilePath, logFilePath string) ([]string, string, []string, error) {
+func prepareShellEnv(ctx *config.ContextData, sessionDir, metaFilePath, logFilePath string, sessionID int64) ([]string, string, []string, error) {
 	tempDir, err := os.MkdirTemp("", "pentlog-shell-*")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: Could not create temp dir for shell config: %v\n", err)
@@ -238,6 +238,9 @@ func prepareShellEnv(ctx *config.ContextData, sessionDir, metaFilePath, logFileP
 	newEnv = append(newEnv, fmt.Sprintf("PENTLOG_SESSION_DIR=%s", sessionDir))
 	newEnv = append(newEnv, fmt.Sprintf("PENTLOG_SESSION_METADATA_PATH=%s", metaFilePath))
 	newEnv = append(newEnv, fmt.Sprintf("PENTLOG_SESSION_LOG_PATH=%s", logFilePath))
+	if sessionID > 0 {
+		newEnv = append(newEnv, fmt.Sprintf("PENTLOG_SESSION_ID=%d", sessionID))
+	}
 
 	promptSegment := fmt.Sprintf("(pentlog:%s/%s)", ctx.Client, ctx.Phase)
 	shell := os.Getenv("SHELL")
@@ -401,6 +404,7 @@ func startRecording(c *exec.Cmd, env []string, ctx *config.ContextData) error {
 	hints := []string{
 		"Type 'exit' or Ctrl+D to stop recording.",
 		"Hotkeys: Ctrl+N = Quick Note | Ctrl+G = Quick Vuln",
+		"Commands: pentlog pause | pentlog resume",
 	}
 	utils.PrintCenteredBlock(hints)
 
@@ -564,7 +568,7 @@ func startResumedSession(ctx *config.ContextData, session *logs.Session) {
 
 	sessionDir := filepath.Dir(session.Path)
 
-	newEnv, tempDir, shellArgs, err := prepareShellEnv(ctx, sessionDir, session.MetaPath, session.Path)
+	newEnv, tempDir, shellArgs, err := prepareShellEnv(ctx, sessionDir, session.MetaPath, session.Path, int64(session.ID))
 	if err != nil {
 		errors.FromError(errors.Generic, "failed to prepare shell environment for resumed session", err).Fatal()
 	}

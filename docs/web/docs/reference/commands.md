@@ -10,7 +10,7 @@ Complete reference for all PentLog commands. Use this guide to explore the full 
 
     ---
 
-    `create`, `shell`, `switch`, `sessions`, `status`, `reset`
+    `create`, `shell`, `pause`, `resume`, `switch`, `sessions`, `status`, `reset`
 
 -   :material-magnify: __Analysis & Search__
 
@@ -150,6 +150,74 @@ pentlog reset
 
 !!! warning "Caution"
     This clears the current context but does not delete any recorded sessions.
+
+---
+
+### `pentlog pause`
+Pause the current recording session.
+
+```bash
+pentlog pause
+```
+
+**Description:**
+Pause recording without exiting the shell. Useful for taking breaks during OSCP exams or before entering sensitive environments.
+
+**Requirements:**
+- Must be run inside an active `pentlog shell` session
+
+**Examples:**
+
+```bash
+# Inside pentlog shell
+$ pentlog pause
+
+⏸️  Session paused successfully!
+   Time: 2026-03-12 23:21:38
+
+   Recording is paused. The shell remains active.
+   Run 'pentlog resume' to continue recording.
+```
+
+**Notes:**
+- Shell remains active (you can still run commands)
+- Pause marker written to session file with timestamp
+- Visual banner displays during replay
+- Use `pentlog resume` to continue recording
+
+---
+
+### `pentlog resume`
+Resume a paused recording session.
+
+```bash
+pentlog resume
+```
+
+**Description:**
+Resume recording from where the session was paused. Maintains single continuous session for clean evidence trails.
+
+**Requirements:**
+- Must be run inside an active `pentlog shell` session
+- Session must be in paused state (have a `.pause_marker` file)
+
+**Examples:**
+
+```bash
+# Inside pentlog shell
+$ pentlog resume
+
+▶️  Session resumed successfully!
+   Time: 2026-03-12 23:25:15
+   Paused for: 3m37s
+
+   Recording is now active.
+```
+
+**Notes:**
+- Resume marker written to session file with timestamp
+- Shows duration of pause
+- Visual banner displays during replay
 
 ---
 

@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 ### Added
+- **Session Pause/Resume**: Pause recording without creating new sessions
+  - `pentlog pause` - Pause current recording session with visual marker
+  - `pentlog resume` - Resume paused session, showing pause duration
+  - Pause/resume markers written with proper ttyrec binary format
+  - Visual banners display in replay showing pause/resume timestamps
+  - Perfect for OSCP exams (take breaks without multiple sessions)
+  - Ideal for client engagements (pause before sensitive operations)
+  - Maintains single continuous session for clean evidence trails
 - **Structured Logging**: New logging package with file output support
   - Logs written to `~/.pentlog/pentlog.log` automatically at startup
   - Uses Go's built-in `log/slog` for structured logging

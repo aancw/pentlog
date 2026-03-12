@@ -30,6 +30,7 @@ const (
 	SessionStateActive    SessionState = "active"
 	SessionStateCompleted SessionState = "completed"
 	SessionStateCrashed   SessionState = "crashed"
+	SessionStatePaused    SessionState = "paused"
 )
 
 type SessionNote struct {
