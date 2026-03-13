@@ -45,7 +45,7 @@ pentlog shell
 Features:
 - Custom PS1 showing current context
 - Automatic ttyrec recording
-- Hotkeys for notes and vulnerabilities
+- Hotkeys for notes, vulnerabilities, pause, and resume
 - Graceful exit handling
 - **Pause/Resume support** for breaks without session fragmentation
 
@@ -81,6 +81,11 @@ Output:
    Recording is now active.
 ```
 
+**Keyboard Shortcuts:**
+- **Ctrl+O** - Quick pause (instant, no typing)
+- **Ctrl+T** - Quick resume (instant, no typing)
+- Or use commands: `pentlog pause` and `pentlog resume`
+
 **Use Cases:**
 - **OSCP Exams**: Take breaks without creating multiple sessions
 - **Client Engagements**: Pause before entering sensitive environments
@@ -91,6 +96,11 @@ Output:
 - Markers display as formatted banners during replay
 - The `.pause_marker` file tracks pause state on disk
 - Shell remains active during pause (you can still run commands, but they're not recorded)
+
+**Terminal Compatibility:**
+- Hotkeys use standard VT100 control characters (Ctrl+O, Ctrl+T)
+- Works reliably across all terminals including Ghostty, iTerm2, GNOME Terminal, and xterm
+- Function keys (F1-F12) and Alt combinations vary by terminal emulator and are not used
 
 ### Custom PS1 Format
 

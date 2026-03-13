@@ -154,12 +154,14 @@ pentlog shell
 
 ### Quick Hotkeys (Inside `pentlog shell`)
 
-During a shell session, use keyboard shortcuts for rapid note/vuln entry:
+During a shell session, use keyboard shortcuts for rapid actions:
 
 | Hotkey | Action | Description |
 |--------|--------|-------------|
 | `Ctrl+N` | Quick Note | Prompts for a one-line note, saves instantly |
 | `Ctrl+G` | Quick Vuln | Prompts for title, severity (c/h/m/l/i), and description |
+| `Ctrl+O` | Pause | Pause recording session instantly |
+| `Ctrl+T` | Resume | Resume paused recording session instantly |
 
 **Example workflow:**
 ```bash
@@ -172,6 +174,17 @@ During a shell session, use keyboard shortcuts for rapid note/vuln entry:
 Severity (c/h/m/l/i): h
 Description (optional): POST /login endpoint vulnerable to blind SQLi
 ✓ Vuln saved: V-abc123 [High] SQL Injection in login form
+
+# Press Ctrl+O to pause recording instantly
+⏸️  Session paused successfully!
+   Time: 2026-03-12 23:21:38
+   Recording is paused. The shell remains active.
+
+# Press Ctrl+T to resume recording instantly
+▶️  Session resumed successfully!
+   Time: 2026-03-12 23:25:15
+   Paused for: 3m37s
+   Recording is now active.
 ```
 
 ### Session Pause/Resume
@@ -203,6 +216,7 @@ $ pentlog resume
 - Pause/resume markers embedded in ttyrec file with timestamps
 - Visual banners display during replay
 - Shell remains active during pause (commands run but aren't recorded)
+- Uses standard VT100 control characters for hotkey compatibility across all terminals
 
 ### 6. Search
 All commands function interactively.

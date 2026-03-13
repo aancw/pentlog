@@ -65,6 +65,7 @@ pentlog create
 pentlog shell
 # → You now have high-fidelity logs in ~/.pentlog/logs/
 # → Logs are indexed in SQLite, ready to search
+# → Press Ctrl+O to pause, Ctrl+T to resume (perfect for breaks)
 
 # 5. Search logs — Find commands across all sessions
 pentlog search
@@ -100,7 +101,7 @@ pentlog export
 | 🤖 **AI Analysis** | Summarize findings with Google Gemini or Ollama (local LLM) |
 | 🎯 **Timeline Extraction** | Interactive timeline browser to reconstruct your attack sequence |
 | 📌 **Notes & Bookmarks** | Add timestamped annotations to sessions for later review |
-| ⌨️ **Quick Hotkeys** | Ctrl+N for notes, Ctrl+G for vulns during shell sessions |
+| ⌨️ **Quick Hotkeys** | Ctrl+N for notes, Ctrl+G for vulns, Ctrl+O/Ctrl+T for pause/resume during shell sessions |
 | 🔄 **Full Replay** | Faithful playback with `ttyplay` preserves exact timing |
 | 🛡️ **Crash Recovery** | Protect evidence from SSH disconnects, OOM kills, and unexpected crashes |
 | 📡 **Live Share** | Share terminal sessions in real-time via browser with dark-themed viewer |
@@ -117,6 +118,8 @@ pentlog export
 | `create` | Initialize a new engagement context (Interactive) |
 | `shell` | Start a recorded shell with the engagement context loaded |
 | `shell --share` | Start a recorded shell with live browser sharing enabled |
+| `pause` | Pause the current recording session (Ctrl+O hotkey) |
+| `resume` | Resume a paused recording session (Ctrl+T hotkey) |
 | `share` | Share a live or recorded session for read-only viewing |
 | `sessions` | List and manage recorded sessions |
 | `switch` | Switch to a different pentest phase |

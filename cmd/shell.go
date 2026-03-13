@@ -269,7 +269,7 @@ func prepareShellEnv(ctx *config.ContextData, sessionDir, metaFilePath, logFileP
 # Pentlog quick commands alias
 alias pentlog="%s"
 
-# Zsh widget bindings for Ctrl+N (note) and Ctrl+G (vuln)
+# Zsh widget bindings for Ctrl+N (note), Ctrl+G (vuln), Ctrl+O (pause), Ctrl+T (resume)
 zle -N _pentlog_quicknote_widget
 _pentlog_quicknote_widget() {
     zle push-line
@@ -282,8 +282,23 @@ _pentlog_quickvuln_widget() {
     BUFFER="pentlog quickvuln"
     zle accept-line
 }
+zle -N _pentlog_pause_widget
+_pentlog_pause_widget() {
+    zle push-line
+    BUFFER="pentlog pause"
+    zle accept-line
+}
+zle -N _pentlog_resume_widget
+_pentlog_resume_widget() {
+    zle push-line
+    BUFFER="pentlog resume"
+    zle accept-line
+}
 bindkey '^N' _pentlog_quicknote_widget
 bindkey '^G' _pentlog_quickvuln_widget
+# Ctrl+O for pause, Ctrl+T for resume
+bindkey '^O' _pentlog_pause_widget
+bindkey '^T' _pentlog_resume_widget
 `, pentlogBin)
 
 		if err := os.WriteFile(zshrcPath, []byte(zshContent), 0644); err != nil {
@@ -332,9 +347,12 @@ trap 'rm -f "$_pentlog_marker"' EXIT
 # Append RPROMPT display to end of PS1
 PS1="$PS1"'\[$(_pentlog_rprompt)\]'
 
-# Bash keybindings for Ctrl+N (note) and Ctrl+G (vuln)
+# Bash keybindings for Ctrl+N (note), Ctrl+G (vuln), Ctrl+O (pause), Ctrl+T (resume)
 bind '"\C-n": "\C-apentlog quicknote\C-m"'
 bind '"\C-g": "\C-apentlog quickvuln\C-m"'
+# Ctrl+O for pause, Ctrl+T for resume
+bind '"\C-o": "\C-apentlog pause\C-m"'
+bind '"\C-t": "\C-apentlog resume\C-m"'
 `, promptSegment)
 
 		if err := os.WriteFile(bashrcPath, []byte(bashContent), 0644); err != nil {
@@ -403,8 +421,7 @@ func startRecording(c *exec.Cmd, env []string, ctx *config.ContextData) error {
 	fmt.Println()
 	hints := []string{
 		"Type 'exit' or Ctrl+D to stop recording.",
-		"Hotkeys: Ctrl+N = Quick Note | Ctrl+G = Quick Vuln",
-		"Commands: pentlog pause | pentlog resume",
+		"Hotkeys: Ctrl+N = Note | Ctrl+G = Vuln | Ctrl+O = Pause | Ctrl+T = Resume",
 	}
 	utils.PrintCenteredBlock(hints)
 
