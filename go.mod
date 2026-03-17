@@ -1,6 +1,6 @@
 module pentlog
 
-go 1.24.0
+go 1.25.0
 
 require (
 	github.com/charmbracelet/bubbles v0.21.1-0.20250623103423-23b8fd6302d7
@@ -16,7 +16,7 @@ require (
 	github.com/spf13/cobra v1.10.2
 	github.com/vito/vt100 v0.1.2
 	github.com/yeka/zip v0.0.0-20231116150916-03d6312748a9
-	golang.org/x/image v0.35.0
+	golang.org/x/image v0.37.0
 	gopkg.in/yaml.v2 v2.4.0
 	modernc.org/sqlite v1.44.3
 )
@@ -51,7 +51,7 @@ require (
 	golang.org/x/crypto v0.47.0 // indirect
 	golang.org/x/exp v0.0.0-20251023183803-a4bb9ffd2546 // indirect
 	golang.org/x/sys v0.40.0 // indirect
-	golang.org/x/text v0.33.0 // indirect
+	golang.org/x/text v0.35.0 // indirect
 	modernc.org/libc v1.67.6 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
