@@ -2,7 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [v0.17.0] - Unreleased
+
+
+## [v0.16.0] - 2026-03-21
 ### Added
 - **Session Pause/Resume**: Pause recording without creating new sessions
   - `pentlog pause` - Pause current recording session with visual marker
@@ -21,13 +24,6 @@ All notable changes to this project will be documented in this file.
 - **Database Connection Pooling**: Added connection limits for SQLite
   - `SetMaxOpenConns(25)`, `SetMaxIdleConns(5)`, `SetConnMaxLifetime(5min)`
   - Prevents resource exhaustion under heavy load
-
-### Changed
-- **Error Handling**: Consistent use of `errors.Fatal()` across shell command
-  - Replaced mixed `fmt.Fprintf() + os.Exit(1)` with structured error handling
-  - Better error context for debugging
-
-### Added
 - **Session Tags**: Flexible tagging system for session organization
   - Add multiple tags to sessions: `pentlog sessions tag <id> "important" "dc-01"`
   - Remove tags: `pentlog sessions untag <id> "tag-name"`
@@ -57,6 +53,9 @@ All notable changes to this project will be documented in this file.
   - Client grouping headers when showing all engagements
 
 ### Changed
+- **Error Handling**: Consistent use of `errors.Fatal()` across shell command
+  - Replaced mixed `fmt.Fprintf() + os.Exit(1)` with structured error handling
+  - Better error context for debugging
 - **Human-Readable Session Sizes**: `pentlog sessions` now displays sizes in KB/MB/GB
   - Replaces raw byte counts (e.g., 4660415) with human-readable format (e.g., 4.5 MB)
   - Uses standard KB/MB/GB notation instead of KiB/MiB/GiB
