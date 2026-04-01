@@ -21,6 +21,8 @@ type SessionMetadata struct {
 	Scope      string `json:"scope"`
 	Operator   string `json:"operator"`
 	Phase      string `json:"phase"`
+	Target     string `json:"target,omitempty"`
+	TargetIP   string `json:"target_ip,omitempty"`
 	Timestamp  string `json:"timestamp"`
 }
 
@@ -314,9 +316,9 @@ func AddSessionToDBWithState(meta SessionMetadata, absLogPath string, state Sess
 
 	now := time.Now().Format(time.RFC3339)
 	result, err := database.Exec(`
-		INSERT INTO sessions (client, engagement, scope, operator, phase, timestamp, filename, relative_path, size, state, last_sync_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`, meta.Client, meta.Engagement, meta.Scope, meta.Operator, meta.Phase, meta.Timestamp, filepath.Base(absLogPath), relPath, 0, string(state), now)
+		INSERT INTO sessions (client, engagement, scope, operator, phase, timestamp, filename, relative_path, size, state, last_sync_at, target, target_ip)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, meta.Client, meta.Engagement, meta.Scope, meta.Operator, meta.Phase, meta.Timestamp, filepath.Base(absLogPath), relPath, 0, string(state), now, meta.Target, meta.TargetIP)
 
 	if err != nil {
 		return 0, err

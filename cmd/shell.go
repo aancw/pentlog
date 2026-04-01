@@ -75,6 +75,9 @@ var shellCmd = &cobra.Command{
 
 		timestamp := time.Now().Format("20060102-150405")
 		baseName := fmt.Sprintf("session-%s-%s", utils.Slugify(ctx.Operator), timestamp)
+		if ctx.Target != "" {
+			baseName = fmt.Sprintf("session-%s-%s-%s", utils.Slugify(ctx.Operator), utils.Slugify(ctx.Target), timestamp)
+		}
 		logFilePath := filepath.Join(sessionDir, baseName+".tty")
 		metaFilePath := filepath.Join(sessionDir, baseName+".json")
 
@@ -84,6 +87,8 @@ var shellCmd = &cobra.Command{
 			Scope:      ctx.Scope,
 			Operator:   ctx.Operator,
 			Phase:      ctx.Phase,
+			Target:     ctx.Target,
+			TargetIP:   ctx.TargetIP,
 			Timestamp:  time.Now().Format(time.RFC3339),
 		}
 
@@ -238,11 +243,20 @@ func prepareShellEnv(ctx *config.ContextData, sessionDir, metaFilePath, logFileP
 	newEnv = append(newEnv, fmt.Sprintf("PENTLOG_SESSION_DIR=%s", sessionDir))
 	newEnv = append(newEnv, fmt.Sprintf("PENTLOG_SESSION_METADATA_PATH=%s", metaFilePath))
 	newEnv = append(newEnv, fmt.Sprintf("PENTLOG_SESSION_LOG_PATH=%s", logFilePath))
+	if ctx.Target != "" {
+		newEnv = append(newEnv, fmt.Sprintf("PENTLOG_TARGET=%s", ctx.Target))
+	}
+	if ctx.TargetIP != "" {
+		newEnv = append(newEnv, fmt.Sprintf("PENTLOG_TARGET_IP=%s", ctx.TargetIP))
+	}
 	if sessionID > 0 {
 		newEnv = append(newEnv, fmt.Sprintf("PENTLOG_SESSION_ID=%d", sessionID))
 	}
 
 	promptSegment := fmt.Sprintf("(pentlog:%s/%s)", ctx.Client, ctx.Phase)
+	if ctx.Target != "" {
+		promptSegment = fmt.Sprintf("(pentlog:%s/%s@%s)", ctx.Client, ctx.Phase, ctx.Target)
+	}
 	shell := os.Getenv("SHELL")
 	if shell == "" {
 		shell = "/bin/sh"

@@ -70,6 +70,8 @@ func migrateSchema(db *sql.DB) error {
 	}{
 		{"state", "TEXT", "completed", "crash recovery"},
 		{"last_sync_at", "TEXT", "", "crash recovery"},
+		{"target", "TEXT", "", "multi-target management"},
+		{"target_ip", "TEXT", "", "multi-target management"},
 	}
 
 	migratedFeatures := make(map[string]bool)

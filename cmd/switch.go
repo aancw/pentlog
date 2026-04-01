@@ -172,6 +172,12 @@ func printSummary(ctx config.ContextData) {
 	}
 	summary = append(summary, fmt.Sprintf("Operator:   %s", ctx.Operator))
 	summary = append(summary, fmt.Sprintf("Phase:      %s", ctx.Phase))
+	if ctx.Target != "" {
+		summary = append(summary, fmt.Sprintf("Target:     %s", ctx.Target))
+	}
+	if ctx.TargetIP != "" {
+		summary = append(summary, fmt.Sprintf("Target IP:  %s", ctx.TargetIP))
+	}
 	summary = append(summary, "---------------------------------------------------")
 	utils.PrintCenteredBlock(summary)
 }

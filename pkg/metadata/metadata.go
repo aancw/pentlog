@@ -14,6 +14,8 @@ type Context struct {
 	Scope      string `json:"scope"`
 	Operator   string `json:"operator"`
 	Phase      string `json:"phase"`
+	Target     string `json:"target,omitempty"`
+	TargetIP   string `json:"target_ip,omitempty"`
 	Timestamp  string `json:"timestamp"`
 	Type       string `json:"type"` // "Client" or "Exam/Lab"
 }

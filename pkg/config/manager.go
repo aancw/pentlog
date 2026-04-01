@@ -38,6 +38,7 @@ type PathsConfig struct {
 	HistoryFile  string
 	DatabaseFile string
 	AIConfigFile string
+	TargetsFile  string
 }
 
 type EnvConfig struct {
@@ -133,6 +134,7 @@ func (cm *ConfigManager) loadDefaults(cfg *AppConfig) error {
 		HistoryFile:  filepath.Join(home, "history.jsonl"),
 		DatabaseFile: filepath.Join(home, "pentlog.db"),
 		AIConfigFile: filepath.Join(home, "ai_config.yaml"),
+		TargetsFile:  filepath.Join(home, "targets.json"),
 	}
 
 	cfg.Env = EnvConfig{
@@ -172,6 +174,7 @@ func (cm *ConfigManager) loadFromEnv(cfg *AppConfig) error {
 		cfg.Paths.HistoryFile = filepath.Join(home, "history.jsonl")
 		cfg.Paths.DatabaseFile = filepath.Join(home, "pentlog.db")
 		cfg.Paths.AIConfigFile = filepath.Join(home, "ai_config.yaml")
+		cfg.Paths.TargetsFile = filepath.Join(home, "targets.json")
 	}
 
 	if dbPath := os.Getenv("PENTLOG_DB_PATH"); dbPath != "" {
@@ -366,8 +369,54 @@ type ContextData struct {
 	Scope      string `json:"scope"`
 	Operator   string `json:"operator"`
 	Phase      string `json:"phase"`
+	Target     string `json:"target,omitempty"`
+	TargetIP   string `json:"target_ip,omitempty"`
 	Timestamp  string `json:"timestamp"`
 	Type       string `json:"type"` // "Client" or "Exam/Lab"
+}
+
+type Target struct {
+	Name string `json:"name"`
+	IP   string `json:"ip"`
+}
+
+type TargetsData struct {
+	Targets []Target `json:"targets"`
+}
+
+func (cm *ConfigManager) LoadTargets() (*TargetsData, error) {
+	cm.mu.RLock()
+	targetsPath := cm.config.Paths.TargetsFile
+	cm.mu.RUnlock()
+
+	if _, err := os.Stat(targetsPath); os.IsNotExist(err) {
+		return &TargetsData{}, nil
+	}
+
+	data, err := os.ReadFile(targetsPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var targets TargetsData
+	if err := json.Unmarshal(data, &targets); err != nil {
+		return nil, err
+	}
+
+	return &targets, nil
+}
+
+func (cm *ConfigManager) SaveTargets(targets *TargetsData) error {
+	cm.mu.RLock()
+	targetsPath := cm.config.Paths.TargetsFile
+	cm.mu.RUnlock()
+
+	data, err := json.MarshalIndent(targets, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(targetsPath, data, 0600)
 }
 
 func (cm *ConfigManager) EnsureDirectories() error {

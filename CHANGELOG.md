@@ -3,7 +3,17 @@
 All notable changes to this project will be documented in this file.
 
 ## [v0.17.0] - Unreleased
+### Added
+- **Target Management**: New `pentlog target` command for multi-target engagements
+  - Add/list/switch/remove/clear targets within the active engagement
+  - Targets stored in `~/.pentlog/targets.json` with name + optional IP/host
+  - Switch prompts update active context with target + target IP
 
+### Changed
+- **Session Context & Metadata**: Targets now flow through context, sessions, and prompts
+  - Context includes `target` and `target_ip` fields
+  - Session metadata persists target fields in JSON and database
+  - Shell prompt shows active target and session filenames include target slug
 
 ## [v0.16.0] - 2026-03-21
 ### Added

@@ -50,6 +50,12 @@ var statusCmd = &cobra.Command{
 			}
 			lines = append(lines, fmt.Sprintf("Operator:   %s", ctx.Operator))
 			lines = append(lines, fmt.Sprintf("Phase:      %s", ctx.Phase))
+			if ctx.Target != "" {
+				lines = append(lines, fmt.Sprintf("Target:     %s", ctx.Target))
+			}
+			if ctx.TargetIP != "" {
+				lines = append(lines, fmt.Sprintf("Target IP:  %s", ctx.TargetIP))
+			}
 		}
 
 		lines = append(lines, "")
