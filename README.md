@@ -50,7 +50,11 @@ pentlog create && pentlog shell
 pentlog search && pentlog export
 ```
 
-After 5 minutes you get: searchable terminal logs with perfect fidelity, timestamped commands organized by Client → Engagement → Phase, compliance-ready HTML reports, and encrypted archives for client delivery.
+After 5 minutes you get:
+- Searchable terminal logs with perfect fidelity
+- Timestamped commands organized by Client → Engagement → Phase
+- Compliance-ready HTML reports
+- Encrypted archives for client delivery
 
 ---
 
@@ -273,7 +277,7 @@ MIT License - See [LICENSE](LICENSE) for details.
 
 If you find PentLog useful, consider supporting its development:
 
-<a href="https://www.buymeacoffee.com/petruknisme" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
+<a href="https://www.buymeacoffee.com/petruknisme" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 150px !important;width: 700px !important;" ></a>
 
 Your support helps maintain and improve this tool for the security community.
 
