@@ -1,4 +1,4 @@
-# PentLog 🔐
+# PentLog
 
 **Evidence-First Pentest Logger — Capture every command, find anything, prove everything.**
 
@@ -15,102 +15,119 @@ Perfect for **Real-World Engagements**, **Compliance & Audits**, **OSCP**, and *
   <a href="https://golang.org"><img alt="Go" src="https://img.shields.io/github/go-mod/go-version/aancw/pentlog?color=blue"></a>
   <a href="https://github.com/aancw/pentlog/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/aancw/pentlog/total?color=blue"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/License-MIT-blue"></a>
+  <a href="https://star-history.com/#aancw/pentlog&Date"><img alt="Star History" src="https://img.shields.io/github/stars/aancw/pentlog?style=social"></a>
 </p>
 
 <p align="center">
-  <strong><a href="#-quick-start">Quick Start</a> • <a href="#-key-features">Features</a> • <a href="#️-commands">Commands</a> • <a href="#️-installation">Install</a> • <a href="#-documentation">Docs</a> • <a href="#-contributing">Contributing</a></strong>
+  <strong><a href="#quick-start">Quick Start</a> • <a href="#features">Features</a> • <a href="#common-workflows">Workflows</a> • <a href="#installation">Install</a> • <a href="#documentation">Docs</a></strong>
 </p>
 
 ---
 
-## ✨ Why PentLog?
-
-### The Problem with Traditional Logging
+## The Problem with Traditional Logging
 
 Using `script`, `tmux`, or basic shell redirection during pentests creates **fragmented, unsearchable, unmaintainable evidence**:
 
-- 🔴 **Lost commands** — Mixed with noise, impossible to extract context
-- 🔴 **No integrity** — How do you prove logs weren't tampered with?
-- 🔴 **Manual reports** — Hours spent copying/pasting into documents
-- 🔴 **Evidence gaps** — ANSI codes, terminal artifacts, overwrites break readability
-- 🔴 **Compliance nightmares** — No audit trails, no encrypted archives
-
-### How PentLog Solves It
-
-- ✅ **Evidence-First Design** — Every command + output captured with perfect fidelity using Virtual Terminal Emulator (handles colors, overwrites, redraws—what you see matches what happened)
-- ✅ **Context & Metadata** — Automatic timestamps, operator tracking, client/engagement organization from day one
-- ✅ **Searchable Everything** — Find any command across all sessions with regex + boolean operators in seconds
-- ✅ **Compliance-Ready** — Integrity hashes, AES-256 encrypted archives, detailed audit trails
-- ✅ **Reports in Minutes** — Auto-generate Markdown/HTML with AI-powered summaries (no manual copy/paste)
-- ✅ **No Root Required** — Works as normal user; logs land safely in `~/.pentlog/`
-- ✅ **Interactive Workflows** — Intuitive TUI for engagement creation, phase switching, searching, and notes
-- ✅ **Replayable** — Faithful session playback with `ttyplay` preserves exact timing
-- ✅ **Integrity Protection** — `pentlog freeze` generates SHA256 hashes for evidence packaging
+- **Lost commands** — Mixed with noise, impossible to extract context
+- **No integrity** — How do you prove logs weren't tampered with?
+- **Manual reports** — Hours spent copying/pasting into documents
+- **Evidence gaps** — ANSI codes, terminal artifacts, overwrites break readability
+- **Compliance nightmares** — No audit trails, no encrypted archives
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ```bash
-# 1. Install (macOS/Linux) — ~30 seconds
+# Install (macOS/Linux) — see Installation section for more options
 curl -sSf https://raw.githubusercontent.com/aancw/pentlog/main/install.sh | sh
-
-# 2. Setup (one-time) — Verify dependencies
 pentlog setup
 
-# 3. Create engagement — Interactive wizard
-pentlog create
+# Create engagement and start recording
+pentlog create && pentlog shell
 
-# 4. Start recording — Shell with ttyrec running
-pentlog shell
-# → You now have high-fidelity logs in ~/.pentlog/logs/
-# → Logs are indexed in SQLite, ready to search
-# → Press Ctrl+O to pause, Ctrl+T to resume (perfect for breaks)
-
-# 5. Search logs — Find commands across all sessions
-pentlog search
-
-# 6. Export report — Generate Markdown/HTML for client
-pentlog export
+# Search and export
+pentlog search && pentlog export
 ```
 
-**What you get after 5 minutes**:
-- ✅ Searchable terminal logs with perfect fidelity (ANSI colors, overwrites, etc.)
-- ✅ Timestamped commands organized by Client → Engagement → Phase
-- ✅ Compliance-ready HTML reports with AI summaries
-- ✅ Encrypted archives for secure client delivery
+After 5 minutes you get: searchable terminal logs with perfect fidelity, timestamped commands organized by Client → Engagement → Phase, compliance-ready HTML reports, and encrypted archives for client delivery.
 
 ---
 
-## 📋 Key Features
+## Features
 
-### 🌟 **Top 5 Features** (What sets PentLog apart)
-
-| Feature | Why It Matters |
-|---------|----------------|
-| 🎬 **High-Fidelity Recording** | Every keystroke + output captured with perfect terminal accuracy (ANSI colors, overwrites, redraws preserved) |
-| 🔍 **Interactive Search** | Find any command across all sessions instantly with regex and boolean operators—no more grep chaos |
-| 📊 **Virtual Terminal Emulator** | What you see in the viewer is *exactly* what you saw in your shell (unlike `script` or `tmux` which break on special chars) |
-| 💾 **Compliance-Ready Export** | Generate Markdown/HTML reports with AI summaries, integrity hashes, and encrypted archives in seconds |
-| 📝 **Automatic Context** | Every command timestamped and organized by Client → Engagement → Phase—no manual naming or organizing |
-
-### 📚 **Additional Features**
+### Core Capabilities
 
 | Feature | Description |
 |---------|-------------|
-| 🤖 **AI Analysis** | Summarize findings with Google Gemini or Ollama (local LLM) |
-| 🎯 **Timeline Extraction** | Interactive timeline browser to reconstruct your attack sequence |
-| 📌 **Notes & Bookmarks** | Add timestamped annotations to sessions for later review |
-| ⌨️ **Quick Hotkeys** | Ctrl+N for notes, Ctrl+G for vulns, Ctrl+O/Ctrl+T for pause/resume during shell sessions |
-| 🔄 **Full Replay** | Faithful playback with `ttyplay` preserves exact timing |
-| 🛡️ **Crash Recovery** | Protect evidence from SSH disconnects, OOM kills, and unexpected crashes |
-| 📡 **Live Share** | Share terminal sessions in real-time via browser with dark-themed viewer |
-| 🔐 **AES-256 Archive** | Password-protected encrypted archives for secure client delivery |
+| **High-Fidelity Recording** | Every keystroke + output captured with perfect terminal accuracy using Virtual Terminal Emulator (ANSI colors, overwrites, redraws preserved) |
+| **Interactive Search** | Find any command across all sessions instantly with regex and boolean operators |
+| **Automatic Organization** | Commands timestamped and organized by Client → Engagement → Phase—no manual naming |
+| **Compliance-Ready Export** | Generate Markdown/HTML reports with AI summaries, integrity hashes, encrypted archives |
+| **Full Replay** | Faithful playback with `ttyplay` preserves exact timing |
+| **Live Sharing** | Share terminal sessions in real-time via browser with dark-themed viewer |
+| **AI Analysis** | Summarize findings with Google Gemini or Ollama (local LLM) |
+| **Timeline Extraction** | Interactive timeline browser to reconstruct attack sequences |
+| **Notes & Bookmarks** | Add timestamped annotations to sessions for later review |
+| **AES-256 Encryption** | Password-protected encrypted archives for secure client delivery |
+| **Crash Recovery** | Protect evidence from SSH disconnects, OOM kills, unexpected crashes |
+
+### Comparison with Alternatives
+
+| Feature | `script` | `tmux` | PentLog |
+|---------|----------|--------|---------|
+| **Terminal Fidelity** | ❌ Breaks on special chars | ⚠️ Lossy (missing redraws) | ✅ Perfect (Virtual Terminal Emulator) |
+| **Searchable Logs** | ❌ Manual grep chaos | ❌ Session-by-session only | ✅ Full-text search + regex + boolean |
+| **Automatic Organization** | ❌ Manual naming | ❌ Manual naming | ✅ Client → Engagement → Phase auto-organized |
+| **Timestamps** | ⚠️ Only start/end | ❌ No timestamps | ✅ Every command timestamped |
+| **Compliance Ready** | ❌ No integrity | ❌ No integrity | ✅ Hashes + encryption + audit trails |
+| **Replay** | ❌ No timing info | ⚠️ Live sessions only | ✅ Faithful playback with `ttyplay` |
+| **Reports** | ❌ Manual copy/paste | ❌ Manual copy/paste | ✅ Auto-generate Markdown/HTML + AI |
+| **Database** | ❌ Just files | ❌ Just files | ✅ Indexed SQLite for fast searching |
+| **Root Required** | ❌ Works as user | ⚠️ Often needs sudo | ✅ Works as normal user |
+| **Live Sharing** | ❌ Not supported | ❌ Not supported | ✅ Real-time browser viewer |
+| **Crash Recovery** | ❌ Logs lost | ⚠️ May lose session | ✅ Protected from SSH/OOM crashes |
 
 ---
 
+## Common Workflows
+
+### Starting a New Engagement
+```bash
+pentlog create    # Interactive wizard: Client, Engagement, Scope, Operator, Phase
+pentlog shell     # Start recording with ttyrec
+# Work normally in your shell...
+# Press Ctrl+O to pause, Ctrl+T to resume
+# Press Ctrl+N to add notes, Ctrl+G to add vulnerabilities
+```
+
+### Searching and Reporting
+```bash
+pentlog search              # Interactive search with regex + boolean operators
+pentlog search "nmap"        # Find all nmap commands
+pentlog search "exploit OR shell"  # Boolean search
+pentlog export              # Generate Markdown/HTML report
+pentlog export --analyze    # Include AI-powered summary
+```
+
+### Managing Evidence
+```bash
+pentlog timeline            # Extract command timeline from session
+pentlog freeze              # Generate SHA256 hashes for integrity
+pentlog archive             # Create encrypted ZIP archive
+pentlog import archive.zip  # Restore archived sessions
+```
+
+### Analyzing and Sharing
+```bash
+pentlog analyze report.md   # AI analysis of your report
+pentlog shell --share       # Live share session via browser
+pentlog serve               # HTTP server for HTML reports with GIF players
+pentlog gif session.tty     # Convert session to animated GIF
+```
+
 <details>
-<summary><h2 style="display: inline;">⌨️ Commands</h2></summary>
+<summary><strong>View All Commands</strong></summary>
 
 | Command | Description |
 | :--- | :--- |
@@ -150,7 +167,7 @@ pentlog export
 </details>
 
 
-## 🛠️ Installation
+## Installation
 
 ### Requirements
 
@@ -189,7 +206,7 @@ pentlog setup  # Auto-installs on macOS, Ubuntu, Fedora, Alpine
 - **Fedora**: `sudo dnf install https://github.com/ovh/ovh-ttyrec/releases/download/v1.1.7.1/ovh-ttyrec-1.1.7.1-1.x86_64.rpm`
 - **Alpine**: `sudo apk add ttyrec`
 
-### ⚠️ Security Best Practices
+### Security Best Practices
 
 - **Password-Protected Archives**: Use interactive mode (`pentlog archive`) instead of `--password` flag to avoid storing passwords in shell history
 - **Database Permissions**: Sensitive files are created with 0600 permissions automatically
@@ -197,23 +214,7 @@ pentlog setup  # Auto-installs on macOS, Ubuntu, Fedora, Alpine
 
 ---
 
-## 📊 Comparison: PentLog vs Alternatives
-
-| Feature | `script` | `tmux` | PentLog |
-|---------|----------|--------|---------|
-| **Terminal Fidelity** | ❌ Breaks on special chars | ⚠️ Lossy (missing redraws) | ✅ Perfect (Virtual Terminal Emulator) |
-| **Searchable Logs** | ❌ Manual grep chaos | ❌ Session-by-session only | ✅ Full-text search + regex + boolean operators |
-| **Automatic Organization** | ❌ Manual naming | ❌ Manual naming | ✅ Client → Engagement → Phase auto-organized |
-| **Timestamps** | ⚠️ Only start/end | ❌ No timestamps | ✅ Every command timestamped |
-| **Compliance Ready** | ❌ No integrity | ❌ No integrity | ✅ Hashes + encryption + audit trails |
-| **Replay** | ❌ No timing info | ⚠️ Live sessions only | ✅ Faithful playback with `ttyplay` |
-| **Reports** | ❌ Manual copy/paste | ❌ Manual copy/paste | ✅ Auto-generate Markdown/HTML + AI summaries |
-| **Database** | ❌ Just files | ❌ Just files | ✅ Indexed SQLite for fast searching |
-| **Root Required** | ❌ Works as user | ⚠️ Often needs sudo | ✅ Works as normal user |
-| **Live Sharing** | ❌ Not supported | ❌ Not supported | ✅ Real-time browser viewer with scrollback |
-| **Crash Recovery** | ❌ Logs lost | ⚠️ May lose session | ✅ Protected from SSH/OOM crashes |
-
-## 📖 Documentation
+## Documentation
 
 ### Getting Started
 - **[Docs Home](https://pentlog.petruknisme.com/)** - Full documentation site
@@ -226,9 +227,6 @@ pentlog setup  # Auto-installs on macOS, Ubuntu, Fedora, Alpine
 - **[Export & Reporting](https://pentlog.petruknisme.com/guide/export/)** - Generate Markdown and HTML reports
 - **[Archiving & Encryption](https://pentlog.petruknisme.com/advanced/archiving/)** - Create encrypted evidence packages
 
-### Local Docs
-- Source files live in `docs/web/docs/` and are served with Zensical (`docs/web/README.md` has build instructions).
-
 ### Project Info
 - **[Roadmap](ROADMAP.md)** - Implemented features and future plans
 - **[Changelog](CHANGELOG.md)** - Version history and improvements
@@ -236,47 +234,19 @@ pentlog setup  # Auto-installs on macOS, Ubuntu, Fedora, Alpine
 
 ---
 
-## 💡 Use Cases
+## Use Cases
 
-### 🔴 **Penetration Testing Engagements** (Real-World)
-**Problem**: Client demands evidence of every command. Your manual notes + tmux logs are a mess.
+**Penetration Testing Engagements** - Auto-capture everything with perfect terminal fidelity, organize by Client → Engagement → Phase automatically, export compliance-ready HTML reports with AI summaries.
 
-**Solution**:
-- Auto-capture everything with perfect terminal fidelity
-- Organize by Client → Engagement → Phase automatically
-- Export compliance-ready HTML reports with AI summaries in minutes
-- Archive with encryption for secure client delivery
+**Compliance & Audits** - Generate integrity hashes with `pentlog freeze`, encrypt sessions with AES-256, maintain detailed audit trails with timestamps and operator tracking.
 
-### 🟡 **Compliance & Audits**
-**Problem**: Regulators need tamper-proof logs, audit trails, and encryption. Your shell history isn't enough.
+**Certifications (OSCP, HTB)** - Search across all sessions to find any command instantly, export clean Markdown reports, use timeline browser to reconstruct attack flows.
 
-**Solution**:
-- Generate integrity hashes with `pentlog freeze` before archiving
-- Encrypt sessions with AES-256 for secure evidence packaging
-- Maintain detailed audit trails with timestamps and operator tracking
-- Create audit-ready reports with searchable content
-
-### 🟢 **Certifications (OSCP, HTB, etc.)**
-**Problem**: Need to document every step for writeups. Fighting with formatting and missing commands.
-
-**Solution**:
-- Search across all sessions to find any command instantly
-- Export clean Markdown reports with proper formatting
-- Perfect terminal fidelity means what you see is what you get
-- Timeline browser helps reconstruct your attack flow
-
-### 🔵 **Security Research & Red Teaming**
-**Problem**: Need reproducible, timestamped terminal sessions for analysis and playback.
-
-**Solution**:
-- Record sessions with precise timing for faithful `ttyplay` replay
-- Extract command timelines for detailed activity analysis
-- Search across historical sessions for patterns and techniques
-- Generate GIF recordings for documentation and presentations
+**Security Research & Red Teaming** - Record sessions with precise timing for faithful replay, extract command timelines for detailed analysis, generate GIF recordings for documentation.
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 We welcome contributions! Start by checking:
 1. [Roadmap](ROADMAP.md) - See what's planned
@@ -285,7 +255,7 @@ We welcome contributions! Start by checking:
 
 ---
 
-## 👏 Acknowledgements
+## Acknowledgements
 
 - **[roomkangali](https://github.com/roomkangali)** - AI Summary feature & logo design
 - **ttyrec/ttyplay authors** - Underlying recording technology
@@ -293,18 +263,24 @@ We welcome contributions! Start by checking:
 
 ---
 
-## 📄 License
+## License
 
 MIT License - See [LICENSE](LICENSE) for details.
 
 ---
 
-## 🎯 Support & Community
+## Support & Sponsorship
 
-- 📖 **Documentation**: [docs/wiki/Home.md](docs/wiki/Home.md)
-- 🐛 **Issues**: [GitHub Issues](https://github.com/aancw/pentlog/issues)
-- 💬 **Discussions**: [GitHub Discussions](https://github.com/aancw/pentlog/discussions)
-- ⭐ **Star us on GitHub** if you find PentLog useful!
+If you find PentLog useful, consider supporting its development:
+
+<a href="https://www.buymeacoffee.com/petruknisme" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
+
+Your support helps maintain and improve this tool for the security community.
+
+**Resources:**
+- **Documentation**: [docs/wiki/Home.md](docs/wiki/Home.md)
+- **Issues**: [GitHub Issues](https://github.com/aancw/pentlog/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/aancw/pentlog/discussions)
 
 ---
 
