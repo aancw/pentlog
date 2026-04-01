@@ -72,7 +72,15 @@ func (s *Server) setupRoutes() {
 
 		r.Mount("/dashboard", handlers.DashboardRoutes())
 		r.Mount("/sessions", handlers.SessionRoutes())
+		r.Mount("/session-content", handlers.SessionContentRoutes())
 		r.Mount("/system", handlers.SystemRoutes())
+		r.Mount("/vulns", handlers.VulnRoutes())
+		r.Mount("/search", handlers.SearchRoutes())
+		r.Mount("/reports", handlers.ReportRoutes())
+		r.Mount("/archives", handlers.ArchiveRoutes())
+		r.Mount("/context", handlers.ContextRoutes())
+		r.Mount("/targets", handlers.TargetRoutes())
+		r.Mount("/recovery", handlers.RecoveryRoutes())
 	})
 
 	if hasStaticFiles {
