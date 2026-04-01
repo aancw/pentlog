@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"pentlog/pkg/api"
 	"pentlog/pkg/api/handlers"
+	"pentlog/pkg/web"
 
 	"github.com/spf13/cobra"
 )
@@ -33,6 +34,8 @@ Examples:
   pentlog web --open             # Open in browser after starting`,
 	Run: func(cmd *cobra.Command, args []string) {
 		handlers.Version = Version
+
+		api.SetStaticFS(web.StaticFS)
 
 		server := api.NewServer(webPort)
 
