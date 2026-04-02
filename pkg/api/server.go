@@ -9,11 +9,12 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
 
-	"pentlog/pkg/api/handlers"
+	"pentlog/pkg/config"
 	"pentlog/pkg/logger"
 
 	"github.com/go-chi/chi/v5"
@@ -23,6 +24,7 @@ import (
 var StaticFS embed.FS
 var hasStaticFiles bool
 var distFS fs.FS
+var localStaticDir string
 
 func SetStaticFS(fsys embed.FS) {
 	StaticFS = fsys
@@ -34,6 +36,18 @@ func SetStaticFS(fsys embed.FS) {
 	} else {
 		logger.Warn("static_files_not_loaded", "error", err)
 	}
+}
+
+func SetStaticDir(dir string) {
+	indexPath := filepath.Join(dir, "index.html")
+	if info, err := os.Stat(indexPath); err == nil && !info.IsDir() {
+		localStaticDir = dir
+		hasStaticFiles = true
+		logger.Info("static_files_loaded", "source", "disk", "dir", dir)
+		return
+	}
+
+	logger.Warn("static_files_not_loaded_from_disk", "dir", dir)
 }
 
 type Server struct {
@@ -67,26 +81,51 @@ func (s *Server) setupMiddleware() {
 
 func (s *Server) setupRoutes() {
 	s.Router.Route("/api", func(r chi.Router) {
-		r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
-			JSON(w, http.StatusOK, map[string]string{"status": "ok"})
-		})
-
-		r.Mount("/dashboard", handlers.DashboardRoutes())
-		r.Mount("/sessions", handlers.SessionRoutes())
-		r.Mount("/session-content", handlers.SessionContentRoutes())
-		r.Mount("/system", handlers.SystemRoutes())
-		r.Mount("/vulns", handlers.VulnRoutes())
-		r.Mount("/search", handlers.SearchRoutes())
-		r.Mount("/reports", handlers.ReportRoutes())
-		r.Mount("/archives", handlers.ArchiveRoutes())
-		r.Mount("/context", handlers.ContextRoutes())
-		r.Mount("/targets", handlers.TargetRoutes())
-		r.Mount("/recovery", handlers.RecoveryRoutes())
+		MountRoutes(r)
 	})
+
+	s.setupArtifactRoutes()
 
 	if hasStaticFiles {
 		s.setupStaticRoutes()
 	}
+}
+
+func (s *Server) setupArtifactRoutes() {
+	s.Router.Get("/files/reports/*", s.serveReportFile)
+	s.Router.Get("/files/archives/*", s.serveArchiveFile)
+}
+
+func (s *Server) serveReportFile(w http.ResponseWriter, r *http.Request) {
+	s.serveManagedFile(w, r, config.Manager().GetPaths().ReportsDir, "/files/reports/")
+}
+
+func (s *Server) serveArchiveFile(w http.ResponseWriter, r *http.Request) {
+	s.serveManagedFile(w, r, config.Manager().GetPaths().ArchiveDir, "/files/archives/")
+}
+
+func (s *Server) serveManagedFile(w http.ResponseWriter, r *http.Request, root string, prefix string) {
+	rel := strings.TrimPrefix(r.URL.Path, prefix)
+	rel = strings.TrimPrefix(filepath.Clean("/"+rel), "/")
+	if rel == "" || rel == "." {
+		http.NotFound(w, r)
+		return
+	}
+
+	fullPath := filepath.Join(root, filepath.FromSlash(rel))
+	cleanRoot := filepath.Clean(root)
+	cleanPath := filepath.Clean(fullPath)
+	if cleanPath != cleanRoot && !strings.HasPrefix(cleanPath, cleanRoot+string(os.PathSeparator)) {
+		http.Error(w, "Invalid path", http.StatusBadRequest)
+		return
+	}
+
+	if _, err := os.Stat(cleanPath); err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	http.ServeFile(w, r, cleanPath)
 }
 
 func (s *Server) setupStaticRoutes() {
@@ -94,7 +133,7 @@ func (s *Server) setupStaticRoutes() {
 	s.Router.Get("/index.html", s.serveIndex)
 	s.Router.Get("/favicon.svg", s.serveStatic)
 	s.Router.Get("/icons.svg", s.serveStatic)
-	s.Router.Get("/assets/{file}", s.serveStatic)
+	s.Router.Get("/assets/*", s.serveStatic)
 
 	s.Router.NotFound(s.serveSPA)
 }
@@ -117,6 +156,19 @@ func (s *Server) serveSPA(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) serveFile(w http.ResponseWriter, r *http.Request, name string, contentType string) {
+	if localStaticDir != "" {
+		fullPath := filepath.Join(localStaticDir, filepath.FromSlash(name))
+		if info, err := os.Stat(fullPath); err == nil && !info.IsDir() {
+			if contentType == "" {
+				contentType = getContentType(name)
+			}
+			w.Header().Set("Content-Type", contentType)
+			w.Header().Set("Cache-Control", "no-cache")
+			http.ServeFile(w, r, fullPath)
+			return
+		}
+	}
+
 	file, err := distFS.Open(name)
 	if err != nil {
 		http.Error(w, "File not found", http.StatusNotFound)
@@ -193,7 +245,7 @@ func (s *Server) Start() error {
 		if hasStaticFiles {
 			fmt.Println("\n Web UI: http://localhost:" + fmt.Sprintf("%d", s.Port))
 		}
-		fmt.Println("\n Press Ctrl+C to stop\n")
+		fmt.Println("\n Press Ctrl+C to stop")
 
 		if err := s.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			errChan <- err
