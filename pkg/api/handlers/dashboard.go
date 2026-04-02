@@ -241,7 +241,7 @@ func handleDashboardEngagements(w http.ResponseWriter, r *http.Request) {
 	})
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{"clients": engagements})
+	json.NewEncoder(w).Encode(map[string]interface{}{"engagements": engagements})
 }
 
 func sessionToMap(s logs.Session) map[string]interface{} {

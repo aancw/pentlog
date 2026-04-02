@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 
 	"pentlog/pkg/logs"
 
@@ -17,86 +18,102 @@ func SessionRoutes() chi.Router {
 	r.Get("/tags", handleTagsList)
 	r.Get("/{id}", handleSessionByID)
 	r.Delete("/{id}", handleDeleteSessionByID)
+	mountSessionContentRoutes(r)
 	return r
 }
 
 func handleSessionsList(w http.ResponseWriter, r *http.Request) {
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
 	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
-	tag := r.URL.Query().Get("tag")
-	client := r.URL.Query().Get("client")
-	phase := r.URL.Query().Get("phase")
-	state := r.URL.Query().Get("state")
+	tag := strings.TrimSpace(r.URL.Query().Get("tag"))
+	client := strings.TrimSpace(r.URL.Query().Get("client"))
+	phase := strings.TrimSpace(r.URL.Query().Get("phase"))
+	state := strings.TrimSpace(r.URL.Query().Get("state"))
+	query := strings.TrimSpace(r.URL.Query().Get("q"))
 
-	if limit == 0 {
+	if limit <= 0 {
 		limit = 20
 	}
-
-	var sessions []logs.Session
-	var err error
-
-	if tag != "" {
-		sessions, err = logs.ListSessionsByTag(tag)
-	} else {
-		sessions, err = logs.ListSessionsPaginated(limit+1, offset)
+	if offset < 0 {
+		offset = 0
 	}
 
+	sessions, err := logs.ListSessions()
 	if err != nil {
 		http.Error(w, `{"error":"Failed to list sessions"}`, http.StatusInternalServerError)
 		return
 	}
 
-	if client != "" {
-		filtered := []logs.Session{}
-		for _, s := range sessions {
-			if s.Metadata.Client == client {
-				filtered = append(filtered, s)
+	filtered := make([]logs.Session, 0, len(sessions))
+	for _, s := range sessions {
+		if tag != "" {
+			tags, _ := logs.GetSessionTags(s.ID)
+			matched := false
+			for _, existing := range tags {
+				if strings.EqualFold(existing, tag) {
+					matched = true
+					break
+				}
+			}
+			if !matched {
+				continue
 			}
 		}
-		sessions = filtered
-	}
 
-	if phase != "" {
-		filtered := []logs.Session{}
-		for _, s := range sessions {
-			if s.Metadata.Phase == phase {
-				filtered = append(filtered, s)
+		if client != "" && !strings.Contains(strings.ToLower(s.Metadata.Client), strings.ToLower(client)) {
+			continue
+		}
+		if phase != "" && !strings.EqualFold(s.Metadata.Phase, phase) {
+			continue
+		}
+		if state != "" && !strings.EqualFold(string(s.State), state) {
+			continue
+		}
+		if query != "" {
+			haystack := strings.ToLower(strings.Join([]string{
+				s.Filename,
+				s.DisplayPath,
+				s.Metadata.Client,
+				s.Metadata.Engagement,
+				s.Metadata.Operator,
+				s.Metadata.Phase,
+				s.Metadata.Target,
+			}, " "))
+			if !strings.Contains(haystack, strings.ToLower(query)) {
+				continue
 			}
 		}
-		sessions = filtered
+
+		filtered = append(filtered, s)
 	}
 
-	if state != "" {
-		filtered := []logs.Session{}
-		for _, s := range sessions {
-			if string(s.State) == state {
-				filtered = append(filtered, s)
-			}
-		}
-		sessions = filtered
+	totalCount := len(filtered)
+	if offset > totalCount {
+		offset = totalCount
 	}
 
-	hasMore := len(sessions) > limit
-	if hasMore {
-		sessions = sessions[:limit]
+	end := offset + limit
+	if end > totalCount {
+		end = totalCount
 	}
-
-	totalCount := len(sessions)
-	allSessions, _ := logs.ListSessions()
-	if allSessions != nil {
-		totalCount = len(allSessions)
-	}
+	pageSessions := filtered[offset:end]
+	hasMore := end < totalCount
 
 	var respSessions []map[string]interface{}
-	for _, s := range sessions {
+	for _, s := range pageSessions {
 		respSessions = append(respSessions, sessionToMap(s))
+	}
+
+	page := 1
+	if limit > 0 {
+		page = offset/limit + 1
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"sessions": respSessions,
 		"total":    totalCount,
-		"page":     offset/limit + 1,
+		"page":     page,
 		"has_more": hasMore,
 	})
 }
