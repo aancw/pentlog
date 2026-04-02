@@ -1,79 +1,77 @@
-import { useQuery } from '@tanstack/react-query'
-import { Shield, Plus } from 'lucide-react'
+import { Shield } from 'lucide-react'
+import { formatDate } from '../lib/api'
+import { useVulns } from '../hooks/useApi'
+
+const severityClass: Record<string, string> = {
+  critical: 'badge-red',
+  high: 'badge-red',
+  medium: 'badge-amber',
+  low: 'badge-green',
+  info: 'badge-blue',
+}
 
 export default function Vulns() {
-  const { data, isLoading } = useQuery({
-    queryKey: ['vulns'],
-    queryFn: async () => {
-      const res = await fetch('/api/vulns')
-      return res.json()
-    },
-  })
-
+  const { data, isLoading } = useVulns()
   const vulns = data?.vulns ?? []
 
-  if (isLoading) return <div className="text-center p-8">Loading...</div>
+  if (isLoading) {
+    return <div className="loading-state">Loading vulnerabilities…</div>
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div className="page-header mb-0">
-          <h1>Vulnerabilities</h1>
-          <p className="text-muted">{data?.total ?? 0} findings tracked</p>
+    <div className="page-stack">
+      <section className="page-heading">
+        <div>
+          <div className="eyebrow">Vulnerability Tracker</div>
+          <h2>Review findings captured for the active context.</h2>
+          <p>The current dashboard supports listing and inspection. Editing still relies on the CLI flow.</p>
         </div>
-        <button className="btn">
-          <Plus className="h-4 w-4" />
-          Add Finding
-        </button>
-      </div>
+        <div className="page-heading-meta">
+          <span className="pill">{data?.total ?? 0} findings</span>
+        </div>
+      </section>
 
-      {vulns.length === 0 ? (
-        <div className="card text-center p-12">
-          <Shield className="h-12 w-12 mx-auto text-muted mb-4" />
-          <h2 className="text-xl font-semibold mb-2">No Vulnerabilities</h2>
-          <p className="text-muted">Start tracking security findings</p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {vulns.map((vuln: any) => {
-            const severityColors: Record<string, string> = {
-              Critical: 'badge-red',
-              High: 'badge-orange',
-              Medium: 'badge-yellow',
-              Low: 'badge-green',
-              Info: 'badge-blue',
-            }
-            return (
-              <div key={vuln.id} className="card">
-                <div className="flex items-start gap-4">
-                  <div className="p-2 rounded bg-secondary">
-                    <Shield className="h-5 w-5 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className={`badge ${severityColors[vuln.severity] || 'badge-purple'}`}>
-                        {vuln.severity}
-                      </span>
-                      <span className={`badge ${vuln.status === 'Open' ? 'badge-yellow' : vuln.status === 'Verified' ? 'badge-green' : 'badge-purple'}`}>
-                        {vuln.status}
-                      </span>
-                      <span className="text-xs text-muted">{vuln.id}</span>
-                    </div>
-                    <h3 className="font-semibold text-lg">{vuln.title}</h3>
-                    {vuln.description && (
-                      <p className="text-sm text-muted mt-1">{vuln.description}</p>
-                    )}
-                    <div className="text-xs text-muted mt-2">
-                      {vuln.phase && <span>Phase: {vuln.phase} · </span>}
-                      {new Date(vuln.created_at).toLocaleDateString()}
-                    </div>
-                  </div>
+      <section className="card-grid">
+        {vulns.map((vuln) => (
+          <article key={vuln.id} className="panel-card vuln-card">
+            <div className="panel-header">
+              <div>
+                <div className="badge-row">
+                  <span className={`badge ${severityClass[vuln.severity.toLowerCase()] ?? 'badge-blue'}`}>{vuln.severity}</span>
+                  <span className="badge badge-sand">{vuln.status}</span>
                 </div>
+                <h3>{vuln.title}</h3>
+                <p>{vuln.phase || 'Unassigned phase'}</p>
               </div>
-            )
-          })}
-        </div>
-      )}
+              <Shield size={18} />
+            </div>
+
+            {vuln.description && <p className="body-copy">{vuln.description}</p>}
+
+            <div className="meta-grid compact-meta-grid">
+              <div>
+                <span>Created</span>
+                <strong>{formatDate(vuln.created_at)}</strong>
+              </div>
+              <div>
+                <span>ID</span>
+                <strong className="mono-text">{vuln.id}</strong>
+              </div>
+            </div>
+
+            {vuln.evidence?.length > 0 && (
+              <div className="tag-cloud">
+                {vuln.evidence.slice(0, 3).map((evidence) => (
+                  <span key={evidence} className="pill">
+                    {evidence}
+                  </span>
+                ))}
+              </div>
+            )}
+          </article>
+        ))}
+        {vulns.length === 0 && <div className="empty-state">No vulnerabilities tracked yet.</div>}
+      </section>
     </div>
   )
 }

@@ -1,59 +1,80 @@
-import { useQuery } from '@tanstack/react-query'
-import { Archive, FileArchive, Folder, Lock } from 'lucide-react'
+import { Archive, Download, Lock } from 'lucide-react'
+import { formatDate } from '../lib/api'
+import { useArchives } from '../hooks/useApi'
 
 export default function Archives() {
-  const { data, isLoading } = useQuery({
-    queryKey: ['archives'],
-    queryFn: async () => {
-      const res = await fetch('/api/archives')
-      return res.json()
-    },
-  })
-
+  const { data, isLoading } = useArchives()
   const archives = data?.archives ?? []
+  const encryptedCount = archives.filter((archive) => archive.encrypted).length
 
-  if (isLoading) return <div className="text-center p-8">Loading...</div>
+  if (isLoading) {
+    return <div className="loading-state">Loading archives…</div>
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="page-header">
-        <h1>Archives</h1>
-        <p className="text-muted">Session archives and backups</p>
-      </div>
+    <div className="page-stack">
+      <section className="page-heading">
+        <div>
+          <div className="eyebrow">Archives</div>
+          <h2>Review packaged evidence bundles.</h2>
+          <p>The web UI now provides direct archive downloads; creation still uses the CLI archive flow.</p>
+        </div>
+      </section>
 
-      {archives.length === 0 ? (
-        <div className="card text-center p-12">
-          <Archive className="h-12 w-12 mx-auto text-muted mb-4" />
-          <h2 className="text-xl font-semibold mb-2">No Archives</h2>
-          <p className="text-muted mb-4">Create archives using CLI:</p>
-          <code className="text-sm text-primary bg-secondary px-4 py-2 rounded">pentlog archive</code>
+      <section className="stats-grid">
+        <article className="stat-card stat-card-blue">
+          <div className="stat-card-header">
+            <span>Total Archives</span>
+            <Archive size={18} />
+          </div>
+          <div className="stat-card-value">{archives.length}</div>
+        </article>
+        <article className="stat-card stat-card-red">
+          <div className="stat-card-header">
+            <span>Encrypted</span>
+            <Lock size={18} />
+          </div>
+          <div className="stat-card-value">{encryptedCount}</div>
+        </article>
+      </section>
+
+      <section className="panel-card">
+        <div className="table-shell">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Client</th>
+                <th>Protected</th>
+                <th>Size</th>
+                <th>Modified</th>
+                <th>Stored As</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {archives.map((archive) => (
+                <tr key={`${archive.client}-${archive.name}`}>
+                  <td>{archive.name}</td>
+                  <td>{archive.client}</td>
+                  <td>
+                    {archive.encrypted ? <span className="badge badge-red">Encrypted</span> : <span className="badge badge-green">Standard</span>}
+                  </td>
+                  <td>{archive.size_human}</td>
+                  <td>{formatDate(archive.mod_time)}</td>
+                  <td className="mono-text">{archive.relative_path}</td>
+                  <td>
+                    <a className="inline-link" href={archive.download_url} download>
+                      Download <Download size={14} />
+                    </a>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {archives.length === 0 && <div className="empty-state compact">No archives found.</div>}
         </div>
-      ) : (
-        <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
-          {archives.map((archive: any, idx: number) => (
-            <div key={idx} className="card">
-              <div className="flex items-start gap-4">
-                <div className="p-3 rounded bg-secondary">
-                  <FileArchive className="h-6 w-6 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  {archive.encrypted && (
-                    <span className="badge badge-orange mb-1">
-                      <Lock className="h-3 w-3 mr-1" /> Encrypted
-                    </span>
-                  )}
-                  <div className="font-medium truncate">{archive.name}</div>
-                  <div className="text-xs text-muted mt-1">
-                    <Folder className="inline h-3 w-3 mr-1" />
-                    {archive.client} · {archive.size_human}
-                  </div>
-                  <div className="text-xs text-muted">{archive.mod_time}</div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      </section>
     </div>
   )
 }

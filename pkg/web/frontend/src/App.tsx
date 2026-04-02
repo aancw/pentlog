@@ -1,15 +1,18 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { Suspense, lazy } from 'react'
+import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import Layout from './components/Layout'
-import Dashboard from './pages/Dashboard'
-import Sessions from './pages/Sessions'
-import SessionDetail from './pages/SessionDetail'
-import Vulns from './pages/Vulns'
-import Reports from './pages/Reports'
-import Search from './pages/Search'
-import Archives from './pages/Archives'
-import Settings from './pages/Settings'
 import './index.css'
+
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const Sessions = lazy(() => import('./pages/Sessions'))
+const SessionDetail = lazy(() => import('./pages/SessionDetail'))
+const Vulns = lazy(() => import('./pages/Vulns'))
+const Reports = lazy(() => import('./pages/Reports'))
+const Search = lazy(() => import('./pages/Search'))
+const Archives = lazy(() => import('./pages/Archives'))
+const Recovery = lazy(() => import('./pages/Recovery'))
+const Settings = lazy(() => import('./pages/Settings'))
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -21,25 +24,26 @@ const queryClient = new QueryClient({
   },
 })
 
-function App() {
+export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <Layout>
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/sessions" element={<Sessions />} />
-            <Route path="/sessions/:id" element={<SessionDetail />} />
-            <Route path="/vulns" element={<Vulns />} />
-            <Route path="/reports" element={<Reports />} />
-            <Route path="/search" element={<Search />} />
-            <Route path="/archives" element={<Archives />} />
-            <Route path="/settings" element={<Settings />} />
-          </Routes>
+          <Suspense fallback={<div className="loading-state">Loading view…</div>}>
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/sessions" element={<Sessions />} />
+              <Route path="/sessions/:id" element={<SessionDetail />} />
+              <Route path="/vulns" element={<Vulns />} />
+              <Route path="/reports" element={<Reports />} />
+              <Route path="/search" element={<Search />} />
+              <Route path="/archives" element={<Archives />} />
+              <Route path="/recovery" element={<Recovery />} />
+              <Route path="/settings" element={<Settings />} />
+            </Routes>
+          </Suspense>
         </Layout>
       </BrowserRouter>
     </QueryClientProvider>
   )
 }
-
-export default App

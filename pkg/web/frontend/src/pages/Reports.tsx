@@ -1,58 +1,85 @@
-import { useQuery } from '@tanstack/react-query'
-import { FileText, FileCode } from 'lucide-react'
+import { ExternalLink, FileCode2, FileText } from 'lucide-react'
+import { formatDate } from '../lib/api'
+import { useReports } from '../hooks/useApi'
 
 export default function Reports() {
-  const { data, isLoading } = useQuery({
-    queryKey: ['reports'],
-    queryFn: async () => {
-      const res = await fetch('/api/reports')
-      return res.json()
-    },
-  })
-
+  const { data, isLoading } = useReports()
   const reports = data?.reports ?? []
+  const htmlReports = reports.filter((report) => report.type === 'html').length
 
-  if (isLoading) return <div className="text-center p-8">Loading...</div>
+  if (isLoading) {
+    return <div className="loading-state">Loading reports…</div>
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="page-header">
-        <h1>Reports</h1>
-        <p className="text-muted">Generated engagement reports</p>
-      </div>
+    <div className="page-stack">
+      <section className="page-heading">
+        <div>
+          <div className="eyebrow">Reports</div>
+          <h2>Review exported engagement artifacts.</h2>
+          <p>The web UI now opens generated reports directly. Creation still happens through the CLI export flow.</p>
+        </div>
+      </section>
 
-      {reports.length === 0 ? (
-        <div className="card text-center p-12">
-          <FileText className="h-12 w-12 mx-auto text-muted mb-4" />
-          <h2 className="text-xl font-semibold mb-2">No Reports</h2>
-          <p className="text-muted mb-4">Generate reports using CLI:</p>
-          <code className="text-sm text-primary bg-secondary px-4 py-2 rounded">pentlog export</code>
+      <section className="stats-grid">
+        <article className="stat-card stat-card-sand">
+          <div className="stat-card-header">
+            <span>Total Reports</span>
+            <FileText size={18} />
+          </div>
+          <div className="stat-card-value">{reports.length}</div>
+        </article>
+        <article className="stat-card stat-card-blue">
+          <div className="stat-card-header">
+            <span>HTML Reports</span>
+            <FileCode2 size={18} />
+          </div>
+          <div className="stat-card-value">{htmlReports}</div>
+        </article>
+      </section>
+
+      <section className="panel-card">
+        <div className="table-shell">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Client</th>
+                <th>Type</th>
+                <th>Size</th>
+                <th>Modified</th>
+                <th>Stored As</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {reports.map((report) => (
+                <tr key={`${report.client}-${report.name}`}>
+                  <td>
+                    <div className="table-title-cell">
+                      {report.type === 'html' ? <FileCode2 size={16} /> : <FileText size={16} />}
+                      <span>{report.name}</span>
+                    </div>
+                  </td>
+                  <td>{report.client}</td>
+                  <td>
+                    <span className={`badge ${report.type === 'html' ? 'badge-blue' : 'badge-sand'}`}>{report.type.toUpperCase()}</span>
+                  </td>
+                  <td>{report.size_human}</td>
+                  <td>{formatDate(report.mod_time)}</td>
+                  <td className="mono-text">{report.relative_path}</td>
+                  <td>
+                    <a className="inline-link" href={report.view_url} target="_blank" rel="noreferrer">
+                      {report.type === 'html' ? 'Open report' : 'View file'} <ExternalLink size={14} />
+                    </a>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {reports.length === 0 && <div className="empty-state compact">No exported reports found.</div>}
         </div>
-      ) : (
-        <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
-          {reports.map((report: any, idx: number) => (
-            <div key={idx} className="card">
-              <div className="flex items-start gap-4">
-                <div className={`p-3 rounded ${report.type === 'html' ? 'bg-blue/10' : 'bg-secondary'}`}>
-                  {report.type === 'html' 
-                    ? <FileCode className="h-6 w-6 text-blue" />
-                    : <FileText className="h-6 w-6 text-muted" />
-                  }
-                </div>
-                <div className="flex-1 min-w-0">
-                  <span className={`badge ${report.type === 'html' ? 'badge-blue' : 'badge-purple'} mb-1`}>
-                    {report.type.toUpperCase()}
-                  </span>
-                  <div className="font-medium truncate">{report.name}</div>
-                  <div className="text-xs text-muted mt-1">
-                    {report.client} · {report.size_human}
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      </section>
     </div>
   )
 }

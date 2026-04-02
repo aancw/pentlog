@@ -1,15 +1,20 @@
+import { useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { useSystemStatus } from '../hooks/useApi'
-import { 
-  LayoutDashboard, 
-  FileText, 
-  Search, 
-  Archive, 
+import {
+  Activity,
+  Archive,
+  ChevronRight,
+  FolderOpen,
+  LayoutDashboard,
+  Menu,
+  Search,
   Settings,
   Shield,
-  FolderOpen,
-  Terminal
+  Terminal,
+  Wrench,
+  X,
 } from 'lucide-react'
+import { useSystemStatus } from '../hooks/useApi'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -19,36 +24,57 @@ const navItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/sessions', label: 'Sessions', icon: FolderOpen },
   { path: '/vulns', label: 'Vulnerabilities', icon: Shield },
-  { path: '/reports', label: 'Reports', icon: FileText },
+  { path: '/reports', label: 'Reports', icon: Terminal },
   { path: '/search', label: 'Search', icon: Search },
   { path: '/archives', label: 'Archives', icon: Archive },
+  { path: '/recovery', label: 'Recovery', icon: Activity },
   { path: '/settings', label: 'Settings', icon: Settings },
 ]
 
 export default function Layout({ children }: LayoutProps) {
   const location = useLocation()
   const { data: status } = useSystemStatus()
+  const [mobileOpen, setMobileOpen] = useState(false)
+
+  const title = useMemo(() => {
+    return navItems.find((item) => item.path === location.pathname)?.label ?? 'PentLog'
+  }, [location.pathname])
 
   return (
-    <div className="flex h-screen">
-      <aside className="sidebar">
+    <div className="app-shell">
+      <aside className={`sidebar ${mobileOpen ? 'sidebar-open' : ''}`}>
         <div className="sidebar-header">
-          <Terminal className="h-6 w-6 text-primary mr-2" />
-          <span className="text-lg font-bold">PentLog</span>
-          <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-primary text-white">
-            v{status?.version || '0.16'}
-          </span>
+          <div className="brand-mark">
+            <Terminal size={18} />
+          </div>
+          <div>
+            <div className="brand-title">PentLog</div>
+            <div className="brand-subtitle">Evidence dashboard</div>
+          </div>
+          <button className="icon-button mobile-only" onClick={() => setMobileOpen(false)} aria-label="Close navigation">
+            <X size={16} />
+          </button>
         </div>
 
-        {status?.has_context && status.context && (
-          <div className="context-badge">
-            <div className="text-xs text-muted mb-1">Active Context</div>
-            <div className="font-medium text-sm truncate">{status.context.client}</div>
-            <div className="text-xs text-muted truncate">
-              {status.context.engagement} / {status.context.phase}
-            </div>
-          </div>
-        )}
+        <div className="sidebar-context">
+          <div className="eyebrow">Active Context</div>
+          {status?.has_context && status.context ? (
+            <>
+              <div className="sidebar-context-title">{status.context.client}</div>
+              <div className="sidebar-context-copy">
+                {status.context.engagement} <ChevronRight size={12} /> {status.context.phase}
+              </div>
+              {status.context.target && (
+                <div className="pill-row">
+                  <span className="pill pill-accent">{status.context.target}</span>
+                  {status.context.target_ip && <span className="pill">{status.context.target_ip}</span>}
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="empty-inline">No active engagement</div>
+          )}
+        </div>
 
         <nav className="sidebar-nav">
           {navItems.map((item) => {
@@ -58,24 +84,51 @@ export default function Layout({ children }: LayoutProps) {
               <Link
                 key={item.path}
                 to={item.path}
-                className={isActive ? 'active' : ''}
+                className={isActive ? 'nav-link active' : 'nav-link'}
+                onClick={() => setMobileOpen(false)}
               >
-                <Icon className="h-4 w-4" />
-                {item.label}
+                <Icon size={16} />
+                <span>{item.label}</span>
               </Link>
             )
           })}
         </nav>
 
         <div className="sidebar-footer">
-          {status?.total_sessions ?? 0} sessions recorded
+          <div className="sidebar-footer-line">
+            <Wrench size={14} />
+            <span>v{status?.version ?? 'dev'}</span>
+          </div>
+          <div className="sidebar-footer-line subdued">{status?.total_sessions ?? 0} sessions indexed</div>
         </div>
       </aside>
 
-      <main className="main-content">
-        <div className="content-wrapper">
-          {children}
-        </div>
+      {mobileOpen && <button className="sidebar-backdrop" onClick={() => setMobileOpen(false)} aria-label="Close navigation" />}
+
+      <main className="main-shell">
+        <header className="topbar">
+          <div>
+            <div className="eyebrow">Workspace</div>
+            <h1 className="topbar-title">{title}</h1>
+          </div>
+
+          <div className="topbar-actions">
+            {status?.has_context && status.context ? (
+              <div className="status-chip">
+                <span className="status-dot" />
+                <span>{status.context.client}</span>
+              </div>
+            ) : (
+              <div className="status-chip status-chip-muted">Context required</div>
+            )}
+
+            <button className="icon-button mobile-only-inline" onClick={() => setMobileOpen(true)} aria-label="Open navigation">
+              <Menu size={16} />
+            </button>
+          </div>
+        </header>
+
+        <div className="content-wrapper">{children}</div>
       </main>
     </div>
   )

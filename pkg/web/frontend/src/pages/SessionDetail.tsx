@@ -1,78 +1,230 @@
-import { useQuery } from '@tanstack/react-query'
-import { useParams, Link } from 'react-router-dom'
-import { ArrowLeft, FileText, HardDrive, Calendar } from 'lucide-react'
+import { useState } from 'react'
+import { Link, useParams } from 'react-router-dom'
+import { ArrowLeft, Clock3, ExternalLink, HardDrive, Radio, StickyNote, Terminal } from 'lucide-react'
+import { formatDate } from '../lib/api'
+import { useSession, useSessionContent, useSessionNotes, useSessionTimeline, useShareStatus } from '../hooks/useApi'
+import { api } from '../hooks/useApi'
 
 export default function SessionDetail() {
   const { id } = useParams()
-  const { data: session, isLoading } = useQuery({
-    queryKey: ['session', id],
-    queryFn: async () => {
-      const res = await fetch(`/api/sessions/${id}`)
-      return res.json()
-    },
-    enabled: !!id,
-  })
+  const [noteDraft, setNoteDraft] = useState('')
+  const sessionQuery = useSession(id)
+  const notesQuery = useSessionNotes(id)
+  const timelineQuery = useSessionTimeline(id)
+  const contentQuery = useSessionContent(id)
+  const shareQuery = useShareStatus()
 
-  if (isLoading) return <div className="text-center p-8">Loading...</div>
-  if (!session) return <div className="text-center p-8">Session not found</div>
+  async function handleAddNote() {
+    if (!id || !noteDraft.trim()) {
+      return
+    }
+    await api.sessions.addNote(id, noteDraft.trim())
+    setNoteDraft('')
+    await notesQuery.refetch()
+    await sessionQuery.refetch()
+  }
+
+  if (sessionQuery.isLoading) {
+    return <div className="loading-state">Loading session…</div>
+  }
+
+  const session = sessionQuery.data
+  if (!session) {
+    return <div className="empty-state">Session not found.</div>
+  }
+
+  const notes = notesQuery.data?.notes ?? []
+  const commands = timelineQuery.data?.commands ?? []
+  const contentPreview = contentQuery.data?.content?.slice(0, 2400) ?? ''
+  const share = shareQuery.data
+  const isLiveShared = Boolean(share?.active && share.log_file && share.log_file === session.path)
 
   return (
-    <div className="space-y-6">
-      <Link to="/sessions" className="inline-flex items-center gap-2 text-muted hover:text-white">
-        <ArrowLeft className="h-4 w-4" /> Back to sessions
+    <div className="page-stack">
+      <Link to="/sessions" className="inline-link back-link">
+        <ArrowLeft size={14} /> Back to sessions
       </Link>
 
-      <div className="page-header">
-        <h1>Session #{session.id}</h1>
-        <p className="font-mono text-sm text-muted">{session.filename}</p>
-      </div>
+      <section className="page-heading">
+        <div>
+          <div className="eyebrow">Session Detail</div>
+          <h2>Session #{session.id}</h2>
+          <p>{session.display_path || session.filename}</p>
+        </div>
+        <div className="page-heading-meta">
+          <span className={`badge badge-${session.state.toLowerCase()}`}>{session.state}</span>
+        </div>
+      </section>
 
-      <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
-        <div className="stat-card">
-          <HardDrive className="icon h-5 w-5" />
-          <div className="label">Size</div>
-          <div className="value">{session.size_human}</div>
-        </div>
-        <div className="stat-card">
-          <Calendar className="icon h-5 w-5" />
-          <div className="label">Modified</div>
-          <div className="value text-lg">{session.mod_time}</div>
-        </div>
-        <div className="stat-card">
-          <FileText className="icon h-5 w-5" />
-          <div className="label">Notes</div>
-          <div className="value">{session.notes_count}</div>
-        </div>
-      </div>
+      <section className="stats-grid">
+        <article className="stat-card stat-card-blue">
+          <div className="stat-card-header">
+            <span>Size</span>
+            <HardDrive size={18} />
+          </div>
+          <div className="stat-card-value">{session.size_human}</div>
+        </article>
+        <article className="stat-card stat-card-sand">
+          <div className="stat-card-header">
+            <span>Notes</span>
+            <StickyNote size={18} />
+          </div>
+          <div className="stat-card-value">{session.notes_count}</div>
+        </article>
+        <article className="stat-card stat-card-amber">
+          <div className="stat-card-header">
+            <span>Commands</span>
+            <Terminal size={18} />
+          </div>
+          <div className="stat-card-value">{commands.length}</div>
+        </article>
+        <article className="stat-card stat-card-green">
+          <div className="stat-card-header">
+            <span>Recorded</span>
+            <Clock3 size={18} />
+          </div>
+          <div className="stat-card-value text-compact">{formatDate(session.mod_time)}</div>
+        </article>
+      </section>
 
-      <div className="card">
-        <h2 className="text-lg font-semibold mb-4">Metadata</h2>
-        <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))' }}>
-          <div>
-            <div className="text-xs text-muted">Client</div>
-            <div className="font-medium">{session.metadata?.client || '-'}</div>
+      <section className="panel-grid two-columns">
+        <article className="panel-card">
+          <div className="panel-header">
+            <div>
+              <h3>Metadata</h3>
+              <p>Context captured with this recording.</p>
+            </div>
           </div>
-          <div>
-            <div className="text-xs text-muted">Engagement</div>
-            <div className="font-medium">{session.metadata?.engagement || '-'}</div>
+          <div className="meta-grid">
+            <div>
+              <span>Client</span>
+              <strong>{session.metadata.client || '-'}</strong>
+            </div>
+            <div>
+              <span>Engagement</span>
+              <strong>{session.metadata.engagement || '-'}</strong>
+            </div>
+            <div>
+              <span>Phase</span>
+              <strong>{session.metadata.phase || '-'}</strong>
+            </div>
+            <div>
+              <span>Operator</span>
+              <strong>{session.metadata.operator || '-'}</strong>
+            </div>
+            <div>
+              <span>Target</span>
+              <strong>{session.metadata.target || '-'}</strong>
+            </div>
+            <div>
+              <span>Target IP</span>
+              <strong>{session.metadata.target_ip || '-'}</strong>
+            </div>
           </div>
-          <div>
-            <div className="text-xs text-muted">Phase</div>
-            <div className="font-medium capitalize">{session.metadata?.phase || '-'}</div>
-          </div>
-          <div>
-            <div className="text-xs text-muted">Operator</div>
-            <div className="font-medium">{session.metadata?.operator || '-'}</div>
-          </div>
-        </div>
-      </div>
+        </article>
 
-      <div className="card">
-        <h2 className="text-lg font-semibold mb-2">File Path</h2>
-        <div className="font-mono text-xs bg-secondary p-3 rounded break-all">
-          {session.path}
+        <article className="panel-card">
+          <div className="panel-header">
+            <div>
+              <h3>Content Preview</h3>
+              <p>Cleaned terminal output excerpt.</p>
+            </div>
+          </div>
+          {contentQuery.isLoading ? (
+            <div className="loading-state compact">Loading content…</div>
+          ) : (
+            <pre className="terminal-preview">{contentPreview || 'No content available.'}</pre>
+          )}
+        </article>
+      </section>
+
+
+      <section className="panel-card">
+        <div className="panel-header">
+          <div>
+            <h3>Replay & Share</h3>
+            <p>Session replay already exists outside the dashboard; live share status is surfaced here.</p>
+          </div>
+          {isLiveShared && share?.watch_url ? (
+            <a className="inline-link" href={share.watch_url} target="_blank" rel="noreferrer">
+              Open watch <ExternalLink size={14} />
+            </a>
+          ) : null}
         </div>
-      </div>
+        {isLiveShared ? (
+          <div className="list-row">
+            <div>
+              <strong>This session is currently being shared live.</strong>
+              <div className="subdued-text mono-text">{share?.log_file}</div>
+            </div>
+            <div className="list-row-meta">
+              <span className={`badge ${share?.reachable ? 'badge-green' : 'badge-amber'}`}>{share?.reachable ? 'Online' : 'Pending'}</span>
+              <span className="pill">
+                <Radio size={14} /> {share?.clients ?? 0} viewers
+              </span>
+            </div>
+          </div>
+        ) : (
+          <div className="empty-state compact">No active live share bound to this session.</div>
+        )}
+      </section>
+
+      <section className="panel-grid two-columns">
+        <article className="panel-card">
+          <div className="panel-header">
+            <div>
+              <h3>Notes</h3>
+              <p>Operator annotations for this session.</p>
+            </div>
+          </div>
+          <div className="note-composer">
+            <textarea value={noteDraft} onChange={(event) => setNoteDraft(event.target.value)} placeholder="Add note…" rows={4} />
+            <button className="primary-button" onClick={handleAddNote} disabled={!noteDraft.trim()}>
+              Save note
+            </button>
+          </div>
+          <div className="list-stack">
+            {notes.map((note, index) => (
+              <div key={`${note.timestamp}-${index}`} className="list-row stacked-row">
+                <strong>{formatDate(note.timestamp)}</strong>
+                <p>{note.content}</p>
+              </div>
+            ))}
+            {notes.length === 0 && <div className="empty-state compact">No notes for this session.</div>}
+          </div>
+        </article>
+
+        <article className="panel-card">
+          <div className="panel-header">
+            <div>
+              <h3>Timeline</h3>
+              <p>Parsed commands from the ttyrec stream.</p>
+            </div>
+          </div>
+          <div className="list-stack timeline-stack">
+            {commands.slice(0, 20).map((entry, index) => (
+              <div key={`${entry.timestamp}-${index}`} className="timeline-entry">
+                <div className="timeline-entry-header">
+                  <span className="pill">{formatDate(entry.timestamp)}</span>
+                  <code>{entry.command}</code>
+                </div>
+                {entry.output && <pre>{entry.output.slice(0, 320)}</pre>}
+              </div>
+            ))}
+            {commands.length === 0 && <div className="empty-state compact">No commands extracted yet.</div>}
+          </div>
+        </article>
+      </section>
+
+      <section className="panel-card">
+        <div className="panel-header">
+          <div>
+            <h3>Filesystem Path</h3>
+            <p>Resolved session log location.</p>
+          </div>
+        </div>
+        <div className="code-block">{session.path}</div>
+      </section>
     </div>
   )
 }

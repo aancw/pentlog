@@ -1,81 +1,143 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import type { FormEvent } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Search, Terminal } from 'lucide-react'
+import { Search as SearchIcon } from 'lucide-react'
+import { api } from '../hooks/useApi'
+import type { SearchResult } from '../lib/api'
 
 export default function SearchPage() {
   const [query, setQuery] = useState('')
-  const [searched, setSearched] = useState('')
+  const [regex, setRegex] = useState(false)
+  const [from, setFrom] = useState('')
+  const [to, setTo] = useState('')
+  const [limit, setLimit] = useState(100)
+  const [submitted, setSubmitted] = useState<Record<string, string | number | boolean> | null>(null)
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['search', searched],
-    queryFn: async () => {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(searched)}`)
-      return res.json()
-    },
-    enabled: !!searched,
+  const searchQuery = useQuery({
+    queryKey: ['search', submitted],
+    queryFn: () => api.search.query(submitted ?? {}),
+    enabled: Boolean(submitted),
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (query.trim()) setSearched(query.trim())
+  const groupedResults = useMemo(() => {
+    const groups = new Map<string, SearchResult[]>()
+    for (const result of searchQuery.data?.results ?? []) {
+      const existing = groups.get(result.session_path) ?? []
+      existing.push(result)
+      groups.set(result.session_path, existing)
+    }
+    return Array.from(groups.entries())
+  }, [searchQuery.data])
+
+  function handleSubmit(event: FormEvent) {
+    event.preventDefault()
+    if (!query.trim()) {
+      return
+    }
+
+    const next: Record<string, string | number | boolean> = {
+      q: query.trim(),
+      regex,
+      limit,
+    }
+    if (from) next.from = from
+    if (to) next.to = to
+    setSubmitted(next)
   }
 
   return (
-    <div className="space-y-6">
-      <div className="page-header">
-        <h1>Search</h1>
-        <p className="text-muted">Search across all sessions and notes</p>
-      </div>
-
-      <form onSubmit={handleSubmit} className="flex gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted" />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Enter search query..."
-            className="input"
-            style={{ paddingLeft: '3rem' }}
-          />
+    <div className="page-stack">
+      <section className="page-heading">
+        <div>
+          <div className="eyebrow">Evidence Search</div>
+          <h2>Search sessions and operator notes.</h2>
+          <p>Supports boolean expressions, regex mode, and date scoping.</p>
         </div>
-        <button type="submit" className="btn" disabled={!query.trim() || isLoading}>
-          {isLoading ? 'Searching...' : 'Search'}
-        </button>
-      </form>
+      </section>
 
-      <div className="p-4 bg-secondary rounded text-sm text-muted">
-        Use <code className="text-primary">term1 term2</code> (AND), 
-        <code className="text-primary"> term1 OR term2</code>, 
-        <code className="text-primary"> -term</code> (NOT)
-      </div>
-
-      {searched && !isLoading && data?.results?.length === 0 && (
-        <div className="card text-center p-12">
-          <Search className="h-12 w-12 mx-auto text-muted mb-4" />
-          <h2 className="text-xl font-semibold mb-2">No Results</h2>
-          <p className="text-muted">No matches for "{searched}"</p>
-        </div>
-      )}
-
-      {data?.results?.length > 0 && (
-        <div className="space-y-4">
-          <div className="text-sm text-muted">
-            {data.total_matches} matches found
-          </div>
-          {data.results.map((result: any, idx: number) => (
-            <div key={idx} className="card">
-              <div className="flex items-center gap-3 p-3 bg-secondary rounded-t border-b border-border">
-                <Terminal className="h-4 w-4 text-primary" />
-                <span className="font-medium text-sm">{result.session_path}</span>
-                {result.is_note && <span className="badge badge-blue">Note</span>}
-                <span className="text-xs text-muted">Line {result.line_num}</span>
-              </div>
-              <pre className="p-4 text-sm overflow-x-auto font-mono">
-                {result.content}
-              </pre>
+      <section className="panel-card filter-card">
+        <form className="search-form" onSubmit={handleSubmit}>
+          <label className="field field-search field-span-2">
+            <span>Query</span>
+            <div className="search-input-shell">
+              <SearchIcon size={16} />
+              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="admin OR token -cleanup" />
             </div>
-          ))}
+          </label>
+
+          <label className="field">
+            <span>From</span>
+            <input type="date" value={from} onChange={(event) => setFrom(event.target.value)} />
+          </label>
+
+          <label className="field">
+            <span>To</span>
+            <input type="date" value={to} onChange={(event) => setTo(event.target.value)} />
+          </label>
+
+          <label className="field">
+            <span>Limit</span>
+            <input type="number" min={1} max={500} value={limit} onChange={(event) => setLimit(Number(event.target.value) || 100)} />
+          </label>
+
+          <label className="checkbox-field">
+            <input type="checkbox" checked={regex} onChange={(event) => setRegex(event.target.checked)} />
+            <span>Regex mode</span>
+          </label>
+
+          <button className="primary-button" type="submit" disabled={!query.trim() || searchQuery.isFetching}>
+            {searchQuery.isFetching ? 'Searching…' : 'Run Search'}
+          </button>
+        </form>
+      </section>
+
+      <section className="panel-card">
+        <div className="panel-header">
+          <div>
+            <h3>Query Guide</h3>
+            <p>
+              Use <code>term1 term2</code> for AND, <code>term1 OR term2</code> for OR, <code>-term</code> for NOT.
+            </p>
+          </div>
         </div>
+      </section>
+
+      {submitted && searchQuery.data && (
+        <section className="panel-card">
+          <div className="panel-header">
+            <div>
+              <h3>Results</h3>
+              <p>
+                {searchQuery.data.total_matches} match{searchQuery.data.total_matches === 1 ? '' : 'es'} for{' '}
+                <code>{String(submitted.q)}</code>
+              </p>
+            </div>
+            <span className="pill">{regex ? 'Regex' : 'Boolean'}</span>
+          </div>
+
+          <div className="list-stack">
+            {groupedResults.map(([sessionPath, items]) => (
+              <article key={sessionPath} className="search-result-card">
+                <div className="search-result-header">
+                  <strong>{sessionPath}</strong>
+                  <span className="pill">{items.length} hits</span>
+                </div>
+                <div className="search-result-body">
+                  {items.map((item, index) => (
+                    <div key={`${item.line_num}-${index}`} className="search-hit">
+                      <div className="search-hit-meta">
+                        <span>Line {item.line_num}</span>
+                        {item.is_note && <span className="badge badge-blue">Note</span>}
+                      </div>
+                      <pre>{item.content}</pre>
+                    </div>
+                  ))}
+                </div>
+              </article>
+            ))}
+            {groupedResults.length === 0 && <div className="empty-state compact">No matches found for the current query.</div>}
+          </div>
+        </section>
       )}
     </div>
   )
