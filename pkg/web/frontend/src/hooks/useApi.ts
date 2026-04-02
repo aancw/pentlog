@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { api } from '../lib/api'
 
 export function useDashboardStats() {
@@ -33,6 +33,7 @@ export function useSessions(params?: Record<string, string | number | undefined>
   return useQuery({
     queryKey: ['sessions', params],
     queryFn: () => api.sessions.list(params),
+    placeholderData: keepPreviousData,
   })
 }
 

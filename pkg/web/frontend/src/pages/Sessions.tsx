@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useDeferredValue, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Eye, Search, Trash2 } from 'lucide-react'
 import { formatDate, formatListLabel } from '../lib/api'
@@ -16,15 +16,20 @@ export default function Sessions() {
   const [phase, setPhase] = useState('')
   const [state, setState] = useState('')
   const [tag, setTag] = useState('')
+  const deferredQuery = useDeferredValue(query)
+  const deferredClient = useDeferredValue(client)
+  const deferredPhase = useDeferredValue(phase)
+  const deferredState = useDeferredValue(state)
+  const deferredTag = useDeferredValue(tag)
 
-  const { data, isLoading, refetch } = useSessions({
+  const { data, isLoading, isFetching, refetch } = useSessions({
     limit: PAGE_SIZE,
     offset: (page - 1) * PAGE_SIZE,
-    q: query || undefined,
-    client: client || undefined,
-    phase: phase || undefined,
-    state: state || undefined,
-    tag: tag || undefined,
+    q: deferredQuery || undefined,
+    client: deferredClient || undefined,
+    phase: deferredPhase || undefined,
+    state: deferredState || undefined,
+    tag: deferredTag || undefined,
   })
   const { data: tags } = useSessionTags()
 
@@ -42,10 +47,6 @@ export default function Sessions() {
 
   function resetPage() {
     setPage(1)
-  }
-
-  if (isLoading) {
-    return <div className="loading-state">Loading sessions…</div>
   }
 
   return (
@@ -147,51 +148,58 @@ export default function Sessions() {
       </section>
 
       <section className="panel-card">
+        {isFetching && <div className="subdued-text">Refreshing table…</div>}
         <div className="table-shell">
-          <table>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Client</th>
-                <th>Engagement</th>
-                <th>Phase</th>
-                <th>State</th>
-                <th>Notes</th>
-                <th>Size</th>
-                <th>Recorded</th>
-                <th aria-label="Actions" />
-              </tr>
-            </thead>
-            <tbody>
-              {sessions.map((session) => (
-                <tr key={session.id}>
-                  <td className="mono-text">#{session.id}</td>
-                  <td>{session.metadata.client || '-'}</td>
-                  <td>{session.metadata.engagement || '-'}</td>
-                  <td>
-                    <span className="pill">{session.metadata.phase || '-'}</span>
-                  </td>
-                  <td>
-                    <span className={`badge badge-${session.state.toLowerCase()}`}>{formatListLabel(session.state)}</span>
-                  </td>
-                  <td>{session.notes_count}</td>
-                  <td>{session.size_human}</td>
-                  <td>{formatDate(session.mod_time)}</td>
-                  <td>
-                    <div className="row-actions">
-                      <Link className="icon-button" to={`/sessions/${session.id}`} aria-label={`Open session ${session.id}`}>
-                        <Eye size={16} />
-                      </Link>
-                      <button className="icon-button danger" onClick={() => handleDelete(session.id)} aria-label={`Delete session ${session.id}`}>
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {sessions.length === 0 && <div className="empty-state compact">No sessions match the current filters.</div>}
+          {isLoading && sessions.length === 0 ? (
+            <div className="loading-state compact">Loading sessions…</div>
+          ) : (
+            <>
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Client</th>
+                    <th>Engagement</th>
+                    <th>Phase</th>
+                    <th>State</th>
+                    <th>Notes</th>
+                    <th>Size</th>
+                    <th>Recorded</th>
+                    <th aria-label="Actions" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {sessions.map((session) => (
+                    <tr key={session.id}>
+                      <td className="mono-text">#{session.id}</td>
+                      <td>{session.metadata.client || '-'}</td>
+                      <td>{session.metadata.engagement || '-'}</td>
+                      <td>
+                        <span className="pill">{session.metadata.phase || '-'}</span>
+                      </td>
+                      <td>
+                        <span className={`badge badge-${session.state.toLowerCase()}`}>{formatListLabel(session.state)}</span>
+                      </td>
+                      <td>{session.notes_count}</td>
+                      <td>{session.size_human}</td>
+                      <td>{formatDate(session.mod_time)}</td>
+                      <td>
+                        <div className="row-actions">
+                          <Link className="icon-button" to={`/sessions/${session.id}`} aria-label={`Open session ${session.id}`}>
+                            <Eye size={16} />
+                          </Link>
+                          <button className="icon-button danger" onClick={() => handleDelete(session.id)} aria-label={`Delete session ${session.id}`}>
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {sessions.length === 0 && <div className="empty-state compact">No sessions match the current filters.</div>}
+            </>
+          )}
         </div>
 
         <div className="pagination-bar">
