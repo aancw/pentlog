@@ -90,6 +90,18 @@ export function useReports() {
   })
 }
 
+export function useReportJob(id?: string) {
+  return useQuery({
+    queryKey: ['reports', 'job', id],
+    queryFn: () => api.reports.job(id as string),
+    enabled: Boolean(id),
+    refetchInterval: (query) => {
+      const status = query.state.data?.job.status
+      return status === 'completed' || status === 'failed' ? false : 1500
+    },
+  })
+}
+
 export function useArchives() {
   return useQuery({
     queryKey: ['archives'],
@@ -155,6 +167,8 @@ export type {
   DashboardStats,
   RecoveryStatus,
   ReportRecord,
+  ReportGenerateJob,
+  ReportGenerateRequest,
   SearchResponse,
   SessionContentResponse,
   SessionNote,

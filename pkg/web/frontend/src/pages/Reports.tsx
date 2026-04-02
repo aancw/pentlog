@@ -1,11 +1,75 @@
+import { useEffect, useState, type FormEvent } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { ExternalLink, FileCode2, FileText } from 'lucide-react'
 import { formatDate } from '../lib/api'
-import { useReports } from '../hooks/useApi'
+import { api } from '../hooks/useApi'
+import { useCurrentContext, useReportJob, useReports } from '../hooks/useApi'
 
 export default function Reports() {
-  const { data, isLoading } = useReports()
+  const queryClient = useQueryClient()
+  const { data, isLoading, refetch } = useReports()
+  const contextQuery = useCurrentContext()
+
+  const [client, setClient] = useState('')
+  const [engagement, setEngagement] = useState('')
+  const [phase, setPhase] = useState('')
+  const [format, setFormat] = useState<'html' | 'md'>('html')
+  const [includeGifs, setIncludeGifs] = useState(false)
+  const [gifResolution, setGifResolution] = useState<'720p' | '1080p'>('720p')
+  const [outputName, setOutputName] = useState('')
+  const [submitError, setSubmitError] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [jobId, setJobId] = useState('')
+
+  const jobQuery = useReportJob(jobId || undefined)
+  const currentJob = jobQuery.data?.job
+
   const reports = data?.reports ?? []
   const htmlReports = reports.filter((report) => report.type === 'html').length
+
+  useEffect(() => {
+    if (contextQuery.data?.context && !client) {
+      setClient(contextQuery.data.context.client ?? '')
+      setEngagement(contextQuery.data.context.engagement ?? '')
+      setPhase(contextQuery.data.context.phase ?? '')
+    }
+  }, [contextQuery.data, client])
+
+  useEffect(() => {
+    if (format !== 'html') {
+      setIncludeGifs(false)
+    }
+  }, [format])
+
+  useEffect(() => {
+    if (currentJob?.status === 'completed') {
+      void refetch()
+      void queryClient.invalidateQueries({ queryKey: ['reports'] })
+    }
+  }, [currentJob?.status, queryClient, refetch])
+
+  async function handleGenerate(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setSubmitError('')
+    setIsSubmitting(true)
+
+    try {
+      const response = await api.reports.generate({
+        client: client || undefined,
+        engagement: engagement || undefined,
+        phase: phase || undefined,
+        format,
+        include_gifs: includeGifs,
+        gif_resolution: gifResolution,
+        output_name: outputName || undefined,
+      })
+      setJobId(response.job.id)
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'Failed to start report generation')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   if (isLoading) {
     return <div className="loading-state">Loading reports…</div>
@@ -16,10 +80,121 @@ export default function Reports() {
       <section className="page-heading">
         <div>
           <div className="eyebrow">Reports</div>
-          <h2>Review exported engagement artifacts.</h2>
-          <p>The web UI now opens generated reports directly. Creation still happens through the CLI export flow.</p>
+          <h2>Review and generate engagement artifacts.</h2>
+          <p>Generate Markdown or HTML reports directly from the web dashboard.</p>
         </div>
       </section>
+
+      <section className="panel-card">
+        <div className="panel-header">
+          <div>
+            <h3>Generate Report</h3>
+            <p>Choose scope and output format. GIF capture is available for HTML exports.</p>
+          </div>
+        </div>
+        <form className="search-form" onSubmit={handleGenerate}>
+          <div className="form-grid">
+            <label className="field">
+              <span>Client</span>
+              <input value={client} onChange={(event) => setClient(event.target.value)} placeholder="AcmeCorp" />
+            </label>
+            <label className="field">
+              <span>Engagement (optional)</span>
+              <input value={engagement} onChange={(event) => setEngagement(event.target.value)} placeholder="Q1-RedTeam" />
+            </label>
+            <label className="field">
+              <span>Phase (optional)</span>
+              <input value={phase} onChange={(event) => setPhase(event.target.value)} placeholder="recon" />
+            </label>
+            <label className="field">
+              <span>Format</span>
+              <select value={format} onChange={(event) => setFormat(event.target.value as 'html' | 'md')}>
+                <option value="html">HTML</option>
+                <option value="md">Markdown</option>
+              </select>
+            </label>
+            <label className="field field-span-2">
+              <span>Output filename (optional)</span>
+              <input value={outputName} onChange={(event) => setOutputName(event.target.value)} placeholder="custom_report.html" />
+            </label>
+            <label className="checkbox-field field-span-2">
+              <input type="checkbox" checked={includeGifs} disabled={format !== 'html'} onChange={(event) => setIncludeGifs(event.target.checked)} />
+              <span>Generate GIFs and embed them in HTML report</span>
+            </label>
+            {format === 'html' && includeGifs && (
+              <label className="field">
+                <span>GIF Resolution</span>
+                <select value={gifResolution} onChange={(event) => setGifResolution(event.target.value as '720p' | '1080p')}>
+                  <option value="720p">720p</option>
+                  <option value="1080p">1080p</option>
+                </select>
+              </label>
+            )}
+          </div>
+          {submitError && <div className="empty-state compact">{submitError}</div>}
+          <div className="row-actions">
+            <button className="primary-button" type="submit" disabled={isSubmitting || jobQuery.isFetching}>
+              {isSubmitting ? 'Starting…' : 'Generate report'}
+            </button>
+            {currentJob && (
+              <span className={`badge ${currentJob.status === 'completed' ? 'badge-green' : currentJob.status === 'failed' ? 'badge-red' : 'badge-amber'}`}>
+                {currentJob.status}
+              </span>
+            )}
+          </div>
+        </form>
+      </section>
+
+      {currentJob && (
+        <section className="panel-card">
+          <div className="panel-header">
+            <div>
+              <h3>Latest Generation Job</h3>
+              <p>{currentJob.message}</p>
+            </div>
+          </div>
+          <div className="meta-grid compact-meta-grid">
+            <div>
+              <span>Job ID</span>
+              <strong className="mono-text">{currentJob.id}</strong>
+            </div>
+            <div>
+              <span>Scope</span>
+              <strong>
+                {currentJob.client}
+                {currentJob.engagement ? ` / ${currentJob.engagement}` : ''}
+                {currentJob.phase ? ` / ${currentJob.phase}` : ''}
+              </strong>
+            </div>
+            <div>
+              <span>Sessions</span>
+              <strong>{currentJob.sessions_count}</strong>
+            </div>
+            <div>
+              <span>GIFs</span>
+              <strong>
+                {currentJob.gif_generated} generated / {currentJob.gif_failed} failed
+              </strong>
+            </div>
+            <div>
+              <span>Updated</span>
+              <strong>{formatDate(currentJob.updated_at)}</strong>
+            </div>
+            <div>
+              <span>Output</span>
+              <strong className="mono-text">{currentJob.relative_path || '-'}</strong>
+            </div>
+          </div>
+          {currentJob.error && <div className="empty-state compact">{currentJob.error}</div>}
+          {currentJob.status === 'completed' && currentJob.view_url && (
+            <div className="row-actions">
+              <a className="inline-link" href={currentJob.view_url} target="_blank" rel="noreferrer">
+                Open generated report <ExternalLink size={14} />
+              </a>
+            </div>
+          )}
+        </section>
+      )}
 
       <section className="stats-grid">
         <article className="stat-card stat-card-sand">

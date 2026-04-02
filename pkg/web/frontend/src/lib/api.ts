@@ -170,6 +170,38 @@ export interface ReportRecord {
   view_url: string
 }
 
+export interface ReportGenerateRequest {
+  client?: string
+  engagement?: string
+  phase?: string
+  format?: 'html' | 'md'
+  include_gifs?: boolean
+  gif_resolution?: '720p' | '1080p'
+  output_name?: string
+}
+
+export interface ReportGenerateJob {
+  id: string
+  status: 'queued' | 'running' | 'completed' | 'failed'
+  message: string
+  error?: string
+  client: string
+  engagement?: string
+  phase?: string
+  format: 'html' | 'md'
+  include_gifs: boolean
+  gif_resolution?: '720p' | '1080p'
+  output_name: string
+  report_path?: string
+  relative_path?: string
+  view_url?: string
+  sessions_count: number
+  gif_generated: number
+  gif_failed: number
+  created_at: string
+  updated_at: string
+}
+
 export interface ArchiveRecord {
   name: string
   client: string
@@ -280,6 +312,12 @@ export const api = {
   },
   reports: {
     list: () => fetchJson<{ reports: ReportRecord[] }>('/api/reports'),
+    generate: (payload: ReportGenerateRequest) =>
+      fetchJson<{ job: ReportGenerateJob }>('/api/reports/generate', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
+    job: (id: string) => fetchJson<{ job: ReportGenerateJob }>(`/api/reports/jobs/${encodeURIComponent(id)}`),
   },
   archives: {
     list: () => fetchJson<{ archives: ArchiveRecord[] }>('/api/archives'),
