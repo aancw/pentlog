@@ -10,7 +10,6 @@ import (
 	"pentlog/pkg/api"
 	"pentlog/pkg/api/handlers"
 	"pentlog/pkg/utils"
-	"pentlog/pkg/web"
 
 	"github.com/spf13/cobra"
 )
@@ -41,7 +40,6 @@ Examples:
 	Run: func(cmd *cobra.Command, args []string) {
 		handlers.Version = Version
 
-		api.SetStaticFS(web.StaticFS)
 		if distDir, err := rebuildWebAssets(); err != nil {
 			fmt.Printf("Warning: failed to rebuild web assets: %v\n", err)
 		} else if distDir != "" {

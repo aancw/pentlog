@@ -2,10 +2,7 @@ package api
 
 import (
 	"context"
-	"embed"
 	"fmt"
-	"io"
-	"io/fs"
 	"net/http"
 	"os"
 	"os/signal"
@@ -21,22 +18,8 @@ import (
 	middleware "github.com/go-chi/chi/v5/middleware"
 )
 
-var StaticFS embed.FS
 var hasStaticFiles bool
-var distFS fs.FS
 var localStaticDir string
-
-func SetStaticFS(fsys embed.FS) {
-	StaticFS = fsys
-	var err error
-	distFS, err = fs.Sub(StaticFS, "dist")
-	if err == nil {
-		hasStaticFiles = true
-		logger.Info("static_files_loaded", "source", "embedded")
-	} else {
-		logger.Warn("static_files_not_loaded", "error", err)
-	}
-}
 
 func SetStaticDir(dir string) {
 	indexPath := filepath.Join(dir, "index.html")
@@ -169,30 +152,7 @@ func (s *Server) serveFile(w http.ResponseWriter, r *http.Request, name string, 
 		}
 	}
 
-	file, err := distFS.Open(name)
-	if err != nil {
-		http.Error(w, "File not found", http.StatusNotFound)
-		return
-	}
-	defer file.Close()
-
-	stat, err := file.Stat()
-	if err != nil {
-		http.Error(w, "File error", http.StatusInternalServerError)
-		return
-	}
-
-	if stat.IsDir() {
-		http.Error(w, "Not a file", http.StatusNotFound)
-		return
-	}
-
-	if contentType == "" {
-		contentType = getContentType(name)
-	}
-	w.Header().Set("Content-Type", contentType)
-	w.Header().Set("Cache-Control", "no-cache")
-	io.Copy(w, file)
+	http.NotFound(w, r)
 }
 
 func getContentType(name string) string {
