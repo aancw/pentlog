@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, Clock3, ExternalLink, HardDrive, Radio, StickyNote, Terminal } from 'lucide-react'
+import { ArrowLeft, Clock3, ExternalLink, HardDrive, Maximize2, Radio, StickyNote, Terminal, X } from 'lucide-react'
 import { formatDate } from '../lib/api'
 import { useSession, useSessionContent, useSessionNotes, useSessionTimeline, useShareStatus } from '../hooks/useApi'
 import { api } from '../hooks/useApi'
@@ -8,11 +8,25 @@ import { api } from '../hooks/useApi'
 export default function SessionDetail() {
   const { id } = useParams()
   const [noteDraft, setNoteDraft] = useState('')
+  const [showFullContent, setShowFullContent] = useState(false)
+  const [showFullTimeline, setShowFullTimeline] = useState(false)
   const sessionQuery = useSession(id)
   const notesQuery = useSessionNotes(id)
   const timelineQuery = useSessionTimeline(id)
   const contentQuery = useSessionContent(id)
   const shareQuery = useShareStatus()
+
+  useEffect(() => {
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setShowFullContent(false)
+        setShowFullTimeline(false)
+      }
+    }
+
+    window.addEventListener('keydown', handleEscape)
+    return () => window.removeEventListener('keydown', handleEscape)
+  }, [])
 
   async function handleAddNote() {
     if (!id || !noteDraft.trim()) {
@@ -35,6 +49,7 @@ export default function SessionDetail() {
 
   const notes = notesQuery.data?.notes ?? []
   const commands = timelineQuery.data?.commands ?? []
+  const fullContent = contentQuery.data?.content ?? ''
   const contentPreview = contentQuery.data?.content?.slice(0, 2400) ?? ''
   const share = shareQuery.data
   const isLiveShared = Boolean(share?.active && share.log_file && share.log_file === session.path)
@@ -129,6 +144,9 @@ export default function SessionDetail() {
               <h3>Content Preview</h3>
               <p>Cleaned terminal output excerpt.</p>
             </div>
+            <button className="secondary-button" onClick={() => setShowFullContent(true)} disabled={!fullContent}>
+              <Maximize2 size={14} /> View full
+            </button>
           </div>
           {contentQuery.isLoading ? (
             <div className="loading-state compact">Loading content…</div>
@@ -200,6 +218,9 @@ export default function SessionDetail() {
               <h3>Timeline</h3>
               <p>Parsed commands from the ttyrec stream.</p>
             </div>
+            <button className="secondary-button" onClick={() => setShowFullTimeline(true)} disabled={commands.length === 0}>
+              <Maximize2 size={14} /> View full
+            </button>
           </div>
           <div className="list-stack timeline-stack">
             {commands.slice(0, 20).map((entry, index) => (
@@ -225,6 +246,46 @@ export default function SessionDetail() {
         </div>
         <div className="code-block">{session.path}</div>
       </section>
+
+      {showFullContent && (
+        <div className="modal-backdrop" onClick={() => setShowFullContent(false)}>
+          <section className="modal-card" onClick={(event) => event.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Full Content Preview</h3>
+              <button className="icon-button" onClick={() => setShowFullContent(false)} aria-label="Close full content preview">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="modal-body">
+              <pre className="terminal-preview modal-terminal">{fullContent || 'No content available.'}</pre>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {showFullTimeline && (
+        <div className="modal-backdrop" onClick={() => setShowFullTimeline(false)}>
+          <section className="modal-card" onClick={(event) => event.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Full Timeline</h3>
+              <button className="icon-button" onClick={() => setShowFullTimeline(false)} aria-label="Close full timeline">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="modal-body list-stack timeline-stack">
+              {commands.map((entry, index) => (
+                <div key={`${entry.timestamp}-${index}`} className="timeline-entry">
+                  <div className="timeline-entry-header">
+                    <span className="pill">{formatDate(entry.timestamp)}</span>
+                    <code>{entry.command}</code>
+                  </div>
+                  {entry.output && <pre>{entry.output}</pre>}
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   )
 }
