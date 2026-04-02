@@ -1,48 +1,3 @@
-const API_BASE = '/api'
-
-export async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options?.headers,
-    },
-  })
-
-  if (!response.ok) {
-    throw new Error(`API Error: ${response.status} ${response.statusText}`)
-  }
-
-  return response.json()
-}
-
-export const api = {
-  dashboard: {
-    stats: () => fetchApi<DashboardStats>('/dashboard/stats'),
-    activity: () => fetchApi<ActivityResponse>('/dashboard/activity'),
-    clients: () => fetchApi<ClientsResponse>('/dashboard/clients'),
-  },
-  sessions: {
-    list: (params?: { limit?: number; offset?: number; tag?: string; client?: string; phase?: string }) => {
-      const searchParams = new URLSearchParams()
-      if (params?.limit) searchParams.set('limit', String(params.limit))
-      if (params?.offset) searchParams.set('offset', String(params.offset))
-      if (params?.tag) searchParams.set('tag', params.tag)
-      if (params?.client) searchParams.set('client', params.client)
-      if (params?.phase) searchParams.set('phase', params.phase)
-      const query = searchParams.toString()
-      return fetchApi<SessionsListResponse>(`/sessions${query ? `?${query}` : ''}`)
-    },
-    get: (id: number) => fetchApi<SessionResponse>(`/sessions/${id}`),
-    delete: (id: number) => 
-      fetchApi<{ message: string }>(`/sessions/${id}`, { method: 'DELETE' }),
-  },
-  system: {
-    status: () => fetchApi<SystemStatus>('/system/status'),
-    info: () => fetchApi<SystemInfo>('/system/info'),
-  },
-}
-
 export interface DashboardStats {
   total_sessions: number
   total_size: number
@@ -53,6 +8,31 @@ export interface DashboardStats {
   total_vulns: number
   phase_counts: Record<string, number>
   severity_counts: Record<string, number>
+}
+
+export interface SessionMetadata {
+  client: string
+  engagement: string
+  scope: string
+  operator: string
+  phase: string
+  target: string
+  target_ip: string
+}
+
+export interface SessionResponse {
+  id: number
+  filename: string
+  path: string
+  display_path: string
+  size: number
+  size_human: string
+  mod_time: string
+  state: string
+  metadata: SessionMetadata
+  tags: string[]
+  notes_count: number
+  has_gif: boolean
 }
 
 export interface ActivityResponse {
@@ -67,29 +47,6 @@ export interface ClientsResponse {
     total_size: number
     total_size_human: string
   }>
-}
-
-export interface SessionResponse {
-  id: number
-  filename: string
-  path: string
-  display_path: string
-  size: number
-  size_human: string
-  mod_time: string
-  state: string
-  metadata: {
-    client: string
-    engagement: string
-    scope: string
-    operator: string
-    phase: string
-    target: string
-    target_ip: string
-  }
-  tags: string[]
-  notes_count: number
-  has_gif: boolean
 }
 
 export interface SessionsListResponse {
@@ -142,4 +99,52 @@ export interface SystemInfo {
     database_file: string
   }
   uptime: string
+}
+
+export const api = {
+  dashboard: {
+    stats: async (): Promise<DashboardStats> => {
+      const res = await fetch('/api/dashboard/stats')
+      return res.json()
+    },
+    activity: async (): Promise<ActivityResponse> => {
+      const res = await fetch('/api/dashboard/activity')
+      return res.json()
+    },
+    clients: async (): Promise<ClientsResponse> => {
+      const res = await fetch('/api/dashboard/clients')
+      return res.json()
+    },
+  },
+  sessions: {
+    list: async (params?: { limit?: number; offset?: number; tag?: string; client?: string; phase?: string }): Promise<SessionsListResponse> => {
+      const searchParams = new URLSearchParams()
+      if (params?.limit) searchParams.set('limit', String(params.limit))
+      if (params?.offset) searchParams.set('offset', String(params.offset))
+      if (params?.tag) searchParams.set('tag', params.tag)
+      if (params?.client) searchParams.set('client', params.client)
+      if (params?.phase) searchParams.set('phase', params.phase)
+      const query = searchParams.toString()
+      const res = await fetch(`/api/sessions${query ? `?${query}` : ''}`)
+      return res.json()
+    },
+    get: async (id: number): Promise<SessionResponse> => {
+      const res = await fetch(`/api/sessions/${id}`)
+      return res.json()
+    },
+    delete: async (id: number): Promise<{ message: string }> => {
+      const res = await fetch(`/api/sessions/${id}`, { method: 'DELETE' })
+      return res.json()
+    },
+  },
+  system: {
+    status: async (): Promise<SystemStatus> => {
+      const res = await fetch('/api/system/status')
+      return res.json()
+    },
+    info: async (): Promise<SystemInfo> => {
+      const res = await fetch('/api/system/info')
+      return res.json()
+    },
+  },
 }

@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../lib/api'
+import type { DashboardStats, ActivityResponse, SessionsListResponse, SessionResponse, SystemStatus } from '../lib/api'
 
 export function useDashboardStats() {
   return useQuery({
@@ -36,3 +37,5 @@ export function useSystemStatus() {
     queryFn: api.system.status,
   })
 }
+
+export type { DashboardStats, ActivityResponse, SessionsListResponse, SessionResponse, SystemStatus }
