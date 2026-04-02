@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -134,12 +135,33 @@ func (s *Server) serveFile(w http.ResponseWriter, r *http.Request, name string, 
 		return
 	}
 
-	if contentType != "" {
-		w.Header().Set("Content-Type", contentType)
+	if contentType == "" {
+		contentType = getContentType(name)
 	}
-
+	w.Header().Set("Content-Type", contentType)
 	w.Header().Set("Cache-Control", "no-cache")
 	io.Copy(w, file)
+}
+
+func getContentType(name string) string {
+	switch {
+	case strings.HasSuffix(name, ".js"):
+		return "application/javascript"
+	case strings.HasSuffix(name, ".css"):
+		return "text/css"
+	case strings.HasSuffix(name, ".html"):
+		return "text/html; charset=utf-8"
+	case strings.HasSuffix(name, ".svg"):
+		return "image/svg+xml"
+	case strings.HasSuffix(name, ".png"):
+		return "image/png"
+	case strings.HasSuffix(name, ".jpg"), strings.HasSuffix(name, ".jpeg"):
+		return "image/jpeg"
+	case strings.HasSuffix(name, ".json"):
+		return "application/json"
+	default:
+		return "application/octet-stream"
+	}
 }
 
 func (s *Server) Start() error {
