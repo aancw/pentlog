@@ -13,7 +13,7 @@
 </head>
 <body>
     <button class="theme-toggle" onclick="toggleTheme()">
-        <span id="theme-icon">☀️ Light</span>
+        <span id="theme-icon">🌙 Dark</span>
     </button>
     
     <h1>Report for Client: {{.Client}}</h1>
@@ -512,14 +512,14 @@
         const currentTheme = root.getAttribute('data-theme');
         const icon = document.getElementById('theme-icon');
         
-        if (currentTheme === 'dark') {
+        if (currentTheme === 'light') {
             root.removeAttribute('data-theme');
-            icon.textContent = '☀️ Light';
-            localStorage.setItem('pentlog-report-theme', 'light');
-        } else {
-            root.setAttribute('data-theme', 'dark');
             icon.textContent = '🌙 Dark';
             localStorage.setItem('pentlog-report-theme', 'dark');
+        } else {
+            root.setAttribute('data-theme', 'light');
+            icon.textContent = '☀️ Light';
+            localStorage.setItem('pentlog-report-theme', 'light');
         }
     }
     
@@ -529,12 +529,12 @@
         const root = document.documentElement;
         const icon = document.getElementById('theme-icon');
         
-        if (savedTheme === 'dark') {
-            root.setAttribute('data-theme', 'dark');
-            icon.textContent = '🌙 Dark';
+        if (savedTheme === 'light') {
+            root.setAttribute('data-theme', 'light');
+            icon.textContent = '☀️ Light';
         } else {
             root.removeAttribute('data-theme');
-            icon.textContent = '☀️ Light';
+            icon.textContent = '🌙 Dark';
         }
     })();
     </script>
