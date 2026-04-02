@@ -3,39 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pentlog Export Report</title>
+    <title>PentLog Export Report</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         {{.CSS}}
     </style>
 </head>
 <body>
+    <button class="theme-toggle" onclick="toggleTheme()">
+        <span id="theme-icon">☀️ Light</span>
+    </button>
+    
     <h1>Report for Client: {{.Client}}</h1>
 
     {{if .Findings}}
     <h2>Findings & Vulnerabilities</h2>
-    <table border="1" style="width:100%; border-collapse: collapse; border: 1px solid #444; margin-top: 20px;">
+    <table>
         <thead>
-            <tr style="background-color: #252526; color: #dcdcaa;">
-                <th style="padding: 10px; border: 1px solid #444;">ID</th>
-                <th style="padding: 10px; border: 1px solid #444;">Severity</th>
-                <th style="padding: 10px; border: 1px solid #444;">Title</th>
-                <th style="padding: 10px; border: 1px solid #444;">Phase</th>
-                <th style="padding: 10px; border: 1px solid #444;">Status</th>
+            <tr>
+                <th>ID</th>
+                <th>Severity</th>
+                <th>Title</th>
+                <th>Phase</th>
+                <th>Status</th>
             </tr>
         </thead>
         <tbody>
             {{range .Findings}}
             <tr>
-                <td style="padding: 10px; border: 1px solid #444;">{{.ID}}</td>
-                <td style="padding: 10px; border: 1px solid #444; color: {{.SeverityColor}}; font-weight: bold;">{{.Severity}}</td>
-                <td style="padding: 10px; border: 1px solid #444;">{{.Title}}</td>
-                <td style="padding: 10px; border: 1px solid #444;">{{.Phase}}</td>
-                <td style="padding: 10px; border: 1px solid #444;">{{.Status}}</td>
+                <td>{{.ID}}</td>
+                <td style="color: {{.SeverityColor}}; font-weight: bold;">{{.Severity}}</td>
+                <td>{{.Title}}</td>
+                <td>{{.Phase}}</td>
+                <td>{{.Status}}</td>
             </tr>
             {{end}}
         </tbody>
     </table>
-    <hr style='border-color: #444; margin-top: 40px;'/>
+    <hr/>
     {{end}}
 
     {{if .AIAnalysis}}
@@ -45,7 +52,7 @@
             {{.AIAnalysis}}
         </div>
     </div>
-    <hr style='border-color: #444; margin-top: 40px;'/>
+    <hr/>
     {{end}}
 
     {{range .Engagements}}
@@ -497,6 +504,38 @@
                 player.play();
             });
         });
+    })();
+    
+    // Theme toggle functionality
+    function toggleTheme() {
+        const root = document.documentElement;
+        const currentTheme = root.getAttribute('data-theme');
+        const icon = document.getElementById('theme-icon');
+        
+        if (currentTheme === 'dark') {
+            root.removeAttribute('data-theme');
+            icon.textContent = '☀️ Light';
+            localStorage.setItem('pentlog-report-theme', 'light');
+        } else {
+            root.setAttribute('data-theme', 'dark');
+            icon.textContent = '🌙 Dark';
+            localStorage.setItem('pentlog-report-theme', 'dark');
+        }
+    }
+    
+    // Load saved theme on page load
+    (function() {
+        const savedTheme = localStorage.getItem('pentlog-report-theme');
+        const root = document.documentElement;
+        const icon = document.getElementById('theme-icon');
+        
+        if (savedTheme === 'dark') {
+            root.setAttribute('data-theme', 'dark');
+            icon.textContent = '🌙 Dark';
+        } else {
+            root.removeAttribute('data-theme');
+            icon.textContent = '☀️ Light';
+        }
     })();
     </script>
 </body>
