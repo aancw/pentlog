@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"image"
 	"image/color"
-	"image/gif"
+	"io"
 	"os"
 	"regexp"
 	"strings"
@@ -88,18 +88,15 @@ func buildPalette() color.Palette {
 }
 
 func RenderToGIF(inputPath, outputPath string, cfg RenderConfig) error {
-	frames, err := ParseTTYRec(inputPath)
+	reader, err := NewFrameReader(inputPath)
 	if err != nil {
 		return err
 	}
-	if len(frames) == 0 {
-		return nil
-	}
+	defer reader.Close()
 
 	term := vt100.NewVT100(cfg.Rows, cfg.Cols)
 	palette := buildPalette()
 
-	// Create font face based on resolution
 	fontSize := 12.0
 	if cfg.Resolution == "1080p" {
 		fontSize = 14.0
@@ -109,25 +106,41 @@ func RenderToGIF(inputPath, outputPath string, cfg RenderConfig) error {
 		return err
 	}
 
-	// Calculate character dimensions from font metrics
-	charW := fontFace.Metrics().Height.Ceil() * 6 / 10 // Approximate monospace width
+	charW := fontFace.Metrics().Height.Ceil() * 6 / 10
 	charH := fontFace.Metrics().Height.Ceil()
 	paddingX, paddingY := 12, 12
 	imgW := cfg.Cols*charW + paddingX*2
 	imgH := cfg.Rows*charH + paddingY*2
 
-	var gifImages []*image.Paletted
-	var delays []int
+	outFile, err := os.Create(outputPath)
+	if err != nil {
+		return err
+	}
+	defer outFile.Close()
 
-	baseTime := frames[0].TimestampUsec
+	gifWriter := NewGIFWriter(outFile, palette, imgW, imgH)
+
+	var baseTime int64
 	var lastCaptureTime int64
 	var lastContent string
+	frameCount := 0
 
-	for i, frame := range frames {
-		// filteredData := filterPromptFromData(frame.Data) // Removed: breaks cursor positioning
-		reader := bytes.NewReader(frame.Data)
-		for reader.Len() > 0 {
-			cmd, err := vt100.Decode(reader)
+	for {
+		frame, err := reader.ReadFrame()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return err
+		}
+
+		if baseTime == 0 {
+			baseTime = frame.TimestampUsec
+		}
+
+		rd := bytes.NewReader(frame.Data)
+		for rd.Len() > 0 {
+			cmd, err := vt100.Decode(rd)
 			if err != nil {
 				break
 			}
@@ -135,7 +148,7 @@ func RenderToGIF(inputPath, outputPath string, cfg RenderConfig) error {
 		}
 
 		currentContent := terminalContentHash(term, cfg.Cols, cfg.Rows)
-		if currentContent == lastContent && i > 0 {
+		if currentContent == lastContent && frameCount > 0 {
 			continue
 		}
 		lastContent = currentContent
@@ -144,7 +157,7 @@ func RenderToGIF(inputPath, outputPath string, cfg RenderConfig) error {
 		scaledElapsed := int64(float64(elapsed) / cfg.Speed)
 
 		var delayCs int
-		if i == 0 {
+		if frameCount == 0 {
 			delayCs = 10
 		} else {
 			diff := scaledElapsed - lastCaptureTime
@@ -158,31 +171,26 @@ func RenderToGIF(inputPath, outputPath string, cfg RenderConfig) error {
 		}
 
 		img := renderTerminal(term, cfg.Cols, cfg.Rows, imgW, imgH, charW, charH, paddingX, paddingY, palette, fontFace)
-		gifImages = append(gifImages, img)
-		delays = append(delays, delayCs)
-		lastCaptureTime = scaledElapsed
+		if err := gifWriter.WriteFrame(img, delayCs); err != nil {
+			return err
+		}
 
-		if cfg.MaxFrames > 0 && len(gifImages) >= cfg.MaxFrames {
+		lastCaptureTime = scaledElapsed
+		frameCount++
+
+		if cfg.MaxFrames > 0 && frameCount >= cfg.MaxFrames {
 			break
 		}
 	}
 
-	if len(gifImages) == 0 {
+	if frameCount == 0 {
 		img := renderTerminal(term, cfg.Cols, cfg.Rows, imgW, imgH, charW, charH, paddingX, paddingY, palette, fontFace)
-		gifImages = append(gifImages, img)
-		delays = append(delays, 100)
+		if err := gifWriter.WriteFrame(img, 100); err != nil {
+			return err
+		}
 	}
 
-	outFile, err := os.Create(outputPath)
-	if err != nil {
-		return err
-	}
-	defer outFile.Close()
-
-	return gif.EncodeAll(outFile, &gif.GIF{
-		Image: gifImages,
-		Delay: delays,
-	})
+	return gifWriter.Close()
 }
 
 func terminalContentHash(term *vt100.VT100, cols, rows int) string {
