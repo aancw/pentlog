@@ -1,8 +1,54 @@
-import { useSystemStatus } from '../hooks/useApi'
-import { Database, Folder, Cpu } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import { Database, Folder, Server, HardDrive } from 'lucide-react'
+
+interface Context {
+  client: string
+  engagement: string
+  scope: string
+  operator: string
+  phase: string
+  target: string
+  target_ip: string
+  timestamp: string
+  type: string
+}
+
+interface SystemStatus {
+  has_context: boolean
+  context: Context | null
+  version: string
+  db_path: string
+  total_sessions: number
+}
+
+interface SystemInfo {
+  version: string
+  paths: {
+    home: string
+    logs_dir: string
+    reports_dir: string
+    archive_dir: string
+    database_file: string
+  }
+  uptime: string
+}
 
 export default function Settings() {
-  const { data: status } = useSystemStatus()
+  const { data: status } = useQuery({
+    queryKey: ['system', 'status'],
+    queryFn: async (): Promise<SystemStatus> => {
+      const res = await fetch('/api/system/status')
+      return res.json()
+    },
+  })
+
+  const { data: info } = useQuery({
+    queryKey: ['system', 'info'],
+    queryFn: async (): Promise<SystemInfo> => {
+      const res = await fetch('/api/system/info')
+      return res.json()
+    },
+  })
 
   return (
     <div className="space-y-6">
@@ -16,7 +62,7 @@ export default function Settings() {
       <div className="grid gap-6 md:grid-cols-2">
         <div className="rounded-lg border border-border bg-card p-6">
           <div className="flex items-center gap-2 mb-4">
-            <Cpu className="h-5 w-5 text-muted-foreground" />
+            <Server className="h-5 w-5 text-muted-foreground" />
             <h2 className="text-lg font-semibold">System Status</h2>
           </div>
           <div className="space-y-3">
@@ -52,13 +98,38 @@ export default function Settings() {
           </div>
         </div>
 
+        <div className="rounded-lg border border-border bg-card p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <HardDrive className="h-5 w-5 text-muted-foreground" />
+            <h2 className="text-lg font-semibold">Storage Paths</h2>
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Home</span>
+              <span className="font-mono text-xs truncate max-w-48">{info?.paths.home}</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Logs</span>
+              <span className="font-mono text-xs truncate max-w-48">{info?.paths.logs_dir}</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Reports</span>
+              <span className="font-mono text-xs truncate max-w-48">{info?.paths.reports_dir}</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Archives</span>
+              <span className="font-mono text-xs truncate max-w-48">{info?.paths.archive_dir}</span>
+            </div>
+          </div>
+        </div>
+
         {status?.context && (
-          <div className="rounded-lg border border-border bg-card p-6 md:col-span-2">
+          <div className="rounded-lg border border-border bg-card p-6">
             <div className="flex items-center gap-2 mb-4">
               <Folder className="h-5 w-5 text-muted-foreground" />
               <h2 className="text-lg font-semibold">Current Context</h2>
             </div>
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-3 grid-cols-2">
               <div>
                 <span className="text-sm text-muted-foreground">Client</span>
                 <p className="font-medium">{status.context.client}</p>
