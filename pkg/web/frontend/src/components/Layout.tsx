@@ -1,15 +1,17 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import {
   Activity,
   Archive,
   ChevronRight,
+  Moon,
   FolderOpen,
   LayoutDashboard,
   Menu,
   Search,
   Settings,
   Shield,
+  Sun,
   Terminal,
   Wrench,
   X,
@@ -35,10 +37,27 @@ export default function Layout({ children }: LayoutProps) {
   const location = useLocation()
   const { data: status } = useSystemStatus()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    const stored = window.localStorage.getItem('pentlog-theme')
+    if (stored === 'light' || stored === 'dark') {
+      return stored
+    }
+
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  })
 
   const title = useMemo(() => {
     return navItems.find((item) => item.path === location.pathname)?.label ?? 'PentLog'
   }, [location.pathname])
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    window.localStorage.setItem('pentlog-theme', theme)
+  }, [theme])
+
+  function handleToggleTheme() {
+    setTheme((current) => (current === 'dark' ? 'light' : 'dark'))
+  }
 
   return (
     <div className="app-shell">
@@ -121,6 +140,15 @@ export default function Layout({ children }: LayoutProps) {
             ) : (
               <div className="status-chip status-chip-muted">Context required</div>
             )}
+
+            <button
+              className={`icon-button theme-toggle ${theme === 'dark' ? 'theme-toggle-active' : ''}`}
+              onClick={handleToggleTheme}
+              aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            >
+              {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
 
             <button className="icon-button mobile-only-inline" onClick={() => setMobileOpen(true)} aria-label="Open navigation">
               <Menu size={16} />
