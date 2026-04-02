@@ -77,6 +77,11 @@ export interface EngagementSummary {
   total_size_human: string
 }
 
+export interface PhaseSummary {
+  name: string
+  sessions_count: number
+}
+
 export interface SessionNote {
   timestamp: string
   content: string
@@ -198,6 +203,8 @@ export interface ReportGenerateJob {
   sessions_count: number
   gif_generated: number
   gif_failed: number
+  avg_time_per_session_secs?: number
+  est_time_remaining_secs?: number
   created_at: string
   updated_at: string
 }
@@ -260,6 +267,17 @@ export function formatDate(value?: string) {
   return parsed.toLocaleString()
 }
 
+export function formatDuration(seconds?: number) {
+  if (!seconds || seconds <= 0) return '-'
+  if (seconds < 60) return `${seconds}s`
+  const mins = Math.floor(seconds / 60)
+  const secs = seconds % 60
+  if (mins < 60) return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`
+  const hours = Math.floor(mins / 60)
+  const remainMins = mins % 60
+  return remainMins > 0 ? `${hours}h ${remainMins}m` : `${hours}h`
+}
+
 export function formatListLabel(label: string) {
   return label.replace(/[-_]/g, ' ')
 }
@@ -272,6 +290,13 @@ export const api = {
     engagements: (client?: string) => {
       const query = client ? `?client=${encodeURIComponent(client)}` : ''
       return fetchJson<{ engagements: EngagementSummary[] }>(`/api/dashboard/engagements${query}`)
+    },
+    phases: (client?: string, engagement?: string) => {
+      const params = new URLSearchParams()
+      if (client) params.set('client', client)
+      if (engagement) params.set('engagement', engagement)
+      const query = params.toString()
+      return fetchJson<{ phases: PhaseSummary[] }>(`/api/dashboard/phases${query ? `?${query}` : ''}`)
     },
   },
   sessions: {
@@ -318,6 +343,7 @@ export const api = {
         body: JSON.stringify(payload),
       }),
     job: (id: string) => fetchJson<{ job: ReportGenerateJob }>(`/api/reports/jobs/${encodeURIComponent(id)}`),
+    activeJob: () => fetchJson<{ job: ReportGenerateJob | null }>('/api/reports/jobs/active'),
   },
   archives: {
     list: () => fetchJson<{ archives: ArchiveRecord[] }>('/api/archives'),

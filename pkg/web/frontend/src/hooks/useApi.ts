@@ -29,6 +29,13 @@ export function useDashboardEngagements(client?: string) {
   })
 }
 
+export function useDashboardPhases(client?: string, engagement?: string) {
+  return useQuery({
+    queryKey: ['dashboard', 'phases', client, engagement],
+    queryFn: () => api.dashboard.phases(client, engagement),
+  })
+}
+
 export function useSessions(params?: Record<string, string | number | undefined>) {
   return useQuery({
     queryKey: ['sessions', params],
@@ -90,12 +97,22 @@ export function useReports() {
   })
 }
 
+export function useActiveReportJob() {
+  return useQuery({
+    queryKey: ['reports', 'activeJob'],
+    queryFn: api.reports.activeJob,
+    refetchInterval: 5000,
+  })
+}
+
 export function useReportJob(id?: string) {
   return useQuery({
     queryKey: ['reports', 'job', id],
     queryFn: () => api.reports.job(id as string),
     enabled: Boolean(id),
+    retry: false,
     refetchInterval: (query) => {
+      if (query.state.error) return false
       const status = query.state.data?.job.status
       return status === 'completed' || status === 'failed' ? false : 1500
     },
@@ -181,3 +198,4 @@ export type {
   TargetRecord,
   Vulnerability,
 } from '../lib/api'
+export { formatDate, formatDuration } from '../lib/api'

@@ -20,6 +20,7 @@ func DashboardRoutes() chi.Router {
 	r.Get("/activity", handleDashboardActivity)
 	r.Get("/clients", handleDashboardClients)
 	r.Get("/engagements", handleDashboardEngagements)
+	r.Get("/phases", handleDashboardPhases)
 	return r
 }
 
@@ -298,4 +299,44 @@ func vulnToMap(v vulns.Vuln) map[string]interface{} {
 func getContext() (*config.ContextData, error) {
 	mgr := config.Manager()
 	return mgr.LoadContext()
+}
+
+func handleDashboardPhases(w http.ResponseWriter, r *http.Request) {
+	client := r.URL.Query().Get("client")
+	engagement := r.URL.Query().Get("engagement")
+
+	sessions, err := logs.ListSessions()
+	if err != nil {
+		http.Error(w, `{"error":"Failed to list sessions"}`, http.StatusInternalServerError)
+		return
+	}
+
+	phaseCounts := make(map[string]int)
+
+	for _, s := range sessions {
+		if client != "" && s.Metadata.Client != client {
+			continue
+		}
+		if engagement != "" && s.Metadata.Engagement != engagement {
+			continue
+		}
+		if s.Metadata.Phase != "" {
+			phaseCounts[s.Metadata.Phase]++
+		}
+	}
+
+	var phases []map[string]interface{}
+	for name, count := range phaseCounts {
+		phases = append(phases, map[string]interface{}{
+			"name":           name,
+			"sessions_count": count,
+		})
+	}
+
+	sort.Slice(phases, func(i, j int) bool {
+		return phases[i]["sessions_count"].(int) > phases[j]["sessions_count"].(int)
+	})
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{"phases": phases})
 }

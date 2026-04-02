@@ -30,6 +30,7 @@ func ReportRoutes() chi.Router {
 	r := chi.NewRouter()
 	r.Get("/", handleReportsList)
 	r.Post("/generate", handleReportsGenerate)
+	r.Get("/jobs/active", handleReportsActiveJob)
 	r.Get("/jobs/{id}", handleReportsJobByID)
 	return r
 }

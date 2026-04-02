@@ -1,14 +1,15 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { ExternalLink, FileCode2, FileText } from 'lucide-react'
-import { formatDate } from '../lib/api'
+import { formatDate, formatDuration } from '../lib/api'
 import { api } from '../hooks/useApi'
-import { useCurrentContext, useReportJob, useReports } from '../hooks/useApi'
+import { useCurrentContext, useReportJob, useReports, useActiveReportJob, useDashboardClients, useDashboardEngagements, useDashboardPhases } from '../hooks/useApi'
 
 export default function Reports() {
   const queryClient = useQueryClient()
   const { data, isLoading, refetch } = useReports()
   const contextQuery = useCurrentContext()
+  const clientsQuery = useDashboardClients()
 
   const [client, setClient] = useState('')
   const [engagement, setEngagement] = useState('')
@@ -19,13 +20,19 @@ export default function Reports() {
   const [outputName, setOutputName] = useState('')
   const [submitError, setSubmitError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [jobId, setJobId] = useState('')
+  const [jobId, setJobId] = useState(() => localStorage.getItem('reportJobId') || '')
 
+  const engagementsQuery = useDashboardEngagements(client)
+  const phasesQuery = useDashboardPhases(client, engagement)
+  const activeJobQuery = useActiveReportJob()
   const jobQuery = useReportJob(jobId || undefined)
   const currentJob = jobQuery.data?.job
 
   const reports = data?.reports ?? []
   const htmlReports = reports.filter((report) => report.type === 'html').length
+  const clients = clientsQuery.data?.clients ?? []
+  const engagements = engagementsQuery.data?.engagements ?? []
+  const phases = phasesQuery.data?.phases ?? []
 
   useEffect(() => {
     if (contextQuery.data?.context && !client) {
@@ -34,6 +41,15 @@ export default function Reports() {
       setPhase(contextQuery.data.context.phase ?? '')
     }
   }, [contextQuery.data, client])
+
+  useEffect(() => {
+    setEngagement('')
+    setPhase('')
+  }, [client])
+
+  useEffect(() => {
+    setPhase('')
+  }, [engagement])
 
   useEffect(() => {
     if (format !== 'html') {
@@ -46,7 +62,27 @@ export default function Reports() {
       void refetch()
       void queryClient.invalidateQueries({ queryKey: ['reports'] })
     }
+    if (currentJob?.status === 'completed' || currentJob?.status === 'failed') {
+      localStorage.removeItem('reportJobId')
+    }
   }, [currentJob?.status, queryClient, refetch])
+
+  useEffect(() => {
+    if (!jobId && activeJobQuery.data?.job) {
+      const activeJob = activeJobQuery.data.job
+      if (activeJob.status === 'queued' || activeJob.status === 'running') {
+        setJobId(activeJob.id)
+        localStorage.setItem('reportJobId', activeJob.id)
+      }
+    }
+  }, [activeJobQuery.data, jobId])
+
+  useEffect(() => {
+    if (jobQuery.isError) {
+      localStorage.removeItem('reportJobId')
+      setJobId('')
+    }
+  }, [jobQuery.isError])
 
   async function handleGenerate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -64,6 +100,7 @@ export default function Reports() {
         output_name: outputName || undefined,
       })
       setJobId(response.job.id)
+      localStorage.setItem('reportJobId', response.job.id)
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : 'Failed to start report generation')
     } finally {
@@ -96,15 +133,30 @@ export default function Reports() {
           <div className="form-grid">
             <label className="field">
               <span>Client</span>
-              <input value={client} onChange={(event) => setClient(event.target.value)} placeholder="AcmeCorp" />
+              <select value={client} onChange={(event) => setClient(event.target.value)}>
+                <option value="">Select client</option>
+                {clients.map((c) => (
+                  <option key={c.name} value={c.name}>{c.name}</option>
+                ))}
+              </select>
             </label>
             <label className="field">
               <span>Engagement (optional)</span>
-              <input value={engagement} onChange={(event) => setEngagement(event.target.value)} placeholder="Q1-RedTeam" />
+              <select value={engagement} onChange={(event) => setEngagement(event.target.value)} disabled={!client}>
+                <option value="">All engagements</option>
+                {engagements.map((e) => (
+                  <option key={e.name} value={e.name}>{e.name}</option>
+                ))}
+              </select>
             </label>
             <label className="field">
               <span>Phase (optional)</span>
-              <input value={phase} onChange={(event) => setPhase(event.target.value)} placeholder="recon" />
+              <select value={phase} onChange={(event) => setPhase(event.target.value)} disabled={!client}>
+                <option value="">All phases</option>
+                {phases.map((p) => (
+                  <option key={p.name} value={p.name}>{p.name}</option>
+                ))}
+              </select>
             </label>
             <label className="field">
               <span>Format</span>
@@ -176,6 +228,18 @@ export default function Reports() {
                 {currentJob.gif_generated} generated / {currentJob.gif_failed} failed
               </strong>
             </div>
+            {currentJob.include_gifs && currentJob.status === 'running' && currentJob.est_time_remaining_secs && currentJob.est_time_remaining_secs > 0 && (
+              <div>
+                <span>Est. Time Remaining</span>
+                <strong>{formatDuration(currentJob.est_time_remaining_secs)}</strong>
+              </div>
+            )}
+            {currentJob.include_gifs && currentJob.avg_time_per_session_secs && currentJob.avg_time_per_session_secs > 0 && (
+              <div>
+                <span>Avg. per Session</span>
+                <strong>{formatDuration(currentJob.avg_time_per_session_secs)}</strong>
+              </div>
+            )}
             <div>
               <span>Updated</span>
               <strong>{formatDate(currentJob.updated_at)}</strong>

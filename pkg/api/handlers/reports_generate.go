@@ -31,25 +31,27 @@ type reportGenerateRequest struct {
 }
 
 type reportGenerateJob struct {
-	ID            string `json:"id"`
-	Status        string `json:"status"`
-	Message       string `json:"message"`
-	Error         string `json:"error,omitempty"`
-	Client        string `json:"client"`
-	Engagement    string `json:"engagement,omitempty"`
-	Phase         string `json:"phase,omitempty"`
-	Format        string `json:"format"`
-	IncludeGIFs   bool   `json:"include_gifs"`
-	GIFResolution string `json:"gif_resolution,omitempty"`
-	OutputName    string `json:"output_name"`
-	ReportPath    string `json:"report_path,omitempty"`
-	RelativePath  string `json:"relative_path,omitempty"`
-	ViewURL       string `json:"view_url,omitempty"`
-	SessionsCount int    `json:"sessions_count"`
-	GIFGenerated  int    `json:"gif_generated"`
-	GIFFailed     int    `json:"gif_failed"`
-	CreatedAt     string `json:"created_at"`
-	UpdatedAt     string `json:"updated_at"`
+	ID                    string `json:"id"`
+	Status                string `json:"status"`
+	Message               string `json:"message"`
+	Error                 string `json:"error,omitempty"`
+	Client                string `json:"client"`
+	Engagement            string `json:"engagement,omitempty"`
+	Phase                 string `json:"phase,omitempty"`
+	Format                string `json:"format"`
+	IncludeGIFs           bool   `json:"include_gifs"`
+	GIFResolution         string `json:"gif_resolution,omitempty"`
+	OutputName            string `json:"output_name"`
+	ReportPath            string `json:"report_path,omitempty"`
+	RelativePath          string `json:"relative_path,omitempty"`
+	ViewURL               string `json:"view_url,omitempty"`
+	SessionsCount         int    `json:"sessions_count"`
+	GIFGenerated          int    `json:"gif_generated"`
+	GIFFailed             int    `json:"gif_failed"`
+	AvgTimePerSessionSecs int    `json:"avg_time_per_session_secs,omitempty"`
+	EstTimeRemainingSecs  int    `json:"est_time_remaining_secs,omitempty"`
+	CreatedAt             string `json:"created_at"`
+	UpdatedAt             string `json:"updated_at"`
 }
 
 var reportJobSeq uint64
@@ -172,6 +174,31 @@ func handleReportsJobByID(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func handleReportsActiveJob(w http.ResponseWriter, r *http.Request) {
+	reportJobs.mu.RLock()
+	defer reportJobs.mu.RUnlock()
+
+	var activeJob *reportGenerateJob
+	for _, job := range reportJobs.jobs {
+		if job.Status == "queued" || job.Status == "running" {
+			if activeJob == nil || job.CreatedAt > activeJob.CreatedAt {
+				activeJob = &job
+			}
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if activeJob != nil {
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"job": activeJob,
+		})
+	} else {
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"job": nil,
+		})
+	}
+}
+
 func filterSessionsForReport(sessions []logs.Session, client, engagement, phase string) []logs.Session {
 	filtered := make([]logs.Session, 0, len(sessions))
 	for _, session := range sessions {
@@ -224,6 +251,8 @@ func runReportJob(id string, req reportGenerateRequest, sessions []logs.Session)
 	var gifPaths map[int]string
 	gifGenerated := 0
 	gifFailed := 0
+	var totalTimeGif time.Duration
+
 	if req.IncludeGIFs {
 		gifPaths = make(map[int]string)
 		gifsDir := filepath.Join(reportDir, "gifs")
@@ -236,6 +265,12 @@ func runReportJob(id string, req reportGenerateRequest, sessions []logs.Session)
 			if session.Path == "" {
 				continue
 			}
+
+			sessionStart := time.Now()
+
+			updateReportJob(id, func(job *reportGenerateJob) {
+				job.Message = fmt.Sprintf("Generating GIF for session %d (%d/%d)", session.ID, gifGenerated+gifFailed+1, len(sessions))
+			})
 
 			gifName := fmt.Sprintf("session-%d.gif", session.ID)
 			gifPath := filepath.Join(gifsDir, gifName)
@@ -254,16 +289,33 @@ func runReportJob(id string, req reportGenerateRequest, sessions []logs.Session)
 
 			if err := recorder.RenderToGIF(session.Path, gifPath, cfg); err != nil {
 				gifFailed++
+				updateReportJob(id, func(job *reportGenerateJob) {
+					job.Message = fmt.Sprintf("GIF failed for session %d: %s", session.ID, err.Error())
+					job.GIFGenerated = gifGenerated
+					job.GIFFailed = gifFailed
+				})
 				continue
 			}
 
+			sessionDuration := time.Since(sessionStart)
+			totalTimeGif += sessionDuration
 			gifGenerated++
 			gifPaths[session.ID] = relativePath
 
+			processed := gifGenerated + gifFailed
+			remaining := len(sessions) - processed
+			var avgSecs, estRemainingSecs int
+			if processed > 0 {
+				avgSecs = int(totalTimeGif.Seconds() / float64(processed))
+				estRemainingSecs = avgSecs * remaining
+			}
+
 			updateReportJob(id, func(job *reportGenerateJob) {
-				job.Message = fmt.Sprintf("Generating GIFs (%d/%d)", gifGenerated+gifFailed, len(sessions))
+				job.Message = fmt.Sprintf("Generating GIFs (%d/%d)", processed, len(sessions))
 				job.GIFGenerated = gifGenerated
 				job.GIFFailed = gifFailed
+				job.AvgTimePerSessionSecs = avgSecs
+				job.EstTimeRemainingSecs = estRemainingSecs
 			})
 		}
 	}
