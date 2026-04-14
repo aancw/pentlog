@@ -35,7 +35,7 @@ jobs:
         run: GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o pentlog-${{ matrix.goos }}-${{ matrix.goarch }} .
 
       - name: Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: pentlog-${{ matrix.goos }}-${{ matrix.goarch }}
