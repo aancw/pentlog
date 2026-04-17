@@ -781,7 +781,7 @@ func AppendNote(notesPath string, note SessionNote) error {
 		return err
 	}
 
-	return os.WriteFile(notesPath, data, 0644)
+	return os.WriteFile(notesPath, data, 0600)
 }
 
 func ReadNotes(notesPath string) ([]SessionNote, error) {

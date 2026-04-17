@@ -53,11 +53,51 @@ var exportCmd = &cobra.Command{
 			return
 		}
 
-		clientIdx := utils.SelectItem("Select Client", clients)
-		if clientIdx == -1 {
-			return
+		var (
+			selectedClient     string
+			selectedEngagement string
+			selectedPhase      string
+		)
+
+		if ctx, err := mgr.LoadContext(); err == nil && ctx.Client != "" {
+			currentPhase := currentPhaseScope(ctx)
+			currentEngagement := currentEngagementScope(ctx)
+			var options []string
+			if hasSessionsForScope(sessions, currentPhase) {
+				options = append(options, formatScopeLabel(ctx, true))
+			}
+			if hasSessionsForScope(sessions, currentEngagement) {
+				options = append(options, formatScopeLabel(ctx, false))
+			}
+			if len(options) > 0 {
+				options = append(options, "Select manually", "[View Existing Reports]")
+				choice := utils.PromptSelect("Export scope", options)
+				if choice == "" {
+					return
+				}
+				switch choice {
+				case formatScopeLabel(ctx, true):
+					selectedClient = ctx.Client
+					selectedEngagement = ctx.Engagement
+					selectedPhase = ctx.Phase
+				case formatScopeLabel(ctx, false):
+					selectedClient = ctx.Client
+					selectedEngagement = ctx.Engagement
+				case "[View Existing Reports]":
+					selectedClient = ctx.Client
+					openClientReports(selectedClient, mgr)
+					return
+				}
+			}
 		}
-		selectedClient := clients[clientIdx]
+
+		if selectedClient == "" {
+			clientIdx := utils.SelectItem("Select Client", clients)
+			if clientIdx == -1 {
+				return
+			}
+			selectedClient = clients[clientIdx]
+		}
 
 		engMap := make(map[string]bool)
 		for _, s := range sessions {
@@ -70,49 +110,22 @@ var exportCmd = &cobra.Command{
 			engagements = append(engagements, e)
 		}
 
-		engagements = append([]string{"All Engagements", "[View Existing Reports]"}, engagements...)
+		if selectedEngagement == "" {
+			engagements = append([]string{"All Engagements", "[View Existing Reports]"}, engagements...)
 
-		var selectedEngagement string
-		for {
-			engIdx := utils.SelectItem("Select Engagement", engagements)
-			if engIdx == -1 {
-				return
-			}
-			selectedEngagement = engagements[engIdx]
-
-			if selectedEngagement == "[View Existing Reports]" {
-				reports, err := logs.ListClientReports(selectedClient)
-				if err != nil {
-					errors.DatabaseErr("list reports", err).Print()
-				} else if len(reports) == 0 {
-					fmt.Println("No existing reports found for this client.")
-				} else {
-					for {
-						// Create a separate list for the menu to include "Back"
-						menuItems := append([]string{"[Back]"}, reports...)
-
-						reportIdx := utils.SelectItem("Select Report to Open", menuItems)
-						if reportIdx == -1 {
-							break // Exit inner loop
-						}
-
-						selectedReport := menuItems[reportIdx]
-						if selectedReport == "[Back]" {
-							break
-						}
-
-						// Open the report
-						fullPath := filepath.Join(mgr.GetPaths().ReportsDir, utils.Slugify(selectedClient), selectedReport)
-
-						fmt.Printf("Opening %s...\n", selectedReport)
-						if err := utils.OpenFile(fullPath); err != nil {
-							errors.FileErr(fullPath, err).Print()
-						}
-					}
+			for {
+				engIdx := utils.SelectItem("Select Engagement", engagements)
+				if engIdx == -1 {
+					return
 				}
-				continue
+				selectedEngagement = engagements[engIdx]
+
+				if selectedEngagement == "[View Existing Reports]" {
+					openClientReports(selectedClient, mgr)
+					continue
+				}
+				break
 			}
-			break
 		}
 
 		if selectedEngagement == "All Engagements" {
@@ -128,19 +141,21 @@ var exportCmd = &cobra.Command{
 				phaseMap[s.Metadata.Phase] = true
 			}
 		}
-		var phases []string
-		for p := range phaseMap {
-			phases = append(phases, p)
-		}
-		phases = append([]string{"All Phases"}, phases...)
+		if selectedPhase == "" {
+			var phases []string
+			for p := range phaseMap {
+				phases = append(phases, p)
+			}
+			phases = append([]string{"All Phases"}, phases...)
 
-		phaseIdx := utils.SelectItem("Select Phase to Export", phases)
-		if phaseIdx == -1 {
-			return
-		}
-		selectedPhase := phases[phaseIdx]
-		if selectedPhase == "All Phases" {
-			selectedPhase = ""
+			phaseIdx := utils.SelectItem("Select Phase to Export", phases)
+			if phaseIdx == -1 {
+				return
+			}
+			selectedPhase = phases[phaseIdx]
+			if selectedPhase == "All Phases" {
+				selectedPhase = ""
+			}
 		}
 
 		// --- Check for existing reports ---
@@ -543,6 +558,37 @@ var exportCmd = &cobra.Command{
 		}
 
 	},
+}
+
+func openClientReports(selectedClient string, mgr *config.ConfigManager) {
+	reports, err := logs.ListClientReports(selectedClient)
+	if err != nil {
+		errors.DatabaseErr("list reports", err).Print()
+		return
+	}
+	if len(reports) == 0 {
+		fmt.Println("No existing reports found for this client.")
+		return
+	}
+
+	for {
+		menuItems := append([]string{"[Back]"}, reports...)
+		reportIdx := utils.SelectItem("Select Report to Open", menuItems)
+		if reportIdx == -1 {
+			return
+		}
+
+		selectedReport := menuItems[reportIdx]
+		if selectedReport == "[Back]" {
+			return
+		}
+
+		fullPath := filepath.Join(mgr.GetPaths().ReportsDir, utils.Slugify(selectedClient), selectedReport)
+		fmt.Printf("Opening %s...\n", selectedReport)
+		if err := utils.OpenFile(fullPath); err != nil {
+			errors.FileErr(fullPath, err).Print()
+		}
+	}
 }
 
 func init() {

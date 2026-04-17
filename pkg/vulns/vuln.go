@@ -211,7 +211,7 @@ func (m *Manager) writeVulns(vulns []Vuln) error {
 		return err
 	}
 
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
 		return err
 	}
 
@@ -220,7 +220,7 @@ func (m *Manager) writeVulns(vulns []Vuln) error {
 		return err
 	}
 
-	return os.WriteFile(path, data, 0644)
+	return os.WriteFile(path, data, 0600)
 }
 
 func (v Vuln) SeverityColor() string {

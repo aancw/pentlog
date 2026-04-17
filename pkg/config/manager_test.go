@@ -124,6 +124,44 @@ func TestLoadContext(t *testing.T) {
 	}
 }
 
+func TestSaveContextPermissions(t *testing.T) {
+	once = sync.Once{}
+	manager = nil
+
+	testHome := t.TempDir()
+	os.Setenv("PENTLOG_TEST_HOME", testHome)
+	defer os.Unsetenv("PENTLOG_TEST_HOME")
+
+	mgr := Manager()
+	testCtx := &ContextData{
+		Client:     "TestClient",
+		Engagement: "TestEngagement",
+		Phase:      "recon",
+		Type:       "Client",
+	}
+
+	if err := mgr.SaveContext(testCtx); err != nil {
+		t.Fatalf("Failed to save context: %v", err)
+	}
+
+	paths := mgr.GetPaths()
+	contextInfo, err := os.Stat(paths.ContextFile)
+	if err != nil {
+		t.Fatalf("Failed to stat context file: %v", err)
+	}
+	if got := contextInfo.Mode().Perm(); got != 0600 {
+		t.Fatalf("expected context permissions 0600, got %#o", got)
+	}
+
+	historyInfo, err := os.Stat(paths.HistoryFile)
+	if err != nil {
+		t.Fatalf("Failed to stat history file: %v", err)
+	}
+	if got := historyInfo.Mode().Perm(); got != 0600 {
+		t.Fatalf("expected history permissions 0600, got %#o", got)
+	}
+}
+
 func TestLoadContextHistory(t *testing.T) {
 	once = sync.Once{}
 	manager = nil
@@ -235,7 +273,7 @@ func TestEnvVarOverrides(t *testing.T) {
 
 	testHome := t.TempDir()
 	customDBPath := filepath.Join(testHome, "custom.db")
-	
+
 	os.Setenv("PENTLOG_TEST_HOME", testHome)
 	os.Setenv("PENTLOG_DB_PATH", customDBPath)
 	os.Setenv("PENTLOG_OLLAMA_URL", "http://custom:11434")

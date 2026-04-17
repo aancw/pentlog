@@ -103,3 +103,23 @@ func TestListSessions(t *testing.T) {
 		t.Error("Did not find session with metadata")
 	}
 }
+
+func TestAppendNotePermissions(t *testing.T) {
+	notePath := filepath.Join(t.TempDir(), "notes", "session.notes.json")
+
+	if err := AppendNote(notePath, SessionNote{
+		Timestamp:  "10:00:00",
+		Content:    "check permissions",
+		ByteOffset: 12,
+	}); err != nil {
+		t.Fatalf("AppendNote failed: %v", err)
+	}
+
+	info, err := os.Stat(notePath)
+	if err != nil {
+		t.Fatalf("Failed to stat note file: %v", err)
+	}
+	if got := info.Mode().Perm(); got != 0600 {
+		t.Fatalf("expected note permissions 0600, got %#o", got)
+	}
+}

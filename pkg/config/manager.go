@@ -316,12 +316,12 @@ func (cm *ConfigManager) SaveContext(ctx *ContextData) error {
 	if err != nil {
 		return err
 	}
-	if err := os.WriteFile(contextPath, data, 0644); err != nil {
+	if err := os.WriteFile(contextPath, data, 0600); err != nil {
 		return err
 	}
 
 	// Append to history
-	f, err := os.OpenFile(historyPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	f, err := os.OpenFile(historyPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {
 		return err
 	}
