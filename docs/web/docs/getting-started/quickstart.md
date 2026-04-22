@@ -178,6 +178,23 @@ This interactive wizard will:
 !!! tip "AI Analysis"
     Add `--analyze` to automatically summarize findings with your configured AI provider.
 
+### Step 8: Open the Web Dashboard (Optional)
+
+Start the browser dashboard for mission-control style visibility:
+
+```bash
+# Default: http://localhost:8080
+pentlog web
+```
+
+Or open automatically in your browser:
+
+```bash
+pentlog web --open
+```
+
+The web dashboard highlights active context, session health, findings, and report/archive readiness.
+
 ## What You've Accomplished
 
 In just 5 minutes, you've:
@@ -188,6 +205,7 @@ In just 5 minutes, you've:
 ✅ **Added notes** — Timestamped annotations for important findings
 ✅ **Searched sessions** — Found commands across all your history
 ✅ **Exported a report** — Client-ready Markdown or HTML
+✅ **Opened web dashboard** — Browser visibility for context, health, and artifacts
 
 ## Your First Session Files
 

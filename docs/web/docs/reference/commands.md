@@ -16,7 +16,7 @@ Complete reference for all PentLog commands. Use this guide to explore the full 
 
     ---
 
-    `search`, `timeline`, `dashboard`
+    `search`, `timeline`, `dashboard`, `web`
 
 -   :material-file-document: __Reporting__
 
@@ -294,6 +294,35 @@ Show interactive dashboard of pentest activity.
 ```bash
 pentlog dashboard
 ```
+
+---
+
+### `pentlog web`
+Start browser-based web dashboard server.
+
+```bash
+pentlog web [flags]
+```
+
+**Examples:**
+
+```bash
+# Start on default port 8080
+pentlog web
+
+# Start on custom port
+pentlog web --port 3000
+
+# Start and open browser automatically
+pentlog web --open
+```
+
+**Flags:**
+
+| Flag | Short | Default | Description |
+|------|-------|---------|-------------|
+| `--port` | `-p` | `8080` | Port for the web dashboard server |
+| `--open` | `-o` | `false` | Open browser after server starts |
 
 ---
 

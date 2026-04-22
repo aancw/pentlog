@@ -247,7 +247,23 @@ View an interactive executive summary of your engagement logic, including eviden
 pentlog dashboard
 ```
 
-### 9. Versioning & Updates
+### 9. Web Dashboard (v0.18.0)
+Use the browser dashboard for mission-control style visibility across active context, session health, findings, and artifact readiness.
+
+```bash
+# Start web dashboard (default: http://localhost:8080)
+pentlog web
+
+# Start on custom port and open browser
+pentlog web --port 3000 --open
+```
+
+**Highlights in v0.18.0:**
+- Unified dashboard snapshot endpoint (`/api/dashboard/overview`)
+- Quick links to Sessions, Search, Reports, and Archives with scoped filters
+- Improved dark-mode contrast and keyboard accessibility
+
+### 10. Versioning & Updates
 Keep your tool up to date.
 
 ```bash

@@ -139,3 +139,4 @@ nav:
   - Reference:
       - reference/commands.md
       - reference/comparison.md
+      - Release Notes: reference/releases.md

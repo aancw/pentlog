@@ -81,6 +81,10 @@ pentlog shell</code></pre>
     <h3>Reference</h3>
     <p>CLI commands, flags, and tool comparisons.</p>
   </a>
+  <a class="mdx-resource-card" href="reference/releases/">
+    <h3>Release Notes</h3>
+    <p>Track what changed in v0.18.0 web dashboard and recent versions.</p>
+  </a>
 </div>
 
 <div class="mdx-footnote">

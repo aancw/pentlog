@@ -80,6 +80,19 @@ Shows:
 - Statistical breakdowns
 - Activity timeline
 
+## Web Dashboard (v0.18.0)
+
+For browser-based operations and faster cross-workflow navigation:
+
+```bash
+pentlog web
+```
+
+Use the web dashboard when you want:
+- Active context and session-state visibility at a glance
+- Quick links into Sessions, Search, Reports, and Archives
+- Dark-mode optimized UI for longer analysis sessions
+
 ## Search Scope
 
 PentLog searches across:

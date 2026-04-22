@@ -2,7 +2,37 @@
 
 All notable changes to this project will be documented in this file.
 
-## [v0.17.0] - Unreleased
+## [v0.18.0] - 2026-04-22
+### Added
+- **Web Dashboard Mission Control**: Reworked browser dashboard surface for faster operational visibility
+  - New at-a-glance layout for active context, session health, findings, and artifact readiness
+  - Workflow quick actions linking directly to sessions, search, reports, and archives
+- **Unified Dashboard API**: New `GET /api/dashboard/overview` endpoint
+  - Consolidates stats, activity, clients, context, and artifact summary into one payload
+- **Scoped Web Flow Prefill**: URL-based prefill support for web pages
+  - Sessions page accepts `client`, `phase`, `state`, `tag`, and `q`
+  - Search page accepts `q`, `regex`, `from`, `to`, and `limit`
+  - Reports page accepts `client`, `engagement`, and `phase`
+- **Dashboard Test Coverage**
+  - Added handler tests for dashboard overview aggregation contract
+  - Added session hydration tests for state/target fields
+
+### Changed
+- **Web Information Architecture**: Dashboard sections reordered to prioritize operational status before detail panels
+- **Accessibility Improvements**:
+  - Added skip-to-content link and stronger keyboard focus visibility
+  - Improved active navigation semantics with `aria-current`
+- **Dark/Light Theme Cohesion**:
+  - Refined theme tokens for state blocks, secondary controls, and stat-card gradients
+  - Added subtle dashboard section entrance animation for improved hierarchy
+
+### Fixed
+- **Dark Mode Contrast**: Resolved low-contrast empty/loading state text in the web dashboard (including live-share empty state)
+- **Session State Reliability**:
+  - `logs.ListSessions` and `logs.GetSession` now consistently hydrate `state`, `last_sync_at`, `target`, and `target_ip`
+  - Improves reliability of state-based filtering and status rendering across web and API consumers
+
+## [v0.17.0] - 2026-04-04
 ### Added
 - **Target Management**: New `pentlog target` command for multi-target engagements
   - Add/list/switch/remove/clear targets within the active engagement

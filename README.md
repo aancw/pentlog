@@ -73,6 +73,7 @@ After 5 minutes you get:
 | **AI Analysis** | Summarize findings with Google Gemini or Ollama (local LLM) |
 | **Timeline Extraction** | Interactive timeline browser to reconstruct attack sequences |
 | **Notes & Bookmarks** | Add timestamped annotations to sessions for later review |
+| **Web Dashboard** | Browser-based dashboard for context status, session health, findings, and artifact workflows |
 | **AES-256 Encryption** | Password-protected encrypted archives for secure client delivery |
 | **Crash Recovery** | Protect evidence from SSH disconnects, OOM kills, unexpected crashes |
 
@@ -126,6 +127,7 @@ pentlog import archive.zip  # Restore archived sessions
 ```bash
 pentlog analyze report.md   # AI analysis of your report
 pentlog shell --share       # Live share session via browser
+pentlog web                 # Start web dashboard (default http://localhost:8080)
 pentlog serve               # HTTP server for HTML reports with GIF players
 pentlog gif session.tty     # Convert session to animated GIF
 ```
@@ -148,6 +150,7 @@ pentlog gif session.tty     # Convert session to animated GIF
 | `search` | Search command history across all sessions (Regex & Boolean) |
 | `timeline` | Interactive browser for command timeline extraction |
 | `dashboard` | Show an interactive dashboard of your pentest activity |
+| `web` | Start browser-based web dashboard server |
 | `note` | Manage session notes and bookmarks |
 | **Reporting** ||
 | `export` | Export commands for a specific phase (Markdown/HTML) |
