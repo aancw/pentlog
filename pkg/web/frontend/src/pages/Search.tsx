@@ -1,16 +1,23 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Search as SearchIcon } from 'lucide-react'
+import { useSearchParams } from 'react-router-dom'
 import { api } from '../hooks/useApi'
 import type { SearchResult } from '../lib/api'
 
 export default function SearchPage() {
-  const [query, setQuery] = useState('')
-  const [regex, setRegex] = useState(false)
-  const [from, setFrom] = useState('')
-  const [to, setTo] = useState('')
-  const [limit, setLimit] = useState(100)
+  const [searchParams] = useSearchParams()
+  const scopedSearch = searchParams.toString()
+  const [query, setQuery] = useState(() => searchParams.get('q') ?? '')
+  const [regex, setRegex] = useState(() => searchParams.get('regex') === 'true')
+  const [from, setFrom] = useState(() => searchParams.get('from') ?? '')
+  const [to, setTo] = useState(() => searchParams.get('to') ?? '')
+  const [limit, setLimit] = useState(() => {
+    const raw = Number(searchParams.get('limit') ?? 100)
+    if (!Number.isFinite(raw) || raw <= 0) return 100
+    return Math.min(500, raw)
+  })
   const [submitted, setSubmitted] = useState<Record<string, string | number | boolean> | null>(null)
 
   const searchQuery = useQuery({
@@ -28,6 +35,36 @@ export default function SearchPage() {
     }
     return Array.from(groups.entries())
   }, [searchQuery.data])
+
+  useEffect(() => {
+    const params = new URLSearchParams(scopedSearch)
+    const nextQuery = params.get('q') ?? ''
+    const nextRegex = params.get('regex') === 'true'
+    const nextFrom = params.get('from') ?? ''
+    const nextTo = params.get('to') ?? ''
+    const rawLimit = Number(params.get('limit') ?? 100)
+    const nextLimit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(500, rawLimit) : 100
+
+    setQuery(nextQuery)
+    setRegex(nextRegex)
+    setFrom(nextFrom)
+    setTo(nextTo)
+    setLimit(nextLimit)
+
+    if (nextQuery.trim() === '') {
+      setSubmitted(null)
+      return
+    }
+
+    const next: Record<string, string | number | boolean> = {
+      q: nextQuery.trim(),
+      regex: nextRegex,
+      limit: nextLimit,
+    }
+    if (nextFrom) next.from = nextFrom
+    if (nextTo) next.to = nextTo
+    setSubmitted(next)
+  }, [scopedSearch])
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault()

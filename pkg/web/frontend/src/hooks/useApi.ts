@@ -8,6 +8,13 @@ export function useDashboardStats() {
   })
 }
 
+export function useDashboardOverview() {
+  return useQuery({
+    queryKey: ['dashboard', 'overview'],
+    queryFn: api.dashboard.overview,
+  })
+}
+
 export function useDashboardActivity() {
   return useQuery({
     queryKey: ['dashboard', 'activity'],
@@ -182,6 +189,7 @@ export type {
   ArchiveRecord,
   ContextEntry,
   DashboardStats,
+  DashboardOverview,
   RecoveryStatus,
   ReportRecord,
   ReportGenerateJob,

@@ -1,5 +1,5 @@
-import { useDeferredValue, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useDeferredValue, useEffect, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Eye, Search, Trash2 } from 'lucide-react'
 import { formatDate, formatListLabel } from '../lib/api'
 import { useSessionTags, useSessions } from '../hooks/useApi'
@@ -10,12 +10,14 @@ const phaseOptions = ['recon', 'enumeration', 'initial-access', 'exploitation', 
 const stateOptions = ['completed', 'active', 'crashed', 'paused']
 
 export default function Sessions() {
+  const [searchParams] = useSearchParams()
+  const urlFilters = searchParams.toString()
   const [page, setPage] = useState(1)
-  const [query, setQuery] = useState('')
-  const [client, setClient] = useState('')
-  const [phase, setPhase] = useState('')
-  const [state, setState] = useState('')
-  const [tag, setTag] = useState('')
+  const [query, setQuery] = useState(() => searchParams.get('q') ?? '')
+  const [client, setClient] = useState(() => searchParams.get('client') ?? '')
+  const [phase, setPhase] = useState(() => searchParams.get('phase') ?? '')
+  const [state, setState] = useState(() => searchParams.get('state') ?? '')
+  const [tag, setTag] = useState(() => searchParams.get('tag') ?? '')
   const deferredQuery = useDeferredValue(query)
   const deferredClient = useDeferredValue(client)
   const deferredPhase = useDeferredValue(phase)
@@ -36,6 +38,16 @@ export default function Sessions() {
   const total = data?.total ?? 0
   const sessions = data?.sessions ?? []
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+
+  useEffect(() => {
+    const params = new URLSearchParams(urlFilters)
+    setQuery(params.get('q') ?? '')
+    setClient(params.get('client') ?? '')
+    setPhase(params.get('phase') ?? '')
+    setState(params.get('state') ?? '')
+    setTag(params.get('tag') ?? '')
+    setPage(1)
+  }, [urlFilters])
 
   async function handleDelete(id: number) {
     if (!window.confirm(`Delete session #${id}?`)) {

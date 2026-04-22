@@ -61,6 +61,10 @@ export default function Layout({ children }: LayoutProps) {
 
   return (
     <div className="app-shell">
+      <a className="skip-link" href="#main-content">
+        Skip to content
+      </a>
+
       <aside className={`sidebar ${mobileOpen ? 'sidebar-open' : ''}`}>
         <div className="sidebar-header">
           <div className="brand-mark">
@@ -98,12 +102,13 @@ export default function Layout({ children }: LayoutProps) {
         <nav className="sidebar-nav">
           {navItems.map((item) => {
             const Icon = item.icon
-            const isActive = location.pathname === item.path
+            const isActive = item.path === '/' ? location.pathname === '/' : location.pathname.startsWith(item.path)
             return (
               <Link
                 key={item.path}
                 to={item.path}
                 className={isActive ? 'nav-link active' : 'nav-link'}
+                aria-current={isActive ? 'page' : undefined}
                 onClick={() => setMobileOpen(false)}
               >
                 <Icon size={16} />
@@ -124,7 +129,7 @@ export default function Layout({ children }: LayoutProps) {
 
       {mobileOpen && <button className="sidebar-backdrop" onClick={() => setMobileOpen(false)} aria-label="Close navigation" />}
 
-      <main className="main-shell">
+      <main className="main-shell" id="main-content" tabIndex={-1}>
         <header className="topbar">
           <div>
             <div className="eyebrow">Workspace</div>

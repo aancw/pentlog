@@ -80,7 +80,7 @@ func ListSessionsPaginated(limit, offset int) ([]Session, error) {
 		}
 	}
 
-	query := "SELECT id, client, engagement, scope, operator, phase, timestamp, filename, relative_path, size FROM sessions ORDER BY timestamp DESC"
+	query := "SELECT id, client, engagement, scope, operator, phase, timestamp, filename, relative_path, size, state, last_sync_at, target, target_ip FROM sessions ORDER BY timestamp DESC"
 	var args []interface{}
 
 	if limit >= 0 {
@@ -101,10 +101,11 @@ func ListSessionsPaginated(limit, offset int) ([]Session, error) {
 	for rows.Next() {
 		var s Session
 		var client, engagement, scope, operator, phase, timestamp, filename, relPath string
+		var state, lastSyncAt, target, targetIP sql.NullString
 		var size int64
 		var id int
 
-		if err := rows.Scan(&id, &client, &engagement, &scope, &operator, &phase, &timestamp, &filename, &relPath, &size); err != nil {
+		if err := rows.Scan(&id, &client, &engagement, &scope, &operator, &phase, &timestamp, &filename, &relPath, &size, &state, &lastSyncAt, &target, &targetIP); err != nil {
 			continue
 		}
 
@@ -119,8 +120,17 @@ func ListSessionsPaginated(limit, offset int) ([]Session, error) {
 			Scope:      scope,
 			Operator:   operator,
 			Phase:      phase,
+			Target:     target.String,
+			TargetIP:   targetIP.String,
 			Timestamp:  timestamp,
 		}
+		s.State = SessionStateCompleted
+		if state.Valid {
+			if cleaned := strings.TrimSpace(state.String); cleaned != "" {
+				s.State = SessionState(cleaned)
+			}
+		}
+		s.LastSyncAt = lastSyncAt.String
 
 		s.MetaPath = strings.Replace(s.Path, ".tty", ".json", 1)
 		s.NotesPath = strings.Replace(s.Path, ".tty", ".notes.json", 1)
@@ -146,11 +156,12 @@ func GetSession(id int) (*Session, error) {
 
 	var s Session
 	var client, engagement, scope, operator, phase, timestamp, filename, relPath string
+	var state, lastSyncAt, target, targetIP sql.NullString
 	var size int64
 
-	row := database.QueryRow("SELECT client, engagement, scope, operator, phase, timestamp, filename, relative_path, size FROM sessions WHERE id = ?", id)
+	row := database.QueryRow("SELECT client, engagement, scope, operator, phase, timestamp, filename, relative_path, size, state, last_sync_at, target, target_ip FROM sessions WHERE id = ?", id)
 
-	if err := row.Scan(&client, &engagement, &scope, &operator, &phase, &timestamp, &filename, &relPath, &size); err != nil {
+	if err := row.Scan(&client, &engagement, &scope, &operator, &phase, &timestamp, &filename, &relPath, &size, &state, &lastSyncAt, &target, &targetIP); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("session ID %d not found", id)
 		}
@@ -170,8 +181,17 @@ func GetSession(id int) (*Session, error) {
 		Scope:      scope,
 		Operator:   operator,
 		Phase:      phase,
+		Target:     target.String,
+		TargetIP:   targetIP.String,
 		Timestamp:  timestamp,
 	}
+	s.State = SessionStateCompleted
+	if state.Valid {
+		if cleaned := strings.TrimSpace(state.String); cleaned != "" {
+			s.State = SessionState(cleaned)
+		}
+	}
+	s.LastSyncAt = lastSyncAt.String
 	s.MetaPath = strings.Replace(s.Path, ".tty", ".json", 1)
 	s.NotesPath = strings.Replace(s.Path, ".tty", ".notes.json", 1)
 

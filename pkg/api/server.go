@@ -196,6 +196,7 @@ func (s *Server) Start() error {
 		fmt.Printf("\n PentLog Web Dashboard running at http://localhost:%d\n\n", s.Port)
 		fmt.Println(" API endpoints:")
 		fmt.Println("   GET  /api/health")
+		fmt.Println("   GET  /api/dashboard/overview")
 		fmt.Println("   GET  /api/dashboard/stats")
 		fmt.Println("   GET  /api/dashboard/activity")
 		fmt.Println("   GET  /api/sessions")

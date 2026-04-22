@@ -1,19 +1,22 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { ExternalLink, FileCode2, FileText } from 'lucide-react'
+import { useSearchParams } from 'react-router-dom'
 import { formatDate, formatDuration } from '../lib/api'
 import { api } from '../hooks/useApi'
 import { useCurrentContext, useReportJob, useReports, useActiveReportJob, useDashboardClients, useDashboardEngagements, useDashboardPhases } from '../hooks/useApi'
 
 export default function Reports() {
   const queryClient = useQueryClient()
+  const [searchParams] = useSearchParams()
+  const scopedFilters = searchParams.toString()
   const { data, isLoading, refetch } = useReports()
   const contextQuery = useCurrentContext()
   const clientsQuery = useDashboardClients()
 
-  const [client, setClient] = useState('')
-  const [engagement, setEngagement] = useState('')
-  const [phase, setPhase] = useState('')
+  const [client, setClient] = useState(() => searchParams.get('client') ?? '')
+  const [engagement, setEngagement] = useState(() => searchParams.get('engagement') ?? '')
+  const [phase, setPhase] = useState(() => searchParams.get('phase') ?? '')
   const [format, setFormat] = useState<'html' | 'md'>('html')
   const [includeGifs, setIncludeGifs] = useState(false)
   const [gifResolution, setGifResolution] = useState<'720p' | '1080p'>('720p')
@@ -35,21 +38,19 @@ export default function Reports() {
   const phases = phasesQuery.data?.phases ?? []
 
   useEffect(() => {
+    const params = new URLSearchParams(scopedFilters)
+    setClient(params.get('client') ?? '')
+    setEngagement(params.get('engagement') ?? '')
+    setPhase(params.get('phase') ?? '')
+  }, [scopedFilters])
+
+  useEffect(() => {
     if (contextQuery.data?.context && !client) {
       setClient(contextQuery.data.context.client ?? '')
       setEngagement(contextQuery.data.context.engagement ?? '')
       setPhase(contextQuery.data.context.phase ?? '')
     }
   }, [contextQuery.data, client])
-
-  useEffect(() => {
-    setEngagement('')
-    setPhase('')
-  }, [client])
-
-  useEffect(() => {
-    setPhase('')
-  }, [engagement])
 
   useEffect(() => {
     if (format !== 'html') {
@@ -133,7 +134,11 @@ export default function Reports() {
           <div className="form-grid">
             <label className="field">
               <span>Client</span>
-              <select value={client} onChange={(event) => setClient(event.target.value)}>
+              <select value={client} onChange={(event) => {
+                setClient(event.target.value)
+                setEngagement('')
+                setPhase('')
+              }}>
                 <option value="">Select client</option>
                 {clients.map((c) => (
                   <option key={c.name} value={c.name}>{c.name}</option>
@@ -142,7 +147,10 @@ export default function Reports() {
             </label>
             <label className="field">
               <span>Engagement (optional)</span>
-              <select value={engagement} onChange={(event) => setEngagement(event.target.value)} disabled={!client}>
+              <select value={engagement} onChange={(event) => {
+                setEngagement(event.target.value)
+                setPhase('')
+              }} disabled={!client}>
                 <option value="">All engagements</option>
                 {engagements.map((e) => (
                   <option key={e.name} value={e.name}>{e.name}</option>

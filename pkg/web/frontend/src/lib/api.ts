@@ -8,6 +8,31 @@ export interface DashboardStats {
   total_vulns: number
   phase_counts: Record<string, number>
   severity_counts: Record<string, number>
+  state_counts?: Record<string, number>
+  last_activity?: string
+}
+
+export interface DashboardArtifactSummary {
+  name: string
+  client: string
+  relative_path: string
+  size: number
+  size_human: string
+  mod_time: string
+  url: string
+}
+
+export interface DashboardOverview {
+  stats: DashboardStats
+  activity: ActivityResponse
+  clients: ClientSummary[]
+  context: ContextResponse
+  artifacts: {
+    reports_total: number
+    archives_total: number
+    latest_report?: DashboardArtifactSummary | null
+    latest_archive?: DashboardArtifactSummary | null
+  }
 }
 
 export interface SessionMetadata {
@@ -284,6 +309,7 @@ export function formatListLabel(label: string) {
 
 export const api = {
   dashboard: {
+    overview: () => fetchJson<DashboardOverview>('/api/dashboard/overview'),
     stats: () => fetchJson<DashboardStats>('/api/dashboard/stats'),
     activity: () => fetchJson<ActivityResponse>('/api/dashboard/activity'),
     clients: () => fetchJson<{ clients: ClientSummary[] }>('/api/dashboard/clients'),

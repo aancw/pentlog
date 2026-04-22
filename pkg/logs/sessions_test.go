@@ -123,3 +123,71 @@ func TestAppendNotePermissions(t *testing.T) {
 		t.Fatalf("expected note permissions 0600, got %#o", got)
 	}
 }
+
+func TestListAndGetSessionHydratesStateAndTarget(t *testing.T) {
+	config.ResetManagerForTesting()
+	defer config.ResetManagerForTesting()
+	defer db.CloseDB()
+
+	tmpDir := t.TempDir()
+	os.Setenv("PENTLOG_TEST_HOME", tmpDir)
+	defer os.Unsetenv("PENTLOG_TEST_HOME")
+
+	mgr := config.Manager()
+	logsDir := mgr.GetPaths().LogsDir
+	sessionDir := filepath.Join(logsDir, "acme", "q2", "exploit")
+	if err := os.MkdirAll(sessionDir, 0700); err != nil {
+		t.Fatalf("mkdir session dir: %v", err)
+	}
+
+	ttyPath := filepath.Join(sessionDir, "manual-tester-20260422-120000.tty")
+	if err := os.WriteFile(ttyPath, []byte("session"), 0600); err != nil {
+		t.Fatalf("write tty file: %v", err)
+	}
+
+	meta := SessionMetadata{
+		Client:     "ACME",
+		Engagement: "Q2",
+		Scope:      "Internal",
+		Operator:   "tester",
+		Phase:      "exploit",
+		Target:     "dc01",
+		TargetIP:   "10.10.10.10",
+		Timestamp:  time.Now().Format(time.RFC3339),
+	}
+
+	id, err := AddSessionToDBWithState(meta, ttyPath, SessionStatePaused)
+	if err != nil {
+		t.Fatalf("add session to db: %v", err)
+	}
+
+	sessions, err := ListSessions()
+	if err != nil {
+		t.Fatalf("list sessions: %v", err)
+	}
+	if len(sessions) != 1 {
+		t.Fatalf("expected 1 session, got %d", len(sessions))
+	}
+
+	got := sessions[0]
+	if got.State != SessionStatePaused {
+		t.Fatalf("expected state %q, got %q", SessionStatePaused, got.State)
+	}
+	if got.Metadata.Target != meta.Target {
+		t.Fatalf("expected target %q, got %q", meta.Target, got.Metadata.Target)
+	}
+	if got.Metadata.TargetIP != meta.TargetIP {
+		t.Fatalf("expected target_ip %q, got %q", meta.TargetIP, got.Metadata.TargetIP)
+	}
+
+	full, err := GetSession(int(id))
+	if err != nil {
+		t.Fatalf("get session: %v", err)
+	}
+	if full.State != SessionStatePaused {
+		t.Fatalf("expected state %q from GetSession, got %q", SessionStatePaused, full.State)
+	}
+	if full.Metadata.Target != meta.Target || full.Metadata.TargetIP != meta.TargetIP {
+		t.Fatalf("expected target fields to round-trip, got target=%q target_ip=%q", full.Metadata.Target, full.Metadata.TargetIP)
+	}
+}
