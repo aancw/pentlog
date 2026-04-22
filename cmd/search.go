@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"pentlog/pkg/config"
 	"pentlog/pkg/errors"
 	"pentlog/pkg/logs"
 	"pentlog/pkg/search"
@@ -111,44 +112,76 @@ var searchCmd = &cobra.Command{
 			return
 		}
 
-		clientIdx := utils.SelectItem("Select Client", clients)
-		if clientIdx == -1 {
-			return
-		}
-		selectedClient := clients[clientIdx]
-
-		var scopedSessions []logs.Session
-		engagementMap := make(map[string]bool)
-		var engagements []string
-
-		for _, s := range allSessions {
-			if s.Metadata.Client == selectedClient {
-				scopedSessions = append(scopedSessions, s)
-				if s.Metadata.Engagement != "" && !engagementMap[s.Metadata.Engagement] {
-					engagementMap[s.Metadata.Engagement] = true
-					engagements = append(engagements, s.Metadata.Engagement)
+		if ctx, err := config.Manager().LoadContext(); err == nil && ctx.Client != "" {
+			currentEngagement := currentEngagementScope(ctx)
+			currentClient := currentClientScope(ctx)
+			var options []string
+			if hasSessionsForScope(allSessions, currentEngagement) {
+				options = append(options, formatScopeLabel(ctx, false))
+			}
+			if hasSessionsForScope(allSessions, currentClient) {
+				options = append(options, fmt.Sprintf("Current client (%s)", ctx.Client))
+			}
+			if len(options) > 0 {
+				options = append(options, "Select client + engagement")
+				choice := utils.PromptSelect("Search scope", options)
+				if choice == "" {
+					return
+				}
+				switch choice {
+				case formatScopeLabel(ctx, false):
+					scope = filterSessionsByScope(allSessions, currentEngagement)
+				case fmt.Sprintf("Current client (%s)", ctx.Client):
+					scope = filterSessionsByScope(allSessions, currentClient)
 				}
 			}
 		}
 
-		if len(engagements) == 0 {
-			fmt.Println("No engagements found for this client.")
-			return
-		}
-
-		engIdx := utils.SelectItem("Select Engagement", engagements)
-		if engIdx == -1 {
-			return
-		}
-		selectedEngagement := engagements[engIdx]
-
-		var finalScope []logs.Session
-		for _, s := range scopedSessions {
-			if s.Metadata.Engagement == selectedEngagement {
-				finalScope = append(finalScope, s)
+		if len(scope) == 0 {
+			clientIdx := utils.SelectItem("Select Client", clients)
+			if clientIdx == -1 {
+				return
 			}
+			selectedClient := clients[clientIdx]
+
+			var scopedSessions []logs.Session
+			engagementMap := make(map[string]bool)
+			var engagements []string
+
+			for _, s := range allSessions {
+				if s.Metadata.Client == selectedClient {
+					scopedSessions = append(scopedSessions, s)
+					if s.Metadata.Engagement != "" && !engagementMap[s.Metadata.Engagement] {
+						engagementMap[s.Metadata.Engagement] = true
+						engagements = append(engagements, s.Metadata.Engagement)
+					}
+				}
+			}
+
+			if len(engagements) == 0 {
+				fmt.Println("No engagements found for this client.")
+				return
+			}
+
+			engIdx := utils.SelectItem("Select Engagement", engagements)
+			if engIdx == -1 {
+				return
+			}
+			selectedEngagement := engagements[engIdx]
+
+			var finalScope []logs.Session
+			for _, s := range scopedSessions {
+				if s.Metadata.Engagement == selectedEngagement {
+					finalScope = append(finalScope, s)
+				}
+			}
+			scope = finalScope
 		}
-		scope = finalScope
+
+		if len(scope) == 0 {
+			fmt.Println("No sessions found for the selected search scope.")
+			return
+		}
 
 		opts := search.SearchOptions{
 			IsRegex: flagRegex,

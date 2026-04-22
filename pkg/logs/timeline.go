@@ -119,6 +119,8 @@ func isPromptLine(line string) bool {
 	patterns := []string{
 		`┌──\(`,           // Kali prompt header (multi-line prompt start)
 		`└─\$`,            // Kali/custom prompt like "└─$" (ACTUAL command line, not header)
+		`❯\s`,             // Starship/zsh-style prompt with command text
+		`❯\s*$`,           // Starship/zsh-style prompt without command
 		`\$\s*$`,          // Simple $ at end (with optional whitespace)
 		`#\s*$`,           // Root # at end (with optional whitespace)
 		`[a-zA-Z0-9_-]+@`, // user@host pattern
@@ -148,6 +150,19 @@ func extractCommand(line string) string {
 		after = strings.TrimSpace(after)
 
 		// Remove context label like "(pentlog:HTB/recon)" from beginning and end
+		contextRegex := regexp.MustCompile(`^\([^)]+\)\s*|\s*\([^)]+\)$`)
+		after = contextRegex.ReplaceAllString(after, "")
+
+		after = cleanCommandText(after)
+
+		return strings.TrimSpace(after)
+	}
+
+	// Pattern 1b: "❯ command" (common starship/zsh prompt)
+	if idx := strings.LastIndex(cleaned, "❯"); idx != -1 {
+		after := cleaned[idx+len("❯"):]
+		after = strings.TrimSpace(after)
+
 		contextRegex := regexp.MustCompile(`^\([^)]+\)\s*|\s*\([^)]+\)$`)
 		after = contextRegex.ReplaceAllString(after, "")
 
@@ -302,6 +317,8 @@ func ParseTimeline(ttyPath string) (*Timeline, error) {
 			if currentCommand != nil {
 				currentCommand.Output = strings.TrimSpace(strings.Join(outputLines, "\n"))
 				timeline.Commands = append(timeline.Commands, *currentCommand)
+				currentCommand = nil
+				outputLines = nil
 			}
 
 			cmd := extractCommand(line)

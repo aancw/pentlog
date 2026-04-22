@@ -2,11 +2,16 @@ package vulns
 
 import (
 	"os"
+	"path/filepath"
+	"pentlog/pkg/config"
 	"testing"
 	"time"
 )
 
 func TestList_Aggregation(t *testing.T) {
+	config.ResetManagerForTesting()
+	defer config.ResetManagerForTesting()
+
 	// Setup temporary directory structure
 	tmpDir, err := os.MkdirTemp("", "pentlog_test")
 	if err != nil {
@@ -72,5 +77,51 @@ func TestList_Aggregation(t *testing.T) {
 
 	if !foundV1 || !foundV2 {
 		t.Errorf("Failed to find all vulns. FoundV1: %v, FoundV2: %v", foundV1, foundV2)
+	}
+}
+
+func TestSavePermissions(t *testing.T) {
+	config.ResetManagerForTesting()
+	defer config.ResetManagerForTesting()
+
+	tmpDir, err := os.MkdirTemp("", "pentlog_test")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	os.Setenv("PENTLOG_TEST_HOME", tmpDir)
+	defer os.Unsetenv("PENTLOG_TEST_HOME")
+
+	mgr := NewManager("ClientA", "EngA")
+	if err := mgr.Save(Vuln{
+		ID:        "vuln-001",
+		Title:     "Sensitive file disclosure",
+		Severity:  SeverityHigh,
+		Status:    StatusOpen,
+		CreatedAt: time.Now(),
+	}); err != nil {
+		t.Fatalf("Save() failed: %v", err)
+	}
+
+	vulnFile, err := mgr.GetVulnsFile()
+	if err != nil {
+		t.Fatalf("GetVulnsFile() failed: %v", err)
+	}
+
+	info, err := os.Stat(vulnFile)
+	if err != nil {
+		t.Fatalf("Failed to stat vuln file: %v", err)
+	}
+	if got := info.Mode().Perm(); got != 0600 {
+		t.Fatalf("expected vuln file permissions 0600, got %#o", got)
+	}
+
+	dirInfo, err := os.Stat(filepath.Dir(vulnFile))
+	if err != nil {
+		t.Fatalf("Failed to stat vuln dir: %v", err)
+	}
+	if got := dirInfo.Mode().Perm(); got != 0700 {
+		t.Fatalf("expected vuln dir permissions 0700, got %#o", got)
 	}
 }
