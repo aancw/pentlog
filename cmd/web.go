@@ -16,9 +16,10 @@ import (
 )
 
 var (
-	webPort int
-	webBind string
-	webOpen bool
+	webPort    int
+	webBind    string
+	webOpen    bool
+	webRebuild bool
 )
 
 var webCmd = &cobra.Command{
@@ -42,9 +43,15 @@ Examples:
 	Run: func(cmd *cobra.Command, args []string) {
 		handlers.Version = Version
 
-		if distDir, err := rebuildWebAssets(); err != nil {
-			fmt.Printf("Warning: failed to rebuild web assets: %v\n", err)
-		} else if distDir != "" {
+		distDir, distErr := findBuiltWebAssets()
+		if webRebuild || distErr != nil {
+			if rebuiltDir, err := rebuildWebAssets(); err != nil {
+				fmt.Printf("Warning: failed to rebuild web assets: %v\n", err)
+			} else {
+				distDir = rebuiltDir
+			}
+		}
+		if distDir != "" {
 			api.SetStaticDir(distDir)
 		}
 
@@ -74,7 +81,23 @@ func init() {
 	webCmd.Flags().IntVarP(&webPort, "port", "p", 8080, "Port to listen on")
 	webCmd.Flags().StringVar(&webBind, "bind", "127.0.0.1", "Address to bind to")
 	webCmd.Flags().BoolVarP(&webOpen, "open", "o", false, "Open in browser after starting")
+	webCmd.Flags().BoolVar(&webRebuild, "rebuild", false, "Rebuild frontend assets before starting the web server")
 	rootCmd.AddCommand(webCmd)
+}
+
+func findBuiltWebAssets() (string, error) {
+	frontendDir, err := findFrontendDir()
+	if err != nil {
+		return "", err
+	}
+
+	distDir := filepath.Clean(filepath.Join(frontendDir, "..", "dist"))
+	indexPath := filepath.Join(distDir, "index.html")
+	if info, err := os.Stat(indexPath); err == nil && !info.IsDir() {
+		return distDir, nil
+	}
+
+	return "", fmt.Errorf("built frontend assets not found")
 }
 
 func rebuildWebAssets() (string, error) {
