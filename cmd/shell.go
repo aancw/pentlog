@@ -30,9 +30,11 @@ import (
 const heartbeatInterval = 30 * time.Second
 
 var (
-	shellShare     bool
-	shellSharePort int
-	shellShareBind string
+	shellShare          bool
+	shellSharePort      int
+	shellShareBind      string
+	shellPhaseOverride  string
+	shellTargetOverride string
 )
 
 var shellCmd = &cobra.Command{
@@ -52,6 +54,16 @@ var shellCmd = &cobra.Command{
 		ctx, err := mgr.LoadContext()
 		if err != nil {
 			errors.NoContext().Fatal()
+		}
+
+		ctx, err = applyShellContextOverrides(mgr, ctx)
+		if err != nil {
+			errors.FromError(errors.InvalidContext, "failed to prepare shell context", err).Fatal()
+		}
+
+		if !confirmShellContext(mgr, ctx) {
+			fmt.Println("Shell launch cancelled.")
+			return
 		}
 
 		crashed, err := logs.GetCrashedSessionsForContext(ctx.Client, ctx.Engagement, ctx.Phase)
@@ -727,6 +739,8 @@ func init() {
 	shellCmd.Flags().BoolVar(&shellShare, "share", false, "Enable live sharing via browser")
 	shellCmd.Flags().IntVar(&shellSharePort, "share-port", 0, "Port for share server (0 = random)")
 	shellCmd.Flags().StringVar(&shellShareBind, "share-bind", "127.0.0.1", "Bind address for share server")
+	shellCmd.Flags().StringVar(&shellPhaseOverride, "phase", "", "Override the current phase for this shell session")
+	shellCmd.Flags().StringVar(&shellTargetOverride, "target", "", "Override the current target for this shell session")
 	rootCmd.AddCommand(shellCmd)
 }
 
@@ -757,6 +771,79 @@ func runHeartbeat(ctx context.Context, sessionID int64, logFilePath string) {
 			}
 		}
 	}
+}
+
+func applyShellContextOverrides(mgr *config.ConfigManager, ctx *config.ContextData) (*config.ContextData, error) {
+	updated := *ctx
+	changed := false
+
+	if shellPhaseOverride != "" && !strings.EqualFold(strings.TrimSpace(updated.Phase), strings.TrimSpace(shellPhaseOverride)) {
+		updated.Phase = strings.TrimSpace(shellPhaseOverride)
+		changed = true
+	}
+
+	if shellTargetOverride != "" && !strings.EqualFold(strings.TrimSpace(updated.Target), strings.TrimSpace(shellTargetOverride)) {
+		targets, err := mgr.LoadTargets()
+		if err != nil {
+			return nil, fmt.Errorf("load targets: %w", err)
+		}
+
+		var matched *config.Target
+		for _, target := range targets.Targets {
+			if strings.EqualFold(target.Name, shellTargetOverride) {
+				targetCopy := target
+				matched = &targetCopy
+				break
+			}
+		}
+		if matched == nil {
+			return nil, fmt.Errorf("target %q not found; run 'pentlog target list' to review available targets", shellTargetOverride)
+		}
+
+		updated.Target = matched.Name
+		updated.TargetIP = matched.IP
+		changed = true
+	}
+
+	if changed {
+		updated.Timestamp = time.Now().Format(time.RFC3339)
+		if err := mgr.SaveContext(&updated); err != nil {
+			return nil, err
+		}
+	}
+
+	return &updated, nil
+}
+
+func confirmShellContext(mgr *config.ConfigManager, ctx *config.ContextData) bool {
+	var warnings []string
+
+	if ctx.Timestamp != "" {
+		if ts, err := time.Parse(time.RFC3339, ctx.Timestamp); err == nil && time.Since(ts) > 8*time.Hour {
+			warnings = append(warnings, fmt.Sprintf("Context is %s old.", time.Since(ts).Round(time.Minute)))
+		}
+	}
+
+	if targets, err := mgr.LoadTargets(); err == nil && len(targets.Targets) > 1 && strings.TrimSpace(ctx.Target) == "" {
+		warnings = append(warnings, "Multiple targets are configured, but no active target is selected.")
+	}
+
+	if len(warnings) == 0 {
+		return true
+	}
+
+	fmt.Println()
+	fmt.Println("Context guardrails:")
+	for _, warning := range warnings {
+		fmt.Printf("  - %s\n", warning)
+	}
+	fmt.Printf("  - Active scope: %s / %s / %s\n", ctx.Client, ctx.Engagement, ctx.Phase)
+	if ctx.Target != "" {
+		fmt.Printf("  - Active target: %s (%s)\n", ctx.Target, ctx.TargetIP)
+	}
+	fmt.Println()
+
+	return utils.PromptSelect("Continue with this shell context?", []string{"Yes", "No"}) == "Yes"
 }
 
 func updateSessionOnExit(sessionID int64, logFilePath string, normalExit bool) {

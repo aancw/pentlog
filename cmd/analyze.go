@@ -3,8 +3,6 @@ package cmd
 import (
 	"fmt"
 	"io/ioutil"
-	"os"
-	"pentlog/pkg/ai"
 	"pentlog/pkg/config"
 	"pentlog/pkg/utils"
 	"strings"
@@ -26,38 +24,15 @@ var analyzeCmd = &cobra.Command{
 		mgr := config.Manager()
 		aiConfigPath := mgr.GetPaths().AIConfigFile
 
-		if _, err := os.Stat(aiConfigPath); os.IsNotExist(err) {
-			idx := utils.SelectItem("AI config not found. Create one?", []string{"Yes", "No"})
-			if idx != 0 {
+		if err := ensureAIConfigInteractive(aiConfigPath); err != nil {
+			if err == errAIConfigSetupCancelled {
 				return nil
 			}
-
-			providerIdx := utils.SelectItem("Select Provider", []string{"Gemini", "Ollama"})
-			var content string
-			if providerIdx == 0 { // Gemini
-				apiKey := utils.PromptString("Enter Gemini API Key", "")
-				content = fmt.Sprintf("provider: \"gemini\"\ngemini:\n  api_key: \"%s\"\n", apiKey)
-			} else if providerIdx == 1 { // Ollama
-				model := utils.PromptString("Enter Ollama Model", "llama3:8b")
-				url := utils.PromptString("Enter Ollama URL", "http://localhost:11434")
-				content = fmt.Sprintf("provider: \"ollama\"\nollama:\n  model: \"%s\"\n  url: \"%s\"\n", model, url)
-			} else {
-				return nil
-			}
-
-			if err := utils.WritePrivateFile(aiConfigPath, []byte(content)); err != nil {
-				return fmt.Errorf("failed to create config file: %w", err)
-			}
-			fmt.Printf("AI config created at %s\n", aiConfigPath)
+			return err
 		}
 
 		spin := utils.NewSpinner("Analyzing report with AI...")
 		spin.Start()
-		cfg, err := ai.LoadConfig(aiConfigPath)
-		if err != nil {
-			spin.Stop()
-			return fmt.Errorf("failed to load config: %w", err)
-		}
 
 		reportData, err := ioutil.ReadFile(reportFile)
 		if err != nil {
@@ -65,23 +40,10 @@ var analyzeCmd = &cobra.Command{
 			return fmt.Errorf("failed to read report file: %w", err)
 		}
 
-		var analyzer ai.AIAnalyzer
-		switch cfg.Provider {
-		case "gemini":
-			analyzer, err = ai.NewGeminiClient(cfg)
-			if err != nil {
-				spin.Stop()
-				return fmt.Errorf("failed to create gemini client: %w", err)
-			}
-		case "ollama":
-			analyzer, err = ai.NewOllamaClient(cfg)
-			if err != nil {
-				spin.Stop()
-				return fmt.Errorf("failed to create ollama client: %w", err)
-			}
-		default:
+		analyzer, err := newAnalyzerFromConfig(aiConfigPath)
+		if err != nil {
 			spin.Stop()
-			return fmt.Errorf("unknown AI provider: %s", cfg.Provider)
+			return err
 		}
 
 		analysis, err := analyzer.Analyze(string(reportData), !fullReport)
