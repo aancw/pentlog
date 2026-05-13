@@ -73,6 +73,10 @@ func TestListSessions(t *testing.T) {
 	}
 
 	// Test ListSessions
+	if err := SyncSessions(); err != nil {
+		t.Fatalf("SyncSessions failed: %v", err)
+	}
+
 	sessions, err := ListSessions()
 	if err != nil {
 		t.Fatalf("ListSessions failed: %v", err)

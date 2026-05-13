@@ -50,6 +50,11 @@ Features include automated hashing (integrity), markdown export, and full shell 
 			errors.DatabaseErr("init", err).Print()
 		}
 
+		if needed, err := logs.NeedsSessionSync(); err == nil && needed && cmd.Name() != "setup" && cmd.Name() != "sync" {
+			fmt.Fprintln(os.Stderr, "\nℹ️  Legacy session files still need to be imported into the database.")
+			fmt.Fprintln(os.Stderr, "   Run 'pentlog sessions sync' to complete the one-time migration.")
+		}
+
 		checkForCrashedSessions(cmd.Name())
 	},
 	Run: func(cmd *cobra.Command, args []string) {

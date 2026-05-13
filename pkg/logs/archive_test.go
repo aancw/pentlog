@@ -53,6 +53,10 @@ func TestArchiveSessions(t *testing.T) {
 	os.WriteFile(timingFile, []byte("timing data"), 0644)
 
 	// Test 1: Archive with Keep (default)
+	if err := SyncSessions(); err != nil {
+		t.Fatalf("SyncSessions failed: %v", err)
+	}
+
 	count, err := ArchiveSessions("testclient", "", "", 0, false, "")
 	if err != nil {
 		t.Fatalf("Archive failed: %v", err)
@@ -204,6 +208,10 @@ func TestArchiveSessionFiltering(t *testing.T) {
 	os.WriteFile(filepath.Join(clientDir2, base2+".tty"), []byte("log"), 0644)
 
 	// Archive ONLY Recon
+	if err := SyncSessions(); err != nil {
+		t.Fatalf("SyncSessions failed: %v", err)
+	}
+
 	count, err := ArchiveSessions("filterclient", "", "recon", 0, true, "")
 	if err != nil {
 		t.Fatalf("Archive failed: %v", err)
@@ -256,6 +264,10 @@ func TestArchiveSessionsEncrypted(t *testing.T) {
 	os.WriteFile(filepath.Join(clientDir, baseName+".json"), metaBytes, 0644)
 
 	// Archive with PASSWORD
+	if err := SyncSessions(); err != nil {
+		t.Fatalf("SyncSessions failed: %v", err)
+	}
+
 	password := "supersecret"
 	count, err := ArchiveSessions("encclient", "", "", 0, false, password)
 	if err != nil {

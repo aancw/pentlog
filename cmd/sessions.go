@@ -28,6 +28,31 @@ var sessionsCmd = &cobra.Command{
 	Long:  `List or delete recorded sessions. Use 'sessions list' to view sessions or 'sessions delete <id>' to remove a session.`,
 }
 
+var sessionsSyncCmd = &cobra.Command{
+	Use:   "sync",
+	Short: "Import legacy session files into the database",
+	Long: `Run the one-time filesystem-to-database sync for sessions.
+
+This is intended for upgrades from older PentLog versions where session files
+already existed on disk before the SQLite session index was populated.`,
+	Run: func(cmd *cobra.Command, args []string) {
+		needsSync, err := logs.NeedsSessionSync()
+		if err != nil {
+			errors.DatabaseErr("check session sync state", err).Fatal()
+		}
+		if !needsSync {
+			fmt.Println("Session database is already in sync.")
+			return
+		}
+
+		if err := logs.SyncSessions(); err != nil {
+			errors.DatabaseErr("sync sessions", err).Fatal()
+		}
+
+		fmt.Println("Session sync completed.")
+	},
+}
+
 var sessionsListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List recorded sessions",
@@ -331,6 +356,7 @@ func init() {
 
 	rootCmd.AddCommand(sessionsCmd)
 	sessionsCmd.AddCommand(sessionsListCmd)
+	sessionsCmd.AddCommand(sessionsSyncCmd)
 	sessionsCmd.AddCommand(sessionsDeleteCmd)
 	sessionsCmd.AddCommand(sessionsTagCmd)
 	sessionsCmd.AddCommand(sessionsListTagsCmd)

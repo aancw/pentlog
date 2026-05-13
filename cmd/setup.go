@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"pentlog/pkg/config"
 	"pentlog/pkg/deps"
+	"pentlog/pkg/logs"
 	"pentlog/pkg/system"
 	"strings"
 
@@ -60,6 +61,15 @@ var setupCmd = &cobra.Command{
 			os.Exit(1)
 		}
 		fmt.Printf("OK (%s)\n", logDir)
+
+		if needsSync, err := logs.NeedsSessionSync(); err == nil && needsSync {
+			fmt.Print("Syncing legacy sessions into the database... ")
+			if err := logs.SyncSessions(); err != nil {
+				fmt.Printf("FAIL\n%v\n", err)
+			} else {
+				fmt.Println("OK")
+			}
+		}
 
 		fmt.Print("Downloading latest templates... ")
 		mgr := config.Manager()

@@ -68,18 +68,6 @@ func ListSessionsPaginated(limit, offset int) ([]Session, error) {
 		return nil, err
 	}
 
-	var migrationDone string
-	err = database.QueryRow("SELECT value FROM schema_info WHERE key = 'legacy_import_complete'").Scan(&migrationDone)
-	if err != nil && err != sql.ErrNoRows {
-		return nil, err
-	}
-
-	if migrationDone != "true" {
-		if err := SyncSessions(); err != nil {
-			return nil, fmt.Errorf("sync failed: %w", err)
-		}
-	}
-
 	query := "SELECT id, client, engagement, scope, operator, phase, timestamp, filename, relative_path, size, state, last_sync_at, target, target_ip FROM sessions ORDER BY timestamp DESC"
 	var args []interface{}
 
@@ -146,6 +134,24 @@ func ListSessionsPaginated(limit, offset int) ([]Session, error) {
 	}
 
 	return sessions, nil
+}
+
+func NeedsSessionSync() (bool, error) {
+	database, err := db.GetDB()
+	if err != nil {
+		return false, err
+	}
+
+	var migrationDone string
+	err = database.QueryRow("SELECT value FROM schema_info WHERE key = 'legacy_import_complete'").Scan(&migrationDone)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return true, nil
+		}
+		return false, err
+	}
+
+	return migrationDone != "true", nil
 }
 
 func GetSession(id int) (*Session, error) {
