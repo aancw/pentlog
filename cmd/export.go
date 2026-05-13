@@ -369,7 +369,7 @@ var exportCmd = &cobra.Command{
 				}
 				reportsBaseDir := mgr.GetPaths().ReportsDir
 				reportDir := filepath.Join(reportsBaseDir, utils.Slugify(selectedClient))
-				if err := os.MkdirAll(reportDir, 0755); err != nil {
+				if err := os.MkdirAll(reportDir, 0700); err != nil {
 					errors.DirErr(reportDir, err).Print()
 					return
 				}
@@ -382,7 +382,7 @@ var exportCmd = &cobra.Command{
 
 				fullPath := filepath.Join(reportDir, filename)
 
-				if err := os.WriteFile(fullPath, []byte(report), 0644); err != nil {
+				if err := utils.WritePrivateFile(fullPath, []byte(report)); err != nil {
 					errors.FileErr(fullPath, err).Print()
 				} else {
 					fmt.Printf("Report saved to %s\n", fullPath)
@@ -407,7 +407,7 @@ var exportCmd = &cobra.Command{
 				}
 				reportsBaseDir := mgr.GetPaths().ReportsDir
 				reportDir := filepath.Join(reportsBaseDir, utils.Slugify(selectedClient))
-				if err := os.MkdirAll(reportDir, 0755); err != nil {
+				if err := os.MkdirAll(reportDir, 0700); err != nil {
 					errors.DirErr(reportDir, err).Print()
 					continue
 				}
@@ -443,7 +443,7 @@ var exportCmd = &cobra.Command{
 					}
 
 					gifsDir := filepath.Join(reportDir, "gifs")
-					if err := os.MkdirAll(gifsDir, 0755); err != nil {
+					if err := os.MkdirAll(gifsDir, 0700); err != nil {
 						errors.DirErr(gifsDir, err).Print()
 					} else {
 						// Check if any GIFs already exist
@@ -525,7 +525,7 @@ var exportCmd = &cobra.Command{
 				}
 				// ----------------------------
 
-				if err := os.WriteFile(fullPath, []byte(htmlReport), 0644); err != nil {
+				if err := utils.WritePrivateFile(fullPath, []byte(htmlReport)); err != nil {
 					errors.FileErr(fullPath, err).Print()
 					return
 				}

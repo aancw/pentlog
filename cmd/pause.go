@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"pentlog/pkg/errors"
+	"pentlog/pkg/utils"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -106,7 +107,7 @@ Use cases:
 		pauseMarker += "═══════════════════════════════════════════════════════════════\r\n\r\n"
 
 		// Append marker to the tty file with proper ttyrec header
-		f, err := os.OpenFile(sessionPath, os.O_APPEND|os.O_WRONLY, 0644)
+		f, err := utils.OpenPrivateFile(sessionPath, os.O_APPEND|os.O_WRONLY)
 		if err != nil {
 			errors.FromError(errors.FileNotFound, "failed to write pause marker", err).
 				AddReason("Could not open session log file for writing").
@@ -123,7 +124,7 @@ Use cases:
 		}
 
 		// Create pause marker file with timestamp
-		if err := os.WriteFile(pauseMarkerFile, []byte(pauseTime.Format(time.RFC3339)), 0644); err != nil {
+		if err := utils.WritePrivateFile(pauseMarkerFile, []byte(pauseTime.Format(time.RFC3339))); err != nil {
 			fmt.Fprintf(os.Stderr, "Warning: Could not create pause marker file: %v\n", err)
 		}
 

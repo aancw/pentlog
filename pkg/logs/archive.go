@@ -78,7 +78,7 @@ func ArchiveSessionsFromList(toArchive []Session, clientName string, deleteOrigi
 
 	mgr := config.Manager()
 	clientArchiveDir := filepath.Join(mgr.GetPaths().ArchiveDir, clientName)
-	if err := os.MkdirAll(clientArchiveDir, 0755); err != nil {
+	if err := os.MkdirAll(clientArchiveDir, 0700); err != nil {
 		return 0, fmt.Errorf("failed to create archive dir: %w", err)
 	}
 
@@ -91,7 +91,7 @@ func archiveZip(toArchive []Session, extraFiles []string, clientArchiveDir, time
 	archiveFilename := fmt.Sprintf("%s.zip", timestamp)
 	archivePath := filepath.Join(clientArchiveDir, archiveFilename)
 
-	file, err := os.Create(archivePath)
+	file, err := utils.CreatePrivateFile(archivePath)
 	if err != nil {
 		return 0, fmt.Errorf("failed to create archive file: %w", err)
 	}

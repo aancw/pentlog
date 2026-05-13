@@ -45,7 +45,7 @@ var analyzeCmd = &cobra.Command{
 				return nil
 			}
 
-			if err := os.WriteFile(aiConfigPath, []byte(content), 0644); err != nil {
+			if err := utils.WritePrivateFile(aiConfigPath, []byte(content)); err != nil {
 				return fmt.Errorf("failed to create config file: %w", err)
 			}
 			fmt.Printf("AI config created at %s\n", aiConfigPath)

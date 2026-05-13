@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"pentlog/pkg/config"
 	"pentlog/pkg/logs"
+	"pentlog/pkg/utils"
 
 	"github.com/spf13/cobra"
 )
@@ -33,7 +34,7 @@ var freezeCmd = &cobra.Command{
 		}
 
 		hashFilePath := filepath.Join(hashesDir, config.HashesFileName)
-		f, err := os.Create(hashFilePath)
+		f, err := utils.CreatePrivateFile(hashFilePath)
 		if err != nil {
 			fmt.Printf("Error creating hash file: %v\n", err)
 			os.Exit(1)
@@ -47,7 +48,7 @@ var freezeCmd = &cobra.Command{
 				fmt.Printf("Warning: could not open %s: %v\n", s.Filename, err)
 				continue
 			}
-			
+
 			if _, err := io.Copy(h, file); err != nil {
 				file.Close()
 				fmt.Printf("Warning: could not hash %s: %v\n", s.Filename, err)
@@ -57,7 +58,7 @@ var freezeCmd = &cobra.Command{
 
 			sum := fmt.Sprintf("%x", h.Sum(nil))
 			line := fmt.Sprintf("%s  %s\n", sum, s.Filename)
-			
+
 			if _, err := f.WriteString(line); err != nil {
 				fmt.Printf("Error writing to hash file: %v\n", err)
 				os.Exit(1)

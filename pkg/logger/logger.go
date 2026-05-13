@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"pentlog/pkg/utils"
 	"runtime"
 	"strings"
 	"sync"
@@ -90,7 +91,7 @@ func SetLogFile(path string) error {
 		fileOutput.Close()
 	}
 
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	f, err := utils.OpenPrivateFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND)
 	if err != nil {
 		return err
 	}

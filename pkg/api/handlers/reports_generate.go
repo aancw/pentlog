@@ -225,7 +225,7 @@ func runReportJob(id string, req reportGenerateRequest, sessions []logs.Session)
 
 	mgr := configManager()
 	reportDir := filepath.Join(mgr.GetPaths().ReportsDir, utils.Slugify(req.Client))
-	if err := os.MkdirAll(reportDir, 0755); err != nil {
+	if err := os.MkdirAll(reportDir, 0700); err != nil {
 		failReportJob(id, fmt.Errorf("failed to prepare report directory: %w", err))
 		return
 	}
@@ -239,7 +239,7 @@ func runReportJob(id string, req reportGenerateRequest, sessions []logs.Session)
 			failReportJob(id, err)
 			return
 		}
-		if err := os.WriteFile(fullPath, []byte(markdownReport), 0644); err != nil {
+		if err := utils.WritePrivateFile(fullPath, []byte(markdownReport)); err != nil {
 			failReportJob(id, fmt.Errorf("failed to write markdown report: %w", err))
 			return
 		}
@@ -256,7 +256,7 @@ func runReportJob(id string, req reportGenerateRequest, sessions []logs.Session)
 	if req.IncludeGIFs {
 		gifPaths = make(map[int]string)
 		gifsDir := filepath.Join(reportDir, "gifs")
-		if err := os.MkdirAll(gifsDir, 0755); err != nil {
+		if err := os.MkdirAll(gifsDir, 0700); err != nil {
 			failReportJob(id, fmt.Errorf("failed to create gifs directory: %w", err))
 			return
 		}
@@ -327,7 +327,7 @@ func runReportJob(id string, req reportGenerateRequest, sessions []logs.Session)
 		return
 	}
 
-	if err := os.WriteFile(fullPath, []byte(htmlReport), 0644); err != nil {
+	if err := utils.WritePrivateFile(fullPath, []byte(htmlReport)); err != nil {
 		failReportJob(id, fmt.Errorf("failed to write html report: %w", err))
 		return
 	}

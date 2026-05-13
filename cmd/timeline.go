@@ -96,7 +96,7 @@ If no session ID is provided, an interactive session selector will be displayed.
 				errors.FromError(errors.Generic, "Error generating JSON", err).Fatal()
 			}
 
-			err = os.WriteFile(outputFile, []byte(jsonOutput), 0644)
+			err = utils.WritePrivateFile(outputFile, []byte(jsonOutput))
 			if err != nil {
 				errors.FileErr(outputFile, err).Fatal()
 			}
@@ -367,7 +367,7 @@ func exportTimeline(timeline *logs.Timeline) {
 		return
 	}
 
-	err = os.WriteFile(filename, []byte(jsonOutput), 0644)
+	err = utils.WritePrivateFile(filename, []byte(jsonOutput))
 	if err != nil {
 		fmt.Printf("Error writing file: %v\n", err)
 		return

@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"pentlog/pkg/config"
+	"pentlog/pkg/utils"
 	"strings"
 	"time"
 
@@ -124,14 +125,14 @@ func ImportFromPentlogArchive(archivePath string, opts ImportOptions) (*ImportRe
 		}
 
 		tempPath := filepath.Join(tempDir, f.Name)
-		if err := os.MkdirAll(filepath.Dir(tempPath), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(tempPath), 0700); err != nil {
 			rc.Close()
 			result.Errors = append(result.Errors, fmt.Sprintf("failed to create dir for %s: %v", f.Name, err))
 			result.SkippedFiles++
 			continue
 		}
 
-		outFile, err := os.Create(tempPath)
+		outFile, err := utils.CreatePrivateFile(tempPath)
 		if err != nil {
 			rc.Close()
 			result.Errors = append(result.Errors, fmt.Sprintf("failed to create temp file for %s: %v", f.Name, err))
@@ -294,7 +295,7 @@ func ImportFromGenericArchive(archivePath string, opts ImportOptions) (*ImportRe
 	defer os.RemoveAll(tempDir)
 
 	targetDir := filepath.Join(logsDir, opts.TargetClient, opts.TargetEngagement, opts.TargetPhase)
-	if err := os.MkdirAll(targetDir, 0755); err != nil {
+	if err := os.MkdirAll(targetDir, 0700); err != nil {
 		return nil, fmt.Errorf("failed to create target directory: %w", err)
 	}
 
@@ -323,14 +324,14 @@ func ImportFromGenericArchive(archivePath string, opts ImportOptions) (*ImportRe
 		}
 
 		tempPath := filepath.Join(tempDir, f.Name)
-		if err := os.MkdirAll(filepath.Dir(tempPath), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(tempPath), 0700); err != nil {
 			rc.Close()
 			result.Errors = append(result.Errors, fmt.Sprintf("failed to create dir for %s: %v", f.Name, err))
 			result.SkippedFiles++
 			continue
 		}
 
-		outFile, err := os.Create(tempPath)
+		outFile, err := utils.CreatePrivateFile(tempPath)
 		if err != nil {
 			rc.Close()
 			result.Errors = append(result.Errors, fmt.Sprintf("failed to create temp file for %s: %v", f.Name, err))
@@ -416,7 +417,9 @@ func ImportFromGenericArchive(archivePath string, opts ImportOptions) (*ImportRe
 		metaPath := strings.TrimSuffix(destPath, ".tty") + ".json"
 		if _, err := os.Stat(metaPath); os.IsNotExist(err) {
 			if metaData, err := json.MarshalIndent(meta, "", "  "); err == nil {
-				os.WriteFile(metaPath, metaData, 0644)
+				if writeErr := utils.WritePrivateFile(metaPath, metaData); writeErr != nil {
+					result.Errors = append(result.Errors, fmt.Sprintf("failed to write metadata %s: %v", metaPath, writeErr))
+				}
 			}
 		}
 
@@ -446,7 +449,7 @@ func copyFile(src, dst string, overwrite bool) error {
 		}
 	}
 
-	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(dst), 0700); err != nil {
 		return err
 	}
 
@@ -456,7 +459,7 @@ func copyFile(src, dst string, overwrite bool) error {
 	}
 	defer srcFile.Close()
 
-	dstFile, err := os.Create(dst)
+	dstFile, err := utils.CreatePrivateFile(dst)
 	if err != nil {
 		return err
 	}

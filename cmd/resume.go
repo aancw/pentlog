@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"pentlog/pkg/errors"
+	"pentlog/pkg/utils"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -114,7 +115,7 @@ Use cases:
 		resumeMarker += "═══════════════════════════════════════════════════════════════\r\n\r\n"
 
 		// Append marker to the tty file with proper ttyrec header
-		f, err := os.OpenFile(sessionPath, os.O_APPEND|os.O_WRONLY, 0644)
+		f, err := utils.OpenPrivateFile(sessionPath, os.O_APPEND|os.O_WRONLY)
 		if err != nil {
 			errors.FromError(errors.FileNotFound, "failed to write resume marker", err).
 				AddReason("Could not open session log file for writing").

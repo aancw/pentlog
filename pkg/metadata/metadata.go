@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"pentlog/pkg/config"
+	"pentlog/pkg/utils"
 )
 
 type Context struct {
@@ -35,12 +36,12 @@ func Save(ctx Context) error {
 	if err != nil {
 		return err
 	}
-	if err := os.WriteFile(path, data, 0644); err != nil {
+	if err := utils.WritePrivateFile(path, data); err != nil {
 		return err
 	}
 
 	historyPath := filepath.Join(dir, "history.jsonl")
-	f, err := os.OpenFile(historyPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	f, err := utils.OpenPrivateFile(historyPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY)
 	if err != nil {
 		return err
 	}

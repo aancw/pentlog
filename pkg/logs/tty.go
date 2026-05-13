@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"pentlog/pkg/utils"
 	"sort"
 )
 
@@ -107,7 +108,7 @@ func MergeTTYFiles(files []string, outputFile string) error {
 		}
 	}
 
-	return os.WriteFile(outputFile, outBuf.Bytes(), 0644)
+	return utils.WritePrivateFile(outputFile, outBuf.Bytes())
 }
 
 func writeRecord(buf *bytes.Buffer, sec, usec uint32, data []byte) {
@@ -146,7 +147,7 @@ func InsertResumeMarker(ttyPath string) error {
 		reader.Seek(int64(header.Len), 1)
 	}
 
-	f, err := os.OpenFile(ttyPath, os.O_APPEND|os.O_WRONLY, 0644)
+	f, err := utils.OpenPrivateFile(ttyPath, os.O_APPEND|os.O_WRONLY)
 	if err != nil {
 		return fmt.Errorf("failed to open file for append: %w", err)
 	}
@@ -199,7 +200,7 @@ func GetLastFrameTimestamp(ttyPath string) (uint32, error) {
 func AdjustFutureTimestamps(ttyPath string, timeDelta int64) error {
 	resumeMarkerPath := ttyPath + ".resume_offset"
 	offsetData := fmt.Sprintf("%d", timeDelta)
-	return os.WriteFile(resumeMarkerPath, []byte(offsetData), 0644)
+	return utils.WritePrivateFile(resumeMarkerPath, []byte(offsetData))
 }
 
 func NormalizeResumedSession(ttyPath string) error {
@@ -337,5 +338,5 @@ func NormalizeResumedSession(ttyPath string) error {
 		lastWrittenUsec = usec
 	}
 
-	return os.WriteFile(ttyPath, buf.Bytes(), 0644)
+	return utils.WritePrivateFile(ttyPath, buf.Bytes())
 }

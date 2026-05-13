@@ -592,7 +592,7 @@ func startResumedSession(ctx *config.ContextData, session *logs.Session) {
 	}
 
 	markerFile := session.Path + ".resume_marker"
-	if err := os.WriteFile(markerFile, []byte(fmt.Sprintf("%d", time.Now().Unix())), 0644); err != nil {
+	if err := utils.WritePrivateFile(markerFile, []byte(fmt.Sprintf("%d", time.Now().Unix()))); err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: Failed to create resume marker: %v\n", err)
 	}
 
@@ -731,7 +731,7 @@ func init() {
 }
 
 func writeMetadata(path string, meta logs.SessionMetadata) error {
-	f, err := os.Create(path)
+	f, err := utils.CreatePrivateFile(path)
 	if err != nil {
 		return err
 	}
