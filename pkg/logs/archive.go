@@ -101,9 +101,10 @@ func archiveZip(toArchive []Session, extraFiles []string, clientArchiveDir, time
 	defer zw.Close()
 
 	var filesToDelete []string
+	var manifestFiles []ArchiveManifestFile
 
 	// Helper to add file to zip
-	addFile := func(path, targetPath string) error {
+	addFile := func(path, targetPath, role string) error {
 		f, err := os.Open(path)
 		if err != nil {
 			return err
@@ -124,8 +125,23 @@ func archiveZip(toArchive []Session, extraFiles []string, clientArchiveDir, time
 			}
 		}
 
-		_, err = io.Copy(w, f)
-		return err
+		if _, err := io.Copy(w, f); err != nil {
+			return err
+		}
+
+		hash, size, err := hashFileSHA256(path)
+		if err != nil {
+			return err
+		}
+
+		manifestFiles = append(manifestFiles, ArchiveManifestFile{
+			ArchivePath: targetPath,
+			Role:        role,
+			Size:        size,
+			SHA256:      hash,
+		})
+
+		return nil
 	}
 
 	for _, s := range toArchive {
@@ -161,7 +177,15 @@ func archiveZip(toArchive []Session, extraFiles []string, clientArchiveDir, time
 				continue
 			}
 
-			if err := addFile(fPath, targetPath); err != nil {
+			role := "session_log"
+			switch {
+			case strings.HasSuffix(fPath, ".json"):
+				role = "session_metadata"
+			case strings.HasSuffix(fPath, ".notes.json"):
+				role = "session_notes"
+			}
+
+			if err := addFile(fPath, targetPath, role); err != nil {
 				zw.Close()   // Flush and close ZIP writer
 				file.Close() // Close file handle
 				os.Remove(archivePath)
@@ -182,12 +206,40 @@ func archiveZip(toArchive []Session, extraFiles []string, clientArchiveDir, time
 			targetPath = filepath.Join("reports", utils.Slugify(filepath.Base(filepath.Dir(extraFile))), filepath.Base(extraFile))
 		}
 
-		if err := addFile(extraFile, targetPath); err != nil {
+		if err := addFile(extraFile, targetPath, "report"); err != nil {
 			zw.Close()   // Flush and close ZIP writer
 			file.Close() // Close file handle
 			os.Remove(archivePath)
 			return 0, fmt.Errorf("failed to add extra file %s to archive: %w", extraFile, err)
 		}
+	}
+
+	manifest := buildArchiveManifest(filepath.Base(clientArchiveDir), deleteOriginals, password != "", manifestFiles)
+	manifestData, err := manifestJSON(manifest)
+	if err != nil {
+		zw.Close()
+		file.Close()
+		os.Remove(archivePath)
+		return 0, fmt.Errorf("failed to marshal archive manifest: %w", err)
+	}
+
+	var manifestWriter io.Writer
+	if password != "" {
+		manifestWriter, err = zw.Encrypt(archiveManifestName, password, zip.AES256Encryption)
+	} else {
+		manifestWriter, err = zw.Create(archiveManifestName)
+	}
+	if err != nil {
+		zw.Close()
+		file.Close()
+		os.Remove(archivePath)
+		return 0, fmt.Errorf("failed to add archive manifest: %w", err)
+	}
+	if _, err := manifestWriter.Write(manifestData); err != nil {
+		zw.Close()
+		file.Close()
+		os.Remove(archivePath)
+		return 0, fmt.Errorf("failed to write archive manifest: %w", err)
 	}
 
 	if err := zw.Flush(); err != nil {

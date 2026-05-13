@@ -149,12 +149,16 @@ func TestArchiveSessions(t *testing.T) {
 
 	foundTiming := false
 	foundLog := false
+	foundManifest := false
 	for _, f := range zr.File {
 		if strings.Contains(f.Name, ".tty") {
 			foundLog = true
 		}
 		if strings.Contains(f.Name, ".timing") {
 			foundTiming = true
+		}
+		if f.Name == archiveManifestName {
+			foundManifest = true
 		}
 	}
 
@@ -163,6 +167,9 @@ func TestArchiveSessions(t *testing.T) {
 	}
 	if foundTiming {
 		t.Error("Archive should NOT contain timing file")
+	}
+	if !foundManifest {
+		t.Error("Archive should contain manifest.json")
 	}
 }
 

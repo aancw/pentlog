@@ -153,7 +153,20 @@ func ImportFromPentlogArchive(archivePath string, opts ImportOptions) (*ImportRe
 		extractedFiles[f.Name] = tempPath
 	}
 
+	if manifestPath, ok := extractedFiles[archiveManifestName]; ok {
+		manifest, err := loadArchiveManifest(manifestPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load archive manifest: %w", err)
+		}
+		if err := verifyImportedManifest(manifest, extractedFiles); err != nil {
+			return nil, fmt.Errorf("archive manifest verification failed: %w", err)
+		}
+	}
+
 	for archivePath, tempPath := range extractedFiles {
+		if archivePath == archiveManifestName {
+			continue
+		}
 		if !strings.HasSuffix(archivePath, ".tty") {
 			continue
 		}
@@ -248,6 +261,9 @@ func ImportFromPentlogArchive(archivePath string, opts ImportOptions) (*ImportRe
 	}
 
 	for archivePath, tempPath := range extractedFiles {
+		if archivePath == archiveManifestName {
+			continue
+		}
 		if !strings.HasPrefix(archivePath, "reports/") {
 			continue
 		}
@@ -264,6 +280,29 @@ func ImportFromPentlogArchive(archivePath string, opts ImportOptions) (*ImportRe
 	}
 
 	return result, nil
+}
+
+func verifyImportedManifest(manifest *ArchiveManifest, extractedFiles map[string]string) error {
+	for _, entry := range manifest.Files {
+		tempPath, ok := extractedFiles[entry.ArchivePath]
+		if !ok {
+			return fmt.Errorf("manifest entry missing from archive: %s", entry.ArchivePath)
+		}
+
+		hash, size, err := hashFileSHA256(tempPath)
+		if err != nil {
+			return fmt.Errorf("failed to hash %s: %w", entry.ArchivePath, err)
+		}
+
+		if size != entry.Size {
+			return fmt.Errorf("%s size mismatch: expected %d, got %d", entry.ArchivePath, entry.Size, size)
+		}
+		if hash != entry.SHA256 {
+			return fmt.Errorf("%s hash mismatch", entry.ArchivePath)
+		}
+	}
+
+	return nil
 }
 
 func ImportFromGenericArchive(archivePath string, opts ImportOptions) (*ImportResult, error) {
