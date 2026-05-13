@@ -7,11 +7,13 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"pentlog/pkg/api/authz"
 	"strings"
 	"syscall"
 	"time"
 
 	"pentlog/pkg/config"
+	"pentlog/pkg/httpauth"
 	"pentlog/pkg/logger"
 
 	"github.com/go-chi/chi/v5"
@@ -35,15 +37,17 @@ func SetStaticDir(dir string) {
 
 type Server struct {
 	Router *chi.Mux
+	Bind   string
 	Port   int
 	server *http.Server
 }
 
-func NewServer(port int) *Server {
+func NewServer(bind string, port int) *Server {
 	r := chi.NewRouter()
 
 	s := &Server{
 		Router: r,
+		Bind:   bind,
 		Port:   port,
 	}
 
@@ -58,7 +62,7 @@ func (s *Server) setupMiddleware() {
 	s.Router.Use(middleware.RealIP)
 	s.Router.Use(Recoverer)
 	s.Router.Use(LoggerMiddleware())
-	s.Router.Use(CORS([]string{"*"}))
+	s.Router.Use(CORS(authz.AllowedOrigins(s.Bind, s.Port)))
 	s.Router.Use(middleware.Compress(5))
 }
 
@@ -88,6 +92,11 @@ func (s *Server) serveArchiveFile(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) serveManagedFile(w http.ResponseWriter, r *http.Request, root string, prefix string) {
+	if !httpauth.ValidateArtifactRequest(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	rel := strings.TrimPrefix(r.URL.Path, prefix)
 	rel = strings.TrimPrefix(filepath.Clean("/"+rel), "/")
 	if rel == "" || rel == "." {
@@ -177,7 +186,7 @@ func getContentType(name string) string {
 }
 
 func (s *Server) Start() error {
-	addr := fmt.Sprintf(":%d", s.Port)
+	addr := fmt.Sprintf("%s:%d", s.Bind, s.Port)
 	s.server = &http.Server{
 		Addr:         addr,
 		Handler:      s.Router,
@@ -192,8 +201,8 @@ func (s *Server) Start() error {
 	errChan := make(chan error, 1)
 
 	go func() {
-		logger.Info("server_starting", "port", s.Port)
-		fmt.Printf("\n PentLog Web Dashboard running at http://localhost:%d\n\n", s.Port)
+		logger.Info("server_starting", "bind", s.Bind, "port", s.Port)
+		fmt.Printf("\n PentLog Web Dashboard running at http://%s:%d\n\n", s.Bind, s.Port)
 		fmt.Println(" API endpoints:")
 		fmt.Println("   GET  /api/health")
 		fmt.Println("   GET  /api/dashboard/overview")
@@ -204,7 +213,7 @@ func (s *Server) Start() error {
 		fmt.Println("   GET  /api/system/status")
 		fmt.Println("   GET  /api/system/info")
 		if hasStaticFiles {
-			fmt.Println("\n Web UI: http://localhost:" + fmt.Sprintf("%d", s.Port))
+			fmt.Printf("\n Web UI: http://%s:%d\n", s.Bind, s.Port)
 		}
 		fmt.Println("\n Press Ctrl+C to stop")
 

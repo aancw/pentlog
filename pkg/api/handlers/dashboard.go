@@ -3,7 +3,6 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
@@ -12,6 +11,7 @@ import (
 
 	"pentlog/pkg/config"
 	"pentlog/pkg/dashboard"
+	"pentlog/pkg/httpauth"
 	"pentlog/pkg/logs"
 	"pentlog/pkg/utils"
 	"pentlog/pkg/vulns"
@@ -431,7 +431,7 @@ func collectArtifactSummary(root string, extensions map[string]bool, fileURLPref
 				"size":          info.Size(),
 				"size_human":    utils.FormatBytes(info.Size()),
 				"mod_time":      info.ModTime().Format("2006-01-02 15:04:05"),
-				"url":           fileURLPrefix + url.PathEscape(entry.Name()) + "/" + url.PathEscape(ce.Name()),
+				"url":           httpauth.BuildArtifactURL(strings.TrimRight(fileURLPrefix, "/"), entry.Name(), ce.Name()),
 			}
 		}
 	}

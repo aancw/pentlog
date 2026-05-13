@@ -3,9 +3,9 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
+	"pentlog/pkg/httpauth"
 	"sort"
 	"strings"
 
@@ -87,7 +87,7 @@ func handleReportsList(w http.ResponseWriter, r *http.Request) {
 				SizeHuman:    formatSize(info.Size()),
 				ModTime:      info.ModTime().Format("2006-01-02 15:04:05"),
 				Type:         getFileExt(ce.Name()),
-				ViewURL:      "/files/reports/" + url.PathEscape(entry.Name()) + "/" + url.PathEscape(ce.Name()),
+				ViewURL:      httpauth.BuildArtifactURL("/files/reports", entry.Name(), ce.Name()),
 			})
 		}
 	}

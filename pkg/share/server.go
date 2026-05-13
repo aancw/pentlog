@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/gorilla/websocket"
@@ -86,7 +87,19 @@ func (s *Server) handleWatch(w http.ResponseWriter, r *http.Request) {
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 4096,
-	CheckOrigin:     func(r *http.Request) bool { return true },
+	CheckOrigin: func(r *http.Request) bool {
+		origin := strings.TrimSpace(r.Header.Get("Origin"))
+		if origin == "" {
+			return true
+		}
+
+		parsed, err := url.Parse(origin)
+		if err != nil {
+			return false
+		}
+
+		return strings.EqualFold(parsed.Host, r.Host)
+	},
 }
 
 func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {

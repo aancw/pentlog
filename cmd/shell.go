@@ -492,6 +492,10 @@ func startShareServer(logFilePath string) (*share.Hub, *share.Server, context.Ca
 		return nil, nil, nil
 	}
 
+	if ip := net.ParseIP(shellShareBind); ip != nil && !ip.IsLoopback() {
+		fmt.Fprintf(os.Stderr, "Warning: live share is exposed on %s. Anyone with the URL can view the session.\n", shellShareBind)
+	}
+
 	hub := share.NewHub()
 	go hub.Run()
 
@@ -722,7 +726,7 @@ func startResumedSession(ctx *config.ContextData, session *logs.Session) {
 func init() {
 	shellCmd.Flags().BoolVar(&shellShare, "share", false, "Enable live sharing via browser")
 	shellCmd.Flags().IntVar(&shellSharePort, "share-port", 0, "Port for share server (0 = random)")
-	shellCmd.Flags().StringVar(&shellShareBind, "share-bind", "0.0.0.0", "Bind address for share server")
+	shellCmd.Flags().StringVar(&shellShareBind, "share-bind", "127.0.0.1", "Bind address for share server")
 	rootCmd.AddCommand(shellCmd)
 }
 

@@ -245,6 +245,10 @@ func startShareServerDaemon(logFilePath string) {
 
 	srv := share.NewServer(hub, token)
 
+	if ip := net.ParseIP(shareBind); ip != nil && !ip.IsLoopback() {
+		fmt.Fprintf(os.Stderr, "Warning: share server is exposed on %s. Anyone with the URL can view the session.\n", shareBind)
+	}
+
 	listenAddr := fmt.Sprintf("%s:%d", shareBind, sharePort)
 	boundAddr, err := srv.Start(listenAddr)
 	if err != nil {
@@ -398,7 +402,7 @@ func init() {
 	shareCmd.AddCommand(shareStatusCmd)
 
 	shareCmd.Flags().IntVarP(&sharePort, "port", "p", 0, "Port to listen on (0 = random)")
-	shareCmd.Flags().StringVar(&shareBind, "bind", "0.0.0.0", "Address to bind to")
+	shareCmd.Flags().StringVar(&shareBind, "bind", "127.0.0.1", "Address to bind to")
 	shareCmd.Flags().BoolVar(&shareFromStart, "from-start", true, "Stream from the beginning of the file")
 	shareCmd.Flags().BoolVar(&shareDaemonMode, "daemon-mode", false, "Internal: run as daemon process")
 	shareCmd.Flags().MarkHidden("daemon-mode")

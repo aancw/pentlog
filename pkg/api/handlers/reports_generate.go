@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,6 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"pentlog/pkg/httpauth"
 	"pentlog/pkg/logs"
 	"pentlog/pkg/recorder"
 	"pentlog/pkg/utils"
@@ -392,7 +392,7 @@ func collectReportFindings(client, engagement, phase string) []vulns.Vuln {
 
 func completeReportJob(id, fullPath, client, filename, message string) {
 	relativePath := filepath.ToSlash(filepath.Join(utils.Slugify(client), filename))
-	viewURL := "/files/reports/" + url.PathEscape(utils.Slugify(client)) + "/" + url.PathEscape(filename)
+	viewURL := httpauth.BuildArtifactURL("/files/reports", utils.Slugify(client), filename)
 	updateReportJob(id, func(job *reportGenerateJob) {
 		job.Status = "completed"
 		job.Message = message

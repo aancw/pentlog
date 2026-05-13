@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -16,6 +17,7 @@ import (
 
 var (
 	webPort int
+	webBind string
 	webOpen bool
 )
 
@@ -46,10 +48,14 @@ Examples:
 			api.SetStaticDir(distDir)
 		}
 
-		server := api.NewServer(webPort)
+		if ip := net.ParseIP(webBind); ip != nil && !ip.IsLoopback() {
+			fmt.Fprintf(os.Stderr, "Warning: web server is exposed on %s. Ensure the network is trusted.\n", webBind)
+		}
+
+		server := api.NewServer(webBind, webPort)
 
 		if webOpen {
-			url := fmt.Sprintf("http://localhost:%d", webPort)
+			url := fmt.Sprintf("http://%s:%d", webBind, webPort)
 			go func() {
 				time.Sleep(750 * time.Millisecond)
 				if err := utils.OpenURL(url); err != nil {
@@ -66,6 +72,7 @@ Examples:
 
 func init() {
 	webCmd.Flags().IntVarP(&webPort, "port", "p", 8080, "Port to listen on")
+	webCmd.Flags().StringVar(&webBind, "bind", "127.0.0.1", "Address to bind to")
 	webCmd.Flags().BoolVarP(&webOpen, "open", "o", false, "Open in browser after starting")
 	rootCmd.AddCommand(webCmd)
 }
