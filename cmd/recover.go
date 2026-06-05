@@ -26,7 +26,7 @@ It can:
 - List all crashed/incomplete sessions
 - Mark stale active sessions as crashed (no heartbeat for 5+ minutes)
 - Recover specific sessions by marking them as completed
-- Clean up orphaned sessions (database entries with missing files)
+- Clean up orphaned sessions (non-archived database entries with missing files)
 - Show session recovery details`,
 	Run: func(cmd *cobra.Command, args []string) {
 		listOnly, _ := cmd.Flags().GetBool("list")
@@ -147,7 +147,7 @@ func printSessionStatus(crashed, active, orphaned []logs.Session) {
 	}
 
 	if len(orphaned) > 0 {
-		fmt.Printf("\n🗑️  Orphaned Sessions (%d) - database entries with missing files:\n", len(orphaned))
+		fmt.Printf("\n🗑️  Orphaned Sessions (%d) - non-archived database entries with missing files:\n", len(orphaned))
 		fmt.Println("─────────────────────────────────────────────────────────────────")
 		for _, s := range orphaned {
 			fmt.Printf("  [%d] %s/%s/%s\n", s.ID, s.Metadata.Client, s.Metadata.Engagement, s.Metadata.Phase)
@@ -344,7 +344,7 @@ func init() {
 	recoverCmd.Flags().Bool("mark-stale", false, "Mark active sessions with no heartbeat as crashed")
 	recoverCmd.Flags().IntP("recover", "r", 0, "Recover a specific session by ID")
 	recoverCmd.Flags().Bool("recover-all", false, "Recover all crashed sessions")
-	recoverCmd.Flags().Bool("clean-orphans", false, "Remove database entries for sessions with missing files")
+	recoverCmd.Flags().Bool("clean-orphans", false, "Remove database entries for non-archived sessions with missing files")
 }
 
 func parseSessionID(s string) int {

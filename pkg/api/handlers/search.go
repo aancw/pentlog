@@ -31,6 +31,7 @@ func handleSearch(w http.ResponseWriter, r *http.Request) {
 	toStr := r.URL.Query().Get("to")
 	limitStr := r.URL.Query().Get("limit")
 	offsetStr := r.URL.Query().Get("offset")
+	includeArchived := r.URL.Query().Get("include_archived") == "true"
 
 	limit := 100
 	if limitStr != "" {
@@ -49,7 +50,9 @@ func handleSearch(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	sessions, err := logs.ListSessions()
+	sessions, err := logs.ListSessionsWithOptions(logs.SessionListOptions{
+		IncludeArchived: includeArchived,
+	})
 	if err != nil {
 		http.Error(w, `{"error":"Failed to list sessions"}`, http.StatusInternalServerError)
 		return

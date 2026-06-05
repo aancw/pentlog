@@ -72,6 +72,9 @@ func migrateSchema(db *sql.DB) error {
 		{"last_sync_at", "TEXT", "", "crash recovery"},
 		{"target", "TEXT", "", "multi-target management"},
 		{"target_ip", "TEXT", "", "multi-target management"},
+		{"archived_at", "TEXT", "", "archive session state"},
+		{"archive_path", "TEXT", "", "archive session state"},
+		{"archive_manifest_sha256", "TEXT", "", "archive session state"},
 	}
 
 	migratedFeatures := make(map[string]bool)

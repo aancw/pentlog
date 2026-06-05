@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file.
 ### Added
 - **Archive Integrity Manifests**: Archives now include `manifest.json` with deterministic hashes and sizes
   - Import verifies the manifest when present to catch tampering
+- **Archive Session State Tracking**: Archived sessions now persist evidence state in SQLite
+  - Sessions store `archived_at`, `archive_path`, and `archive_manifest_sha256`
+  - `archive --delete` now updates DB truth instead of leaving rows behind as later "orphans"
 - **Explicit Session Sync**: Legacy filesystem-to-database sync is now a dedicated `pentlog sessions sync` migration step
 - **Shell Guardrails**: `pentlog shell` now exposes `--phase`, `--target`, and stale-context confirmation before starting a recording
 - **Shared AI Config Bootstrapping**: `analyze` and `export` now reuse the same AI configuration setup path
@@ -18,6 +21,7 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 - **Web Defaults**: `pentlog web` now uses existing built assets by default and only rebuilds on `--rebuild` or when assets are missing
+- **Archived Session Visibility**: Default session, search, and timeline flows now hide archived sessions unless explicitly requested
 - **Web Search State**: Search filters now use URL-driven state for bookmarkable and shareable queries
   - Search page keeps `q`, `regex`, `from`, `to`, `limit`, and `page` in the URL
   - Search results paginate with stable `limit` / `offset` semantics and `has_more` metadata
@@ -26,6 +30,7 @@ All notable changes to this project will be documented in this file.
   - Includes per-hit context windows and note timestamps for downstream UI workflows
 
 ### Fixed
+- **Archive/Delete Orphan Drift**: `recover --clean-orphans` is now reserved for genuine inconsistencies instead of normal archive flow
 - **Evidence File Permissions**: Sensitive file writes now go through private helpers so evidence and config files use stricter permissions
 - **Archive Import Hardening**: Import flow now validates manifest-backed archives and keeps the copy path aligned with the new integrity format
 - **Search and Session UX**: Session detail and search pages now preserve context better when jumping between search hits and session content

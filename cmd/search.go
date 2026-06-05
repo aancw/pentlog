@@ -21,9 +21,10 @@ import (
 )
 
 var (
-	flagAfter  string
-	flagBefore string
-	flagRegex  bool
+	flagAfter           string
+	flagBefore          string
+	flagRegex           bool
+	flagIncludeArchived bool
 )
 
 type searchModel struct {
@@ -93,7 +94,9 @@ var searchCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		var scope []logs.Session
 
-		allSessions, err := logs.ListSessions()
+		allSessions, err := logs.ListSessionsWithOptions(logs.SessionListOptions{
+			IncludeArchived: flagIncludeArchived,
+		})
 		if err != nil {
 			errors.DatabaseErr("list sessions", err).Fatal()
 		}
@@ -526,4 +529,5 @@ func init() {
 	searchCmd.Flags().StringVarP(&flagAfter, "after", "a", "", "Filter logs after date (DDMMYYYY)")
 	searchCmd.Flags().StringVarP(&flagBefore, "before", "b", "", "Filter logs before date (DDMMYYYY)")
 	searchCmd.Flags().BoolVarP(&flagRegex, "regex", "r", false, "Treat query as regex (default: boolean)")
+	searchCmd.Flags().BoolVar(&flagIncludeArchived, "include-archived", false, "Include archived sessions in the search scope")
 }

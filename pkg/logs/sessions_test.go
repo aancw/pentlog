@@ -195,3 +195,79 @@ func TestListAndGetSessionHydratesStateAndTarget(t *testing.T) {
 		t.Fatalf("expected target fields to round-trip, got target=%q target_ip=%q", full.Metadata.Target, full.Metadata.TargetIP)
 	}
 }
+
+func TestListSessionsExcludesArchivedByDefault(t *testing.T) {
+	config.ResetManagerForTesting()
+	defer config.ResetManagerForTesting()
+	defer db.CloseDB()
+
+	tmpDir := t.TempDir()
+	os.Setenv("PENTLOG_TEST_HOME", tmpDir)
+	defer os.Unsetenv("PENTLOG_TEST_HOME")
+
+	mgr := config.Manager()
+	sessionDir := filepath.Join(mgr.GetPaths().LogsDir, "acme", "q3", "reporting")
+	if err := os.MkdirAll(sessionDir, 0700); err != nil {
+		t.Fatalf("mkdir session dir: %v", err)
+	}
+
+	activePath := filepath.Join(sessionDir, "active.tty")
+	if err := os.WriteFile(activePath, []byte("active"), 0600); err != nil {
+		t.Fatalf("write active tty: %v", err)
+	}
+	archivedPath := filepath.Join(sessionDir, "archived.tty")
+	if err := os.WriteFile(archivedPath, []byte("archived"), 0600); err != nil {
+		t.Fatalf("write archived tty: %v", err)
+	}
+
+	meta := SessionMetadata{
+		Client:     "ACME",
+		Engagement: "Q3",
+		Phase:      "reporting",
+		Timestamp:  time.Now().Format(time.RFC3339),
+	}
+
+	if _, err := AddSessionToDBWithState(meta, activePath, SessionStateCompleted); err != nil {
+		t.Fatalf("add active session: %v", err)
+	}
+	archivedID, err := AddSessionToDBWithState(meta, archivedPath, SessionStateCompleted)
+	if err != nil {
+		t.Fatalf("add archived session: %v", err)
+	}
+	if err := MarkSessionsArchived([]int{int(archivedID)}, "/tmp/archive.zip", "deadbeef"); err != nil {
+		t.Fatalf("mark archived: %v", err)
+	}
+
+	sessions, err := ListSessions()
+	if err != nil {
+		t.Fatalf("ListSessions failed: %v", err)
+	}
+	if len(sessions) != 1 {
+		t.Fatalf("expected only active sessions by default, got %d", len(sessions))
+	}
+	if sessions[0].Filename != "active.tty" {
+		t.Fatalf("expected active session to remain visible, got %s", sessions[0].Filename)
+	}
+
+	allSessions, err := ListSessionsWithOptions(SessionListOptions{IncludeArchived: true})
+	if err != nil {
+		t.Fatalf("ListSessionsWithOptions failed: %v", err)
+	}
+	if len(allSessions) != 2 {
+		t.Fatalf("expected both sessions when including archived, got %d", len(allSessions))
+	}
+
+	archivedOnly, err := ListSessionsWithOptions(SessionListOptions{OnlyArchived: true})
+	if err != nil {
+		t.Fatalf("ListSessionsWithOptions archived-only failed: %v", err)
+	}
+	if len(archivedOnly) != 1 {
+		t.Fatalf("expected one archived session, got %d", len(archivedOnly))
+	}
+	if archivedOnly[0].State != SessionStateArchived {
+		t.Fatalf("expected archived state, got %q", archivedOnly[0].State)
+	}
+	if archivedOnly[0].ArchivePath != "/tmp/archive.zip" {
+		t.Fatalf("expected archive path to round-trip, got %q", archivedOnly[0].ArchivePath)
+	}
+}

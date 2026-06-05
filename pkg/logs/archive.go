@@ -1,6 +1,8 @@
 package logs
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"os"
@@ -95,13 +97,12 @@ func archiveZip(toArchive []Session, extraFiles []string, clientArchiveDir, time
 	if err != nil {
 		return 0, fmt.Errorf("failed to create archive file: %w", err)
 	}
-	defer file.Close()
 
 	zw := zip.NewWriter(file)
-	defer zw.Close()
 
 	var filesToDelete []string
 	var manifestFiles []ArchiveManifestFile
+	var sessionIDs []int
 
 	// Helper to add file to zip
 	addFile := func(path, targetPath, role string) error {
@@ -145,6 +146,8 @@ func archiveZip(toArchive []Session, extraFiles []string, clientArchiveDir, time
 	}
 
 	for _, s := range toArchive {
+		sessionIDs = append(sessionIDs, s.ID)
+
 		files := []string{s.Path}
 		if s.MetaPath != "" {
 			files = append(files, s.MetaPath)
@@ -186,8 +189,8 @@ func archiveZip(toArchive []Session, extraFiles []string, clientArchiveDir, time
 			}
 
 			if err := addFile(fPath, targetPath, role); err != nil {
-				zw.Close()   // Flush and close ZIP writer
-				file.Close() // Close file handle
+				zw.Close()
+				file.Close()
 				os.Remove(archivePath)
 				return 0, fmt.Errorf("failed to add file %s to archive: %w", fPath, err)
 			}
@@ -207,8 +210,8 @@ func archiveZip(toArchive []Session, extraFiles []string, clientArchiveDir, time
 		}
 
 		if err := addFile(extraFile, targetPath, "report"); err != nil {
-			zw.Close()   // Flush and close ZIP writer
-			file.Close() // Close file handle
+			zw.Close()
+			file.Close()
 			os.Remove(archivePath)
 			return 0, fmt.Errorf("failed to add extra file %s to archive: %w", extraFile, err)
 		}
@@ -242,8 +245,21 @@ func archiveZip(toArchive []Session, extraFiles []string, clientArchiveDir, time
 		return 0, fmt.Errorf("failed to write archive manifest: %w", err)
 	}
 
-	if err := zw.Flush(); err != nil {
-		return 0, err
+	if err := zw.Close(); err != nil {
+		file.Close()
+		os.Remove(archivePath)
+		return 0, fmt.Errorf("failed to finalize archive: %w", err)
+	}
+	if err := file.Close(); err != nil {
+		os.Remove(archivePath)
+		return 0, fmt.Errorf("failed to close archive file: %w", err)
+	}
+
+	manifestHash := sha256.Sum256(manifestData)
+	manifestSHA256 := hex.EncodeToString(manifestHash[:])
+	if err := MarkSessionsArchived(sessionIDs, archivePath, manifestSHA256); err != nil {
+		os.Remove(archivePath)
+		return 0, fmt.Errorf("failed to persist archived session state: %w", err)
 	}
 
 	if deleteOriginals {

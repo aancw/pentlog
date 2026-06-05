@@ -474,14 +474,17 @@ func sessionToMap(s logs.Session) map[string]interface{} {
 	}
 
 	return map[string]interface{}{
-		"id":           s.ID,
-		"filename":     s.Filename,
-		"path":         s.Path,
-		"display_path": s.DisplayPath,
-		"size":         s.Size,
-		"size_human":   utils.FormatBytes(s.Size),
-		"mod_time":     s.ModTime,
-		"state":        string(s.State),
+		"id":                      s.ID,
+		"filename":                s.Filename,
+		"path":                    s.Path,
+		"display_path":            s.DisplayPath,
+		"size":                    s.Size,
+		"size_human":              utils.FormatBytes(s.Size),
+		"mod_time":                s.ModTime,
+		"state":                   string(s.State),
+		"archived_at":             s.ArchivedAt,
+		"archive_path":            s.ArchivePath,
+		"archive_manifest_sha256": s.ArchiveManifestSHA256,
 		"metadata": map[string]string{
 			"client":     s.Metadata.Client,
 			"engagement": s.Metadata.Engagement,

@@ -33,6 +33,7 @@ const (
 	SessionStateCompleted SessionState = "completed"
 	SessionStateCrashed   SessionState = "crashed"
 	SessionStatePaused    SessionState = "paused"
+	SessionStateArchived  SessionState = "archived"
 )
 
 type SessionNote struct {
@@ -42,33 +43,79 @@ type SessionNote struct {
 }
 
 type Session struct {
-	ID          int
-	Filename    string
-	Path        string
-	DisplayPath string
-	MetaPath    string
-	NotesPath   string
-	ModTime     string
-	Size        int64
-	Metadata    SessionMetadata
-	SortKey     time.Time
-	State       SessionState
-	LastSyncAt  string
+	ID                    int
+	Filename              string
+	Path                  string
+	DisplayPath           string
+	MetaPath              string
+	NotesPath             string
+	ModTime               string
+	Size                  int64
+	Metadata              SessionMetadata
+	SortKey               time.Time
+	State                 SessionState
+	LastSyncAt            string
+	ArchivedAt            string
+	ArchivePath           string
+	ArchiveManifestSHA256 string
 }
 
 func ListSessions() ([]Session, error) {
-	// Wrapper for backward compatibility, currently fetching all (limit=0 means no limit in our logic, or we can pass -1)
-	// Passing -1 as limit to fetch all
-	return ListSessionsPaginated(-1, 0)
+	return ListSessionsWithOptions(SessionListOptions{})
+}
+
+type SessionListOptions struct {
+	IncludeArchived bool
+	OnlyArchived    bool
+}
+
+type sessionScanner interface {
+	Scan(dest ...interface{}) error
+}
+
+type sessionRow struct {
+	ID                    int
+	Client                string
+	Engagement            string
+	Scope                 sql.NullString
+	Operator              sql.NullString
+	Phase                 string
+	Timestamp             string
+	Filename              string
+	RelativePath          string
+	Size                  int64
+	State                 sql.NullString
+	LastSyncAt            sql.NullString
+	Target                sql.NullString
+	TargetIP              sql.NullString
+	ArchivedAt            sql.NullString
+	ArchivePath           sql.NullString
+	ArchiveManifestSHA256 sql.NullString
+}
+
+func ListSessionsWithOptions(opts SessionListOptions) ([]Session, error) {
+	return listSessions(-1, 0, opts)
 }
 
 func ListSessionsPaginated(limit, offset int) ([]Session, error) {
+	return ListSessionsPaginatedWithOptions(limit, offset, SessionListOptions{})
+}
+
+func ListSessionsPaginatedWithOptions(limit, offset int, opts SessionListOptions) ([]Session, error) {
+	return listSessions(limit, offset, opts)
+}
+
+func listSessions(limit, offset int, opts SessionListOptions) ([]Session, error) {
 	database, err := db.GetDB()
 	if err != nil {
 		return nil, err
 	}
 
-	query := "SELECT id, client, engagement, scope, operator, phase, timestamp, filename, relative_path, size, state, last_sync_at, target, target_ip FROM sessions ORDER BY timestamp DESC"
+	query := fmt.Sprintf("SELECT %s FROM sessions", sessionSelectColumns(""))
+	if filter := archiveFilterClause(opts); filter != "" {
+		query += " WHERE " + filter
+	}
+	query += " ORDER BY timestamp DESC"
 	var args []interface{}
 
 	if limit >= 0 {
@@ -83,54 +130,13 @@ func ListSessionsPaginated(limit, offset int) ([]Session, error) {
 	defer rows.Close()
 
 	var sessions []Session
-	mgr := config.Manager()
-	rootDir := mgr.GetPaths().LogsDir
 
 	for rows.Next() {
-		var s Session
-		var client, engagement, scope, operator, phase, timestamp, filename, relPath string
-		var state, lastSyncAt, target, targetIP sql.NullString
-		var size int64
-		var id int
-
-		if err := rows.Scan(&id, &client, &engagement, &scope, &operator, &phase, &timestamp, &filename, &relPath, &size, &state, &lastSyncAt, &target, &targetIP); err != nil {
+		row, err := scanSessionRow(rows)
+		if err != nil {
 			continue
 		}
-
-		s.ID = id
-		s.Filename = filename
-		s.Path = filepath.Join(rootDir, relPath)
-		s.DisplayPath = relPath
-		s.Size = size
-		s.Metadata = SessionMetadata{
-			Client:     client,
-			Engagement: engagement,
-			Scope:      scope,
-			Operator:   operator,
-			Phase:      phase,
-			Target:     target.String,
-			TargetIP:   targetIP.String,
-			Timestamp:  timestamp,
-		}
-		s.State = SessionStateCompleted
-		if state.Valid {
-			if cleaned := strings.TrimSpace(state.String); cleaned != "" {
-				s.State = SessionState(cleaned)
-			}
-		}
-		s.LastSyncAt = lastSyncAt.String
-
-		s.MetaPath = strings.Replace(s.Path, ".tty", ".json", 1)
-		s.NotesPath = strings.Replace(s.Path, ".tty", ".notes.json", 1)
-
-		if ts, err := time.Parse(time.RFC3339, timestamp); err == nil {
-			s.ModTime = ts.Format("2006-01-02 15:04:05")
-			s.SortKey = ts
-		} else {
-			s.ModTime = timestamp
-		}
-
-		sessions = append(sessions, s)
+		sessions = append(sessions, buildSession(row))
 	}
 
 	return sessions, nil
@@ -160,54 +166,16 @@ func GetSession(id int) (*Session, error) {
 		return nil, err
 	}
 
-	var s Session
-	var client, engagement, scope, operator, phase, timestamp, filename, relPath string
-	var state, lastSyncAt, target, targetIP sql.NullString
-	var size int64
-
-	row := database.QueryRow("SELECT client, engagement, scope, operator, phase, timestamp, filename, relative_path, size, state, last_sync_at, target, target_ip FROM sessions WHERE id = ?", id)
-
-	if err := row.Scan(&client, &engagement, &scope, &operator, &phase, &timestamp, &filename, &relPath, &size, &state, &lastSyncAt, &target, &targetIP); err != nil {
+	row := database.QueryRow(fmt.Sprintf("SELECT %s FROM sessions WHERE id = ?", sessionSelectColumns("")), id)
+	sessionRow, err := scanSessionRow(row)
+	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("session ID %d not found", id)
 		}
 		return nil, err
 	}
 
-	mgr := config.Manager()
-
-	s.ID = id
-	s.Filename = filename
-	s.Path = filepath.Join(mgr.GetPaths().LogsDir, relPath)
-	s.DisplayPath = relPath
-	s.Size = size
-	s.Metadata = SessionMetadata{
-		Client:     client,
-		Engagement: engagement,
-		Scope:      scope,
-		Operator:   operator,
-		Phase:      phase,
-		Target:     target.String,
-		TargetIP:   targetIP.String,
-		Timestamp:  timestamp,
-	}
-	s.State = SessionStateCompleted
-	if state.Valid {
-		if cleaned := strings.TrimSpace(state.String); cleaned != "" {
-			s.State = SessionState(cleaned)
-		}
-	}
-	s.LastSyncAt = lastSyncAt.String
-	s.MetaPath = strings.Replace(s.Path, ".tty", ".json", 1)
-	s.NotesPath = strings.Replace(s.Path, ".tty", ".notes.json", 1)
-
-	if ts, err := time.Parse(time.RFC3339, timestamp); err == nil {
-		s.ModTime = ts.Format("2006-01-02 15:04:05")
-		s.SortKey = ts
-	} else {
-		s.ModTime = timestamp
-	}
-
+	s := buildSession(sessionRow)
 	return &s, nil
 }
 
@@ -400,63 +368,23 @@ func GetSessionsByState(state SessionState) ([]Session, error) {
 		return nil, err
 	}
 
-	rows, err := database.Query(`
-		SELECT id, client, engagement, scope, operator, phase, timestamp, filename, relative_path, size, state, last_sync_at
-		FROM sessions WHERE state = ? ORDER BY timestamp DESC
-	`, string(state))
+	rows, err := database.Query(
+		fmt.Sprintf("SELECT %s FROM sessions WHERE state = ? ORDER BY timestamp DESC", sessionSelectColumns("")),
+		string(state),
+	)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
 	var sessions []Session
-	mgr := config.Manager()
-	rootDir := mgr.GetPaths().LogsDir
 
 	for rows.Next() {
-		var s Session
-		var client, engagement, scope, operator, phase, timestamp, filename, relPath string
-		var size int64
-		var id int
-		var stateStr, lastSyncAt sql.NullString
-
-		if err := rows.Scan(&id, &client, &engagement, &scope, &operator, &phase, &timestamp, &filename, &relPath, &size, &stateStr, &lastSyncAt); err != nil {
+		row, err := scanSessionRow(rows)
+		if err != nil {
 			continue
 		}
-
-		s.ID = id
-		s.Filename = filename
-		s.Path = filepath.Join(rootDir, relPath)
-		s.DisplayPath = relPath
-		s.Size = size
-		s.Metadata = SessionMetadata{
-			Client:     client,
-			Engagement: engagement,
-			Scope:      scope,
-			Operator:   operator,
-			Phase:      phase,
-			Timestamp:  timestamp,
-		}
-		s.MetaPath = strings.Replace(s.Path, ".tty", ".json", 1)
-		s.NotesPath = strings.Replace(s.Path, ".tty", ".notes.json", 1)
-
-		if stateStr.Valid {
-			s.State = SessionState(stateStr.String)
-		} else {
-			s.State = SessionStateCompleted
-		}
-		if lastSyncAt.Valid {
-			s.LastSyncAt = lastSyncAt.String
-		}
-
-		if ts, err := time.Parse(time.RFC3339, timestamp); err == nil {
-			s.ModTime = ts.Format("2006-01-02 15:04:05")
-			s.SortKey = ts
-		} else {
-			s.ModTime = timestamp
-		}
-
-		sessions = append(sessions, s)
+		sessions = append(sessions, buildSession(row))
 	}
 
 	return sessions, nil
@@ -468,65 +396,26 @@ func GetCrashedSessionsForContext(client, engagement, phase string) ([]Session, 
 		return nil, err
 	}
 
-	rows, err := database.Query(`
-		SELECT id, client, engagement, scope, operator, phase, timestamp, filename, relative_path, size, state, last_sync_at
-		FROM sessions
-		WHERE state = ? AND client = ? AND engagement = ? AND phase = ?
-		ORDER BY timestamp DESC
-	`, string(SessionStateCrashed), client, engagement, phase)
+	rows, err := database.Query(
+		fmt.Sprintf(
+			"SELECT %s FROM sessions WHERE state = ? AND client = ? AND engagement = ? AND phase = ? ORDER BY timestamp DESC",
+			sessionSelectColumns(""),
+		),
+		string(SessionStateCrashed), client, engagement, phase,
+	)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
 	var sessions []Session
-	mgr := config.Manager()
-	rootDir := mgr.GetPaths().LogsDir
 
 	for rows.Next() {
-		var s Session
-		var client, engagement, scope, operator, phase, timestamp, filename, relPath string
-		var size int64
-		var id int
-		var stateStr, lastSyncAt sql.NullString
-
-		if err := rows.Scan(&id, &client, &engagement, &scope, &operator, &phase, &timestamp, &filename, &relPath, &size, &stateStr, &lastSyncAt); err != nil {
+		row, err := scanSessionRow(rows)
+		if err != nil {
 			continue
 		}
-
-		s.ID = id
-		s.Filename = filename
-		s.Path = filepath.Join(rootDir, relPath)
-		s.DisplayPath = relPath
-		s.Size = size
-		s.Metadata = SessionMetadata{
-			Client:     client,
-			Engagement: engagement,
-			Scope:      scope,
-			Operator:   operator,
-			Phase:      phase,
-			Timestamp:  timestamp,
-		}
-		s.MetaPath = strings.Replace(s.Path, ".tty", ".json", 1)
-		s.NotesPath = strings.Replace(s.Path, ".tty", ".notes.json", 1)
-
-		if stateStr.Valid {
-			s.State = SessionState(stateStr.String)
-		} else {
-			s.State = SessionStateCompleted
-		}
-		if lastSyncAt.Valid {
-			s.LastSyncAt = lastSyncAt.String
-		}
-
-		if ts, err := time.Parse(time.RFC3339, timestamp); err == nil {
-			s.ModTime = ts.Format("2006-01-02 15:04:05")
-			s.SortKey = ts
-		} else {
-			s.ModTime = timestamp
-		}
-
-		sessions = append(sessions, s)
+		sessions = append(sessions, buildSession(row))
 	}
 
 	return sessions, nil
@@ -565,6 +454,14 @@ func MarkStaleSessions(timeout time.Duration) (int, error) {
 }
 
 func RecoverSession(sessionID int) error {
+	session, err := GetSession(sessionID)
+	if err != nil {
+		return err
+	}
+	if session.State == SessionStateArchived {
+		return fmt.Errorf("session %d is archived and cannot be recovered as a local crashed session", sessionID)
+	}
+
 	database, err := db.GetDB()
 	if err != nil {
 		return err
@@ -575,7 +472,7 @@ func RecoverSession(sessionID int) error {
 		return err
 	}
 
-	session, err := GetSession(sessionID)
+	session, err = GetSession(sessionID)
 	if err != nil {
 		return nil
 	}
@@ -611,6 +508,43 @@ func DeleteSession(sessionID int) error {
 
 	_, err = database.Exec(`DELETE FROM sessions WHERE id = ?`, sessionID)
 	return err
+}
+
+func MarkSessionsArchived(sessionIDs []int, archivePath, manifestSHA256 string) error {
+	if len(sessionIDs) == 0 {
+		return nil
+	}
+
+	database, err := db.GetDB()
+	if err != nil {
+		return err
+	}
+
+	tx, err := database.Begin()
+	if err != nil {
+		return err
+	}
+
+	stmt, err := tx.Prepare(`
+		UPDATE sessions
+		SET state = ?, archived_at = ?, archive_path = ?, archive_manifest_sha256 = ?, last_sync_at = ?
+		WHERE id = ?
+	`)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	defer stmt.Close()
+
+	now := time.Now().Format(time.RFC3339)
+	for _, sessionID := range sessionIDs {
+		if _, err := stmt.Exec(string(SessionStateArchived), now, archivePath, manifestSHA256, now, sessionID); err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+
+	return tx.Commit()
 }
 
 // AddTag adds a tag to a session
@@ -671,19 +605,25 @@ func GetSessionTags(sessionID int) ([]string, error) {
 
 // ListSessionsByTag returns all sessions with a specific tag
 func ListSessionsByTag(tag string) ([]Session, error) {
+	return ListSessionsByTagWithOptions(tag, SessionListOptions{})
+}
+
+func ListSessionsByTagWithOptions(tag string, opts SessionListOptions) ([]Session, error) {
 	database, err := db.GetDB()
 	if err != nil {
 		return nil, err
 	}
 
-	query := `
-		SELECT s.id, s.client, s.engagement, s.scope, s.operator, s.phase, s.timestamp, 
-		       s.filename, s.relative_path, s.size
+	query := fmt.Sprintf(`
+		SELECT %s
 		FROM sessions s
 		INNER JOIN session_tags st ON s.id = st.session_id
 		WHERE st.tag = ?
-		ORDER BY s.timestamp DESC
-	`
+	`, sessionSelectColumns("s"))
+	if filter := archiveFilterClause(opts); filter != "" {
+		query += " AND " + strings.ReplaceAll(filter, "state", "s.state")
+	}
+	query += " ORDER BY s.timestamp DESC"
 
 	rows, err := database.Query(query, tag)
 	if err != nil {
@@ -692,58 +632,124 @@ func ListSessionsByTag(tag string) ([]Session, error) {
 	defer rows.Close()
 
 	var sessions []Session
-	mgr := config.Manager()
-	rootDir := mgr.GetPaths().LogsDir
 
 	for rows.Next() {
-		var s Session
-		var client, engagement, phase, timestamp, filename, relPath string
-		var scope, operator sql.NullString
-		var size int64
-		var id int
-
-		if err := rows.Scan(&id, &client, &engagement, &scope, &operator, &phase, &timestamp, &filename, &relPath, &size); err != nil {
+		row, err := scanSessionRow(rows)
+		if err != nil {
 			continue
 		}
-
-		s.ID = id
-		s.Filename = filename
-		s.Path = filepath.Join(rootDir, relPath)
-		s.DisplayPath = relPath
-		s.Size = size
-
-		scopeVal := ""
-		if scope.Valid {
-			scopeVal = scope.String
-		}
-		operatorVal := ""
-		if operator.Valid {
-			operatorVal = operator.String
-		}
-
-		s.Metadata = SessionMetadata{
-			Client:     client,
-			Engagement: engagement,
-			Scope:      scopeVal,
-			Operator:   operatorVal,
-			Phase:      phase,
-			Timestamp:  timestamp,
-		}
-
-		s.MetaPath = strings.Replace(s.Path, ".tty", ".json", 1)
-		s.NotesPath = strings.Replace(s.Path, ".tty", ".notes.json", 1)
-
-		if ts, err := time.Parse(time.RFC3339, timestamp); err == nil {
-			s.ModTime = ts.Format("2006-01-02 15:04:05")
-			s.SortKey = ts
-		} else {
-			s.ModTime = timestamp
-		}
-
-		sessions = append(sessions, s)
+		sessions = append(sessions, buildSession(row))
 	}
 
 	return sessions, nil
+}
+
+func archiveFilterClause(opts SessionListOptions) string {
+	switch {
+	case opts.OnlyArchived:
+		return "TRIM(COALESCE(state, '')) = 'archived'"
+	case opts.IncludeArchived:
+		return ""
+	default:
+		return "TRIM(COALESCE(state, '')) != 'archived'"
+	}
+}
+
+func sessionSelectColumns(prefix string) string {
+	if prefix != "" {
+		prefix += "."
+	}
+
+	return strings.Join([]string{
+		prefix + "id",
+		prefix + "client",
+		prefix + "engagement",
+		prefix + "scope",
+		prefix + "operator",
+		prefix + "phase",
+		prefix + "timestamp",
+		prefix + "filename",
+		prefix + "relative_path",
+		prefix + "size",
+		prefix + "state",
+		prefix + "last_sync_at",
+		prefix + "target",
+		prefix + "target_ip",
+		prefix + "archived_at",
+		prefix + "archive_path",
+		prefix + "archive_manifest_sha256",
+	}, ", ")
+}
+
+func scanSessionRow(scanner sessionScanner) (sessionRow, error) {
+	var row sessionRow
+	err := scanner.Scan(
+		&row.ID,
+		&row.Client,
+		&row.Engagement,
+		&row.Scope,
+		&row.Operator,
+		&row.Phase,
+		&row.Timestamp,
+		&row.Filename,
+		&row.RelativePath,
+		&row.Size,
+		&row.State,
+		&row.LastSyncAt,
+		&row.Target,
+		&row.TargetIP,
+		&row.ArchivedAt,
+		&row.ArchivePath,
+		&row.ArchiveManifestSHA256,
+	)
+	return row, err
+}
+
+func buildSession(row sessionRow) Session {
+	mgr := config.Manager()
+	path := filepath.Join(mgr.GetPaths().LogsDir, row.RelativePath)
+	session := Session{
+		ID:          row.ID,
+		Filename:    row.Filename,
+		Path:        path,
+		DisplayPath: row.RelativePath,
+		MetaPath:    strings.Replace(path, ".tty", ".json", 1),
+		NotesPath:   strings.Replace(path, ".tty", ".notes.json", 1),
+		Size:        row.Size,
+		Metadata: SessionMetadata{
+			Client:     row.Client,
+			Engagement: row.Engagement,
+			Scope:      row.Scope.String,
+			Operator:   row.Operator.String,
+			Phase:      row.Phase,
+			Target:     row.Target.String,
+			TargetIP:   row.TargetIP.String,
+			Timestamp:  row.Timestamp,
+		},
+		State:                 normalizeSessionState(row.State),
+		LastSyncAt:            row.LastSyncAt.String,
+		ArchivedAt:            row.ArchivedAt.String,
+		ArchivePath:           row.ArchivePath.String,
+		ArchiveManifestSHA256: row.ArchiveManifestSHA256.String,
+	}
+
+	if ts, err := time.Parse(time.RFC3339, row.Timestamp); err == nil {
+		session.ModTime = ts.Format("2006-01-02 15:04:05")
+		session.SortKey = ts
+	} else {
+		session.ModTime = row.Timestamp
+	}
+
+	return session
+}
+
+func normalizeSessionState(state sql.NullString) SessionState {
+	if state.Valid {
+		if cleaned := strings.TrimSpace(state.String); cleaned != "" {
+			return SessionState(cleaned)
+		}
+	}
+	return SessionStateCompleted
 }
 
 // ListAllTags returns all tags used in the system

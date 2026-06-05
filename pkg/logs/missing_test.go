@@ -99,3 +99,55 @@ func TestListSessionsPaginatedMissingFile(t *testing.T) {
 		t.Errorf("Expected orphaned session path %s, got %s", sessionPath, orphaned[0].Path)
 	}
 }
+
+func TestArchivedMissingFileIsNotOrphaned(t *testing.T) {
+	config.ResetManagerForTesting()
+	defer config.ResetManagerForTesting()
+
+	tmpDir, err := os.MkdirTemp("", "pentlog-archived-missing-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	os.Setenv("PENTLOG_TEST_HOME", tmpDir)
+	defer os.Unsetenv("PENTLOG_TEST_HOME")
+	defer db.CloseDB()
+
+	logsDir := filepath.Join(tmpDir, ".pentlog", "logs")
+	sessionDir := filepath.Join(logsDir, "testclient", "testeng", "archive")
+	if err := os.MkdirAll(sessionDir, 0700); err != nil {
+		t.Fatal(err)
+	}
+
+	sessionPath := filepath.Join(sessionDir, "archived-session.tty")
+	if err := os.WriteFile(sessionPath, []byte("log content"), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	meta := SessionMetadata{
+		Client:     "testclient",
+		Engagement: "testeng",
+		Phase:      "archive",
+		Timestamp:  time.Now().Format(time.RFC3339),
+	}
+
+	id, err := AddSessionToDBWithState(meta, sessionPath, SessionStateCompleted)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := MarkSessionsArchived([]int{int(id)}, "/tmp/archive.zip", "cafebabe"); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(sessionPath); err != nil {
+		t.Fatal(err)
+	}
+
+	orphaned, err := GetOrphanedSessions()
+	if err != nil {
+		t.Fatalf("GetOrphanedSessions failed: %v", err)
+	}
+	if len(orphaned) != 0 {
+		t.Fatalf("expected archived missing-file sessions to be excluded from orphan detection, got %d", len(orphaned))
+	}
+}

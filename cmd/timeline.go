@@ -18,7 +18,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var outputFile string
+var (
+	outputFile              string
+	timelineIncludeArchived bool
+)
 
 var timelineCmd = &cobra.Command{
 	Use:   "timeline [id]",
@@ -37,7 +40,9 @@ If no session ID is provided, an interactive session selector will be displayed.
 				errors.NewError(errors.Generic, fmt.Sprintf("Invalid session ID: %s", args[0])).Fatal()
 			}
 		} else {
-			sessions, err := logs.ListSessions()
+			sessions, err := logs.ListSessionsWithOptions(logs.SessionListOptions{
+				IncludeArchived: timelineIncludeArchived,
+			})
 			if err != nil {
 				errors.DatabaseErr("list sessions", err).Fatal()
 			}
@@ -70,9 +75,22 @@ If no session ID is provided, an interactive session selector will be displayed.
 		if err != nil {
 			errors.SessionMissing(fmt.Sprintf("%d", id)).Fatal()
 		}
+		if session.State == logs.SessionStateArchived && !timelineIncludeArchived {
+			errors.NewError(errors.Generic, "Session is archived; rerun with --include-archived to inspect archived records").Fatal()
+		}
 
 		if session.Path == "" {
 			errors.NewError(errors.SessionNotFound, "Session file missing; cannot analyze").Fatal()
+		}
+		if _, err := os.Stat(session.Path); err != nil {
+			if os.IsNotExist(err) && session.State == logs.SessionStateArchived {
+				msg := fmt.Sprintf("Archived session is no longer stored locally. Archive: %s", session.ArchivePath)
+				errors.NewError(errors.SessionNotFound, msg).Fatal()
+			}
+			if os.IsNotExist(err) {
+				errors.NewError(errors.SessionNotFound, "Session file missing; cannot analyze").Fatal()
+			}
+			errors.FileErr(session.Path, err).Fatal()
 		}
 
 		spin := utils.NewSpinner(fmt.Sprintf("Analyzing session %d...", id))
@@ -110,6 +128,7 @@ If no session ID is provided, an interactive session selector will be displayed.
 
 func init() {
 	timelineCmd.Flags().StringVarP(&outputFile, "output", "o", "", "Output file path for JSON export")
+	timelineCmd.Flags().BoolVar(&timelineIncludeArchived, "include-archived", false, "Include archived sessions in selection and direct lookup")
 	rootCmd.AddCommand(timelineCmd)
 }
 

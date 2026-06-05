@@ -3,19 +3,22 @@ package api
 import "time"
 
 type SessionResponse struct {
-	ID          int         `json:"id"`
-	Filename    string      `json:"filename"`
-	Path        string      `json:"path"`
-	DisplayPath string      `json:"display_path"`
-	Size        int64       `json:"size"`
-	SizeHuman   string      `json:"size_human"`
-	ModTime     string      `json:"mod_time"`
-	State       string      `json:"state"`
-	Duration    string      `json:"duration"`
-	Metadata    SessionMeta `json:"metadata"`
-	Tags        []string    `json:"tags"`
-	NotesCount  int         `json:"notes_count"`
-	HasGIF      bool        `json:"has_gif"`
+	ID                    int         `json:"id"`
+	Filename              string      `json:"filename"`
+	Path                  string      `json:"path"`
+	DisplayPath           string      `json:"display_path"`
+	Size                  int64       `json:"size"`
+	SizeHuman             string      `json:"size_human"`
+	ModTime               string      `json:"mod_time"`
+	State                 string      `json:"state"`
+	ArchivedAt            string      `json:"archived_at,omitempty"`
+	ArchivePath           string      `json:"archive_path,omitempty"`
+	ArchiveManifestSHA256 string      `json:"archive_manifest_sha256,omitempty"`
+	Duration              string      `json:"duration"`
+	Metadata              SessionMeta `json:"metadata"`
+	Tags                  []string    `json:"tags"`
+	NotesCount            int         `json:"notes_count"`
+	HasGIF                bool        `json:"has_gif"`
 }
 
 type SessionMeta struct {

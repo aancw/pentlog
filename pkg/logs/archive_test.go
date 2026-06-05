@@ -85,6 +85,34 @@ func TestArchiveSessions(t *testing.T) {
 		t.Error("Original timing file should still exist")
 	}
 
+	activeSessions, err := ListSessions()
+	if err != nil {
+		t.Fatalf("ListSessions failed: %v", err)
+	}
+	if len(activeSessions) != 0 {
+		t.Fatalf("expected archived sessions to be excluded from default listings, got %d", len(activeSessions))
+	}
+
+	allSessions, err := ListSessionsWithOptions(SessionListOptions{IncludeArchived: true})
+	if err != nil {
+		t.Fatalf("ListSessionsWithOptions failed: %v", err)
+	}
+	if len(allSessions) != 1 {
+		t.Fatalf("expected 1 session including archived, got %d", len(allSessions))
+	}
+	if allSessions[0].State != SessionStateArchived {
+		t.Fatalf("expected session state %q, got %q", SessionStateArchived, allSessions[0].State)
+	}
+	if allSessions[0].ArchivePath == "" {
+		t.Fatal("expected archive_path to be recorded")
+	}
+	if allSessions[0].ArchiveManifestSHA256 == "" {
+		t.Fatal("expected archive_manifest_sha256 to be recorded")
+	}
+	if allSessions[0].ArchivedAt == "" {
+		t.Fatal("expected archived_at to be recorded")
+	}
+
 	// Test 2: Archive with Delete
 	// Wait a bit to ensure timestamp diff maybe? Or just run it.
 	// Since we already have an archive, it will create a NEW timestamped archive.
@@ -116,17 +144,16 @@ func TestArchiveSessions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Archive delete failed: %v", err)
 	}
-	// Should pick up both files now (original + new one)
-	if count != 2 {
-		t.Errorf("Expected 2 archived sessions, got %d", count)
+	if count != 1 {
+		t.Errorf("Expected 1 newly archived session, got %d", count)
 	}
 
 	// Verify Originals GONE
-	if _, err := os.Stat(logFile); !os.IsNotExist(err) {
-		t.Error("Original log file should be deleted")
+	if _, err := os.Stat(logFile); os.IsNotExist(err) {
+		t.Error("First archived log file should remain because it was archived with keep mode")
 	}
-	if _, err := os.Stat(timingFile); !os.IsNotExist(err) {
-		t.Error("Original timing file should be deleted")
+	if _, err := os.Stat(timingFile); os.IsNotExist(err) {
+		t.Error("First archived timing file should remain because it was archived with keep mode")
 	}
 	if _, err := os.Stat(logFile2); !os.IsNotExist(err) {
 		t.Error("Original log file 2 should be deleted")
@@ -174,6 +201,14 @@ func TestArchiveSessions(t *testing.T) {
 	}
 	if !foundManifest {
 		t.Error("Archive should contain manifest.json")
+	}
+
+	orphaned, err := GetOrphanedSessions()
+	if err != nil {
+		t.Fatalf("GetOrphanedSessions failed: %v", err)
+	}
+	if len(orphaned) != 0 {
+		t.Fatalf("expected archived sessions deleted from disk to stay out of orphan cleanup, got %d", len(orphaned))
 	}
 }
 
@@ -226,6 +261,17 @@ func TestArchiveSessionFiltering(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(clientDir2, base2+".tty")); os.IsNotExist(err) {
 		t.Error("Exploit session should still exist")
+	}
+
+	activeSessions, err := ListSessions()
+	if err != nil {
+		t.Fatalf("ListSessions failed: %v", err)
+	}
+	if len(activeSessions) != 1 {
+		t.Fatalf("expected only the non-archived session to remain in default listings, got %d", len(activeSessions))
+	}
+	if activeSessions[0].Metadata.Phase != "exploit" {
+		t.Fatalf("expected remaining active session to be exploit, got %s", activeSessions[0].Metadata.Phase)
 	}
 }
 
@@ -288,6 +334,17 @@ func TestArchiveSessionsEncrypted(t *testing.T) {
 	archive := archives[0]
 	if !strings.HasSuffix(archive.Filename, ".zip") {
 		t.Errorf("Expected .zip archive, got %s", archive.Filename)
+	}
+
+	sessions, err := ListSessionsWithOptions(SessionListOptions{IncludeArchived: true})
+	if err != nil {
+		t.Fatalf("ListSessionsWithOptions failed: %v", err)
+	}
+	if len(sessions) != 1 {
+		t.Fatalf("expected 1 archived session in database, got %d", len(sessions))
+	}
+	if sessions[0].State != SessionStateArchived {
+		t.Fatalf("expected archived state after encryption flow, got %q", sessions[0].State)
 	}
 
 	// We can't easily test decryption without the same library logic or unzipping command

@@ -30,6 +30,7 @@ func handleSessionsList(w http.ResponseWriter, r *http.Request) {
 	phase := strings.TrimSpace(r.URL.Query().Get("phase"))
 	state := strings.TrimSpace(r.URL.Query().Get("state"))
 	query := strings.TrimSpace(r.URL.Query().Get("q"))
+	includeArchived := strings.EqualFold(strings.TrimSpace(r.URL.Query().Get("include_archived")), "true")
 
 	if limit <= 0 {
 		limit = 20
@@ -38,7 +39,10 @@ func handleSessionsList(w http.ResponseWriter, r *http.Request) {
 		offset = 0
 	}
 
-	sessions, err := logs.ListSessions()
+	sessions, err := logs.ListSessionsWithOptions(logs.SessionListOptions{
+		IncludeArchived: includeArchived || strings.EqualFold(state, string(logs.SessionStateArchived)),
+		OnlyArchived:    strings.EqualFold(state, string(logs.SessionStateArchived)),
+	})
 	if err != nil {
 		http.Error(w, `{"error":"Failed to list sessions"}`, http.StatusInternalServerError)
 		return

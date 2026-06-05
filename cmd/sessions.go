@@ -15,9 +15,11 @@ import (
 )
 
 var (
-	sessionsLimit  int
-	sessionsOffset int
-	sessionsTag    string
+	sessionsLimit           int
+	sessionsOffset          int
+	sessionsTag             string
+	sessionsIncludeArchived bool
+	sessionsArchivedOnly    bool
 )
 
 const defaultSessionsPageSize = 20
@@ -62,7 +64,10 @@ var sessionsListCmd = &cobra.Command{
 
 		// If tag filter is specified, use it
 		if sessionsTag != "" {
-			sessions, err = logs.ListSessionsByTag(sessionsTag)
+			sessions, err = logs.ListSessionsByTagWithOptions(sessionsTag, logs.SessionListOptions{
+				IncludeArchived: sessionsIncludeArchived,
+				OnlyArchived:    sessionsArchivedOnly,
+			})
 			if err != nil {
 				errors.DatabaseErr("list sessions by tag", err).Fatal()
 			}
@@ -78,7 +83,10 @@ var sessionsListCmd = &cobra.Command{
 		}
 
 		if sessionsLimit > 0 || sessionsOffset > 0 {
-			sessions, err = logs.ListSessionsPaginated(sessionsLimit, sessionsOffset)
+			sessions, err = logs.ListSessionsPaginatedWithOptions(sessionsLimit, sessionsOffset, logs.SessionListOptions{
+				IncludeArchived: sessionsIncludeArchived,
+				OnlyArchived:    sessionsArchivedOnly,
+			})
 			if err != nil {
 				errors.DatabaseErr("list sessions", err).Fatal()
 			}
@@ -103,7 +111,10 @@ var sessionsListCmd = &cobra.Command{
 
 		offset := 0
 		for {
-			sessions, err = logs.ListSessionsPaginated(defaultSessionsPageSize+1, offset)
+			sessions, err = logs.ListSessionsPaginatedWithOptions(defaultSessionsPageSize+1, offset, logs.SessionListOptions{
+				IncludeArchived: sessionsIncludeArchived,
+				OnlyArchived:    sessionsArchivedOnly,
+			})
 			if err != nil {
 				errors.DatabaseErr("list sessions", err).Fatal()
 			}
@@ -353,6 +364,8 @@ func init() {
 	sessionsListCmd.Flags().IntVarP(&sessionsLimit, "limit", "l", 0, "Maximum number of sessions to display")
 	sessionsListCmd.Flags().IntVarP(&sessionsOffset, "offset", "o", 0, "Number of sessions to skip (for pagination)")
 	sessionsListCmd.Flags().StringVarP(&sessionsTag, "tag", "t", "", "Filter sessions by tag")
+	sessionsListCmd.Flags().BoolVar(&sessionsIncludeArchived, "include-archived", false, "Include archived sessions in results")
+	sessionsListCmd.Flags().BoolVar(&sessionsArchivedOnly, "archived-only", false, "Show only archived sessions")
 
 	rootCmd.AddCommand(sessionsCmd)
 	sessionsCmd.AddCommand(sessionsListCmd)
@@ -365,9 +378,9 @@ func init() {
 
 func printSessionsTable(sessions []logs.Session) {
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
-	fmt.Fprintln(w, "ID\tTIME\tSIZE\tFILE")
+	fmt.Fprintln(w, "ID\tTIME\tSTATE\tSIZE\tFILE")
 	for _, s := range sessions {
-		fmt.Fprintf(w, "%d\t%s\t%s\t%s\n", s.ID, s.ModTime, utils.FormatBytes(s.Size), s.DisplayPath)
+		fmt.Fprintf(w, "%d\t%s\t%s\t%s\t%s\n", s.ID, s.ModTime, s.State, utils.FormatBytes(s.Size), s.DisplayPath)
 	}
 	w.Flush()
 }
