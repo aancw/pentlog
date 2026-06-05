@@ -30,11 +30,22 @@ func handleSearch(w http.ResponseWriter, r *http.Request) {
 	fromStr := r.URL.Query().Get("from")
 	toStr := r.URL.Query().Get("to")
 	limitStr := r.URL.Query().Get("limit")
+	offsetStr := r.URL.Query().Get("offset")
 
 	limit := 100
 	if limitStr != "" {
 		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
 			limit = l
+		}
+	}
+	if limit > 500 {
+		limit = 500
+	}
+
+	offset := 0
+	if offsetStr != "" {
+		if parsed, err := strconv.Atoi(offsetStr); err == nil && parsed >= 0 {
+			offset = parsed
 		}
 	}
 
@@ -47,6 +58,7 @@ func handleSearch(w http.ResponseWriter, r *http.Request) {
 	opts := search.SearchOptions{
 		IsRegex: isRegex,
 		Limit:   limit,
+		Offset:  offset,
 	}
 
 	if fromStr != "" {
@@ -56,32 +68,38 @@ func handleSearch(w http.ResponseWriter, r *http.Request) {
 	}
 	if toStr != "" {
 		if t, err := time.Parse("2006-01-02", toStr); err == nil {
-			opts.Before = t
+			opts.Before = t.Add(24*time.Hour - time.Nanosecond)
 		}
 	}
 
-	matches, err := search.Search(query, sessions, opts)
+	page, err := search.SearchPage(query, sessions, opts)
 	if err != nil {
 		http.Error(w, `{"error":"Search failed: `+err.Error()+`"}`, http.StatusInternalServerError)
 		return
 	}
 
 	var results []map[string]interface{}
-	for _, m := range matches {
+	for _, m := range page.Matches {
 		results = append(results, map[string]interface{}{
-			"session_id":   m.Session.ID,
-			"session_path": m.Session.DisplayPath,
-			"line_num":     m.LineNum,
-			"content":      utils.StripANSI(m.Content),
-			"is_note":      m.IsNote,
+			"session_id":         m.Session.ID,
+			"session_path":       m.Session.DisplayPath,
+			"line_num":           m.LineNum,
+			"content":            utils.StripANSI(m.Content),
+			"context":            m.Context,
+			"context_start_line": m.ContextStartLine,
+			"is_note":            m.IsNote,
+			"note_timestamp":     m.NoteTimestamp,
 		})
 	}
 
 	resp := map[string]interface{}{
 		"results":       results,
-		"total_matches": len(results),
+		"total_matches": page.Total,
 		"query":         query,
 		"is_regex":      isRegex,
+		"limit":         limit,
+		"offset":        offset,
+		"has_more":      offset+len(results) < page.Total,
 	}
 
 	w.Header().Set("Content-Type", "application/json")

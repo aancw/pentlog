@@ -156,12 +156,20 @@ type SearchResponse struct {
 	TotalMatches int            `json:"total_matches"`
 	Query        string         `json:"query"`
 	IsRegex      bool           `json:"is_regex"`
+	Limit        int            `json:"limit"`
+	Offset       int            `json:"offset"`
+	HasMore      bool           `json:"has_more"`
 }
 
 type SearchResult struct {
-	SessionID   int     `json:"session_id"`
-	SessionPath string  `json:"session_path"`
-	Matches     []Match `json:"matches"`
+	SessionID        int      `json:"session_id"`
+	SessionPath      string   `json:"session_path"`
+	LineNum          int      `json:"line_num"`
+	Content          string   `json:"content"`
+	Context          []string `json:"context"`
+	ContextStartLine int      `json:"context_start_line"`
+	IsNote           bool     `json:"is_note"`
+	NoteTimestamp    string   `json:"note_timestamp,omitempty"`
 }
 
 type Match struct {

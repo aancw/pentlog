@@ -769,11 +769,51 @@ textarea:focus-visible {
   margin-top: 0.8rem;
 }
 
+.search-hit-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.8rem;
+}
+
 .search-hit pre,
 .terminal-preview,
 .timeline-entry pre,
 .code-block {
   overflow-x: auto;
+}
+
+.content-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.content-line {
+  display: grid;
+  grid-template-columns: minmax(3rem, auto) minmax(0, 1fr);
+  gap: 0.9rem;
+  padding: 0.4rem 0.55rem;
+  border: 1px solid transparent;
+  border-radius: 10px;
+}
+
+.content-line-number {
+  color: var(--muted);
+  text-align: right;
+  user-select: none;
+}
+
+.content-line-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.content-line-highlight,
+.list-row-highlight {
+  border-color: rgba(216, 156, 79, 0.35);
+  background: rgba(216, 156, 79, 0.12);
 }
 
 .search-hit pre,

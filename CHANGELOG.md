@@ -2,6 +2,34 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.19.1] - 2026-06-05
+### Added
+- **Archive Integrity Manifests**: Archives now include `manifest.json` with deterministic hashes and sizes
+  - Import verifies the manifest when present to catch tampering
+- **Explicit Session Sync**: Legacy filesystem-to-database sync is now a dedicated `pentlog sessions sync` migration step
+- **Shell Guardrails**: `pentlog shell` now exposes `--phase`, `--target`, and stale-context confirmation before starting a recording
+- **Shared AI Config Bootstrapping**: `analyze` and `export` now reuse the same AI configuration setup path
+- **Web Search Triage Workflow**: Search results now support evidence-first drill-down from the browser dashboard
+  - Search hits include transcript context lines and note timestamps
+  - Result cards link directly to the matching session and matching hit
+  - Session detail highlights the selected transcript line or operator note after drill-down
+- **Search API Coverage**
+  - Added handler tests for pagination and context-line search responses
+
+### Changed
+- **Web Defaults**: `pentlog web` now uses existing built assets by default and only rebuilds on `--rebuild` or when assets are missing
+- **Web Search State**: Search filters now use URL-driven state for bookmarkable and shareable queries
+  - Search page keeps `q`, `regex`, `from`, `to`, `limit`, and `page` in the URL
+  - Search results paginate with stable `limit` / `offset` semantics and `has_more` metadata
+- **Search Response Contract**: Web search now returns richer result metadata
+  - Includes real `total_matches` counts instead of just the current page length
+  - Includes per-hit context windows and note timestamps for downstream UI workflows
+
+### Fixed
+- **Evidence File Permissions**: Sensitive file writes now go through private helpers so evidence and config files use stricter permissions
+- **Archive Import Hardening**: Import flow now validates manifest-backed archives and keeps the copy path aligned with the new integrity format
+- **Search and Session UX**: Session detail and search pages now preserve context better when jumping between search hits and session content
+
 ## [v0.18.0] - 2026-04-22
 ### Added
 - **Web Dashboard Mission Control**: Reworked browser dashboard surface for faster operational visibility

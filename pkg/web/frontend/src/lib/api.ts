@@ -130,7 +130,10 @@ export interface SearchResult {
   session_path: string
   line_num: number
   content: string
+  context: string[]
+  context_start_line: number
   is_note: boolean
+  note_timestamp?: string
 }
 
 export interface SearchResponse {
@@ -138,6 +141,9 @@ export interface SearchResponse {
   total_matches: number
   query: string
   is_regex: boolean
+  limit: number
+  offset: number
+  has_more: boolean
 }
 
 export interface SystemStatus {

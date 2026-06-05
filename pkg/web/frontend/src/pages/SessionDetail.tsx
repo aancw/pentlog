@@ -1,12 +1,18 @@
-import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, Clock3, ExternalLink, HardDrive, Maximize2, Radio, StickyNote, Terminal, X } from 'lucide-react'
 import { formatDate } from '../lib/api'
 import { useSession, useSessionContent, useSessionNotes, useSessionTimeline, useShareStatus } from '../hooks/useApi'
 import { api } from '../hooks/useApi'
 
+type FocusedLine = {
+  number: number
+  text: string
+}
+
 export default function SessionDetail() {
   const { id } = useParams()
+  const [searchParams] = useSearchParams()
   const [noteDraft, setNoteDraft] = useState('')
   const [showFullContent, setShowFullContent] = useState(false)
   const [showFullTimeline, setShowFullTimeline] = useState(false)
@@ -15,6 +21,11 @@ export default function SessionDetail() {
   const timelineQuery = useSessionTimeline(id)
   const contentQuery = useSessionContent(id)
   const shareQuery = useShareStatus()
+
+  const matchType = searchParams.get('matchType') ?? ''
+  const matchText = searchParams.get('matchText') ?? ''
+  const noteTimestamp = searchParams.get('noteTs') ?? ''
+  const matchLine = Number(searchParams.get('matchLine') ?? 0)
 
   useEffect(() => {
     function handleEscape(event: KeyboardEvent) {
@@ -54,6 +65,36 @@ export default function SessionDetail() {
   const share = shareQuery.data
   const isLiveShared = Boolean(share?.active && share.log_file && share.log_file === session.path)
 
+  const focusedContentLines = useMemo<FocusedLine[]>(() => {
+    if (matchType === 'note' || matchLine <= 0 || fullContent === '') {
+      return []
+    }
+
+    const lines = fullContent.split('\n')
+    const start = Math.max(0, matchLine - 3)
+    const end = Math.min(lines.length, matchLine + 2)
+
+    return lines.slice(start, end).map((line, index) => ({
+      number: start + index + 1,
+      text: line,
+    }))
+  }, [fullContent, matchLine, matchType])
+
+  const highlightedNoteIndex = useMemo(() => {
+    if (notes.length === 0 || matchType !== 'note') {
+      return -1
+    }
+
+    return notes.findIndex((note) => {
+      if (noteTimestamp && note.timestamp === noteTimestamp) {
+        return true
+      }
+      return matchText !== '' && note.content === matchText
+    })
+  }, [matchText, matchType, noteTimestamp, notes])
+
+  const hasSearchFocus = focusedContentLines.length > 0 || highlightedNoteIndex >= 0
+
   return (
     <div className="page-stack">
       <Link to="/sessions" className="inline-link back-link">
@@ -70,6 +111,32 @@ export default function SessionDetail() {
           <span className={`badge badge-${session.state.toLowerCase()}`}>{session.state}</span>
         </div>
       </section>
+
+      {hasSearchFocus && (
+        <section className="panel-card">
+          <div className="panel-header">
+            <div>
+              <h3>Search Focus</h3>
+              <p>{highlightedNoteIndex >= 0 ? 'This page opened from a matching operator note.' : 'This page opened from a matching transcript line.'}</p>
+            </div>
+          </div>
+          {highlightedNoteIndex >= 0 ? (
+            <div className="list-row list-row-highlight stacked-row">
+              <strong>{formatDate(notes[highlightedNoteIndex]?.timestamp)}</strong>
+              <p>{notes[highlightedNoteIndex]?.content}</p>
+            </div>
+          ) : (
+            <div className="terminal-preview content-lines">
+              {focusedContentLines.map((line) => (
+                <div key={line.number} className={`content-line ${line.number === matchLine ? 'content-line-highlight' : ''}`}>
+                  <span className="content-line-number">{line.number}</span>
+                  <span className="content-line-text">{line.text || ' '}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       <section className="stats-grid">
         <article className="stat-card stat-card-blue">
@@ -142,7 +209,7 @@ export default function SessionDetail() {
           <div className="panel-header">
             <div>
               <h3>Content Preview</h3>
-              <p>Cleaned terminal output excerpt.</p>
+              <p>{focusedContentLines.length > 0 ? 'Transcript excerpt centered on the matching line.' : 'Cleaned terminal output excerpt.'}</p>
             </div>
             <button className="secondary-button" onClick={() => setShowFullContent(true)} disabled={!fullContent}>
               <Maximize2 size={14} /> View full
@@ -150,12 +217,20 @@ export default function SessionDetail() {
           </div>
           {contentQuery.isLoading ? (
             <div className="loading-state compact">Loading content…</div>
+          ) : focusedContentLines.length > 0 ? (
+            <div className="terminal-preview content-lines">
+              {focusedContentLines.map((line) => (
+                <div key={line.number} className={`content-line ${line.number === matchLine ? 'content-line-highlight' : ''}`}>
+                  <span className="content-line-number">{line.number}</span>
+                  <span className="content-line-text">{line.text || ' '}</span>
+                </div>
+              ))}
+            </div>
           ) : (
             <pre className="terminal-preview">{contentPreview || 'No content available.'}</pre>
           )}
         </article>
       </section>
-
 
       <section className="panel-card">
         <div className="panel-header">
@@ -203,7 +278,7 @@ export default function SessionDetail() {
           </div>
           <div className="list-stack">
             {notes.map((note, index) => (
-              <div key={`${note.timestamp}-${index}`} className="list-row stacked-row">
+              <div key={`${note.timestamp}-${index}`} className={`list-row stacked-row ${index === highlightedNoteIndex ? 'list-row-highlight' : ''}`}>
                 <strong>{formatDate(note.timestamp)}</strong>
                 <p>{note.content}</p>
               </div>
