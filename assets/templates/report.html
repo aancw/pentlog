@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PentLog Export Report</title>
+    <title>PentLog Evidence Report</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
     <style>
         {{.CSS}}
     </style>
@@ -15,89 +15,401 @@
     <button class="theme-toggle" onclick="toggleTheme()">
         <span id="theme-icon">🌙 Dark</span>
     </button>
-    
-    <h1>Report for Client: {{.Client}}</h1>
 
-    {{if .Findings}}
-    <h2>Findings & Vulnerabilities</h2>
-    <table>
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Severity</th>
-                <th>Title</th>
-                <th>Phase</th>
-                <th>Status</th>
-            </tr>
-        </thead>
-        <tbody>
-            {{range .Findings}}
-            <tr>
-                <td>{{.ID}}</td>
-                <td style="color: {{.SeverityColor}}; font-weight: bold;">{{.Severity}}</td>
-                <td>{{.Title}}</td>
-                <td>{{.Phase}}</td>
-                <td>{{.Status}}</td>
-            </tr>
-            {{end}}
-        </tbody>
-    </table>
-    <hr/>
-    {{end}}
-
-    {{if .AIAnalysis}}
-    <div class="session">
-        <h2>AI Analysis</h2>
-        <div class="ai-content">
-            {{.AIAnalysis}}
-        </div>
-    </div>
-    <hr/>
-    {{end}}
-
-    {{range .Engagements}}
-    <h2>Engagement: {{.Name}}</h2>
-        {{range .Phases}}
-        <h3>Phase: {{.Name}}</h3>
-            {{range .Sessions}}
-            <div class="session">
-                <h4>Session {{.ID}} ({{.ModTime}})</h4>
-                {{if .GIFPath}}
-                <div class="gif-player-container" data-gif="{{.GIFPath}}" data-session-id="{{.ID}}">
-                    <div class="gif-placeholder">
-                        <div class="gif-play-btn">▶</div>
-                        <span class="gif-label">Click to load session recording</span>
-                    </div>
-                    <div class="gif-player-wrapper" style="display: none;">
-                        <canvas class="gif-canvas"></canvas>
-                        <div class="gif-controls">
-                            <button class="gif-ctrl-btn gif-play-pause" title="Play/Pause (Space)">▶</button>
-                            <button class="gif-ctrl-btn gif-step-back" title="Previous Frame (←)">⏮</button>
-                            <button class="gif-ctrl-btn gif-step-fwd" title="Next Frame (→)">⏭</button>
-                            <div class="gif-progress-container">
-                                <input type="range" class="gif-progress" min="0" max="100" value="0" title="Seek">
-                                <span class="gif-frame-info">0 / 0</span>
-                            </div>
-                            <select class="gif-speed" title="Playback Speed">
-                                <option value="0.25">0.25x</option>
-                                <option value="0.5">0.5x</option>
-                                <option value="1" selected>1x</option>
-                                <option value="2">2x</option>
-                                <option value="4">4x</option>
-                            </select>
-                            <button class="gif-ctrl-btn gif-restart" title="Restart (R)">↺</button>
-                        </div>
-                    </div>
+    <main class="page-shell">
+        <section class="hero">
+            <div class="hero-copy">
+                <p class="eyebrow">PentLog Evidence Report</p>
+                <h1>{{.Client}}</h1>
+                <p class="hero-text">Curated evidence, finding context, and operational references assembled from recorded sessions.</p>
+            </div>
+            <div class="hero-meta card">
+                <div class="meta-row">
+                    <span>Generated</span>
+                    <strong>{{.GeneratedAt}}</strong>
                 </div>
-                {{end}}
-                <details class="terminal-details">
-                    <summary>View Terminal Output</summary>
-                    <div class="log-content">{{.Content}}</div>
-                </details>
+                <div class="meta-row">
+                    <span>Activity Window</span>
+                    <strong>{{.Summary.FirstObserved}} to {{.Summary.LastObserved}}</strong>
+                </div>
+                <div class="meta-row">
+                    <span>Targets</span>
+                    <strong>{{if .Summary.Targets}}{{join .Summary.Targets ", "}}{{else}}-{{end}}</strong>
+                </div>
+                <div class="meta-row">
+                    <span>Operators</span>
+                    <strong>{{if .Summary.Operators}}{{join .Summary.Operators ", "}}{{else}}-{{end}}</strong>
+                </div>
+            </div>
+        </section>
+
+        <section class="summary-grid">
+            <article class="stat-card">
+                <span class="stat-label">Sessions</span>
+                <strong class="stat-value">{{.Summary.SessionCount}}</strong>
+                <span class="stat-detail">{{.Summary.EngagementCount}} engagement(s), {{.Summary.PhaseCount}} phase(s)</span>
+            </article>
+            <article class="stat-card">
+                <span class="stat-label">Findings</span>
+                <strong class="stat-value">{{.Summary.FindingCount}}</strong>
+                <span class="stat-detail">Critical {{.Summary.CriticalCount}} · High {{.Summary.HighCount}} · Medium {{.Summary.MediumCount}}</span>
+            </article>
+            <article class="stat-card">
+                <span class="stat-label">Evidence</span>
+                <strong class="stat-value">{{.Summary.EvidenceCount}}</strong>
+                <span class="stat-detail">Curated snippets for assembly-ready reporting</span>
+            </article>
+            <article class="stat-card">
+                <span class="stat-label">Appendix</span>
+                <strong class="stat-value">{{.Summary.CommandCount}}</strong>
+                <span class="stat-detail">Command entries with {{.Summary.ArchiveRefCount}} integrity reference(s)</span>
+            </article>
+        </section>
+
+        <section class="section-block">
+            <div class="section-heading">
+                <p class="eyebrow">Executive Summary</p>
+                <h2>Scope Snapshot</h2>
+            </div>
+            <div class="card prose-card">
+                <ul class="summary-list">
+                    <li>Scope covers {{.Summary.EngagementCount}} engagement(s), {{.Summary.PhaseCount}} phase(s), and {{.Summary.SessionCount}} recorded session(s).</li>
+                    <li>Findings captured: {{.Summary.FindingCount}} total. Status mix: Open {{.Summary.OpenCount}}, Verified {{.Summary.VerifiedCount}}, Closed {{.Summary.ClosedCount}}.</li>
+                    <li>Curated evidence snippets: {{.Summary.EvidenceCount}}. Command appendix entries: {{.Summary.CommandCount}}.</li>
+                    <li>Session tags in scope: {{if .Summary.Tags}}{{join .Summary.Tags ", "}}{{else}}-{{end}}.</li>
+                </ul>
+            </div>
+            {{if .AIAnalysis}}
+            <div class="card prose-card ai-card">
+                <div class="section-heading section-heading-inline">
+                    <p class="eyebrow">AI Summary</p>
+                    <h3>Analyst Assist</h3>
+                </div>
+                <div class="ai-content">
+                    {{.AIAnalysis}}
+                </div>
             </div>
             {{end}}
+        </section>
+
+        <section class="section-block">
+            <div class="section-heading">
+                <p class="eyebrow">Engagement Metadata</p>
+                <h2>Operational Scope</h2>
+            </div>
+            <div class="metadata-stack">
+                {{range .EngagementMetadata}}
+                <article class="card metadata-card">
+                    <div class="metadata-header">
+                        <div>
+                            <h3>{{.Name}}</h3>
+                            <p>{{.DateRange}}</p>
+                        </div>
+                        <span class="pill">{{.SessionCount}} session(s)</span>
+                    </div>
+                    <div class="metadata-grid">
+                        <div>
+                            <span class="mini-label">Operators</span>
+                            <p>{{if .Operators}}{{join .Operators ", "}}{{else}}-{{end}}</p>
+                        </div>
+                        <div>
+                            <span class="mini-label">Targets</span>
+                            <p>{{if .Targets}}{{join .Targets ", "}}{{else}}-{{end}}</p>
+                        </div>
+                        <div>
+                            <span class="mini-label">Tags</span>
+                            <p>{{if .Tags}}{{join .Tags ", "}}{{else}}-{{end}}</p>
+                        </div>
+                    </div>
+                    <div class="phase-list">
+                        {{range .Phases}}
+                        <div class="phase-chip">
+                            <strong>{{.Name}}</strong>
+                            <span>{{.SessionCount}} session(s)</span>
+                            <small>Targets: {{if .Targets}}{{join .Targets ", "}}{{else}}-{{end}}</small>
+                            <small>Tags: {{if .Tags}}{{join .Tags ", "}}{{else}}-{{end}}</small>
+                        </div>
+                        {{end}}
+                    </div>
+                </article>
+                {{end}}
+            </div>
+        </section>
+
+        <section class="section-block">
+            <div class="section-heading">
+                <p class="eyebrow">Findings</p>
+                <h2>Recorded Issues</h2>
+            </div>
+            {{if .Findings}}
+            <div class="finding-stack">
+                {{range .Findings}}
+                <article class="card finding-card">
+                    <div class="finding-header">
+                        <div>
+                            <div class="finding-line">
+                                <span class="severity-badge" style="color: {{.SeverityColor}};">{{.Severity}}</span>
+                                <span class="finding-id">{{.ID}}</span>
+                            </div>
+                            <h3>{{.Title}}</h3>
+                        </div>
+                        <div class="finding-meta">
+                            <span class="pill">{{.Status}}</span>
+                            <span class="pill">{{if .Phase}}{{.Phase}}{{else}}Unscoped{{end}}</span>
+                        </div>
+                    </div>
+                    {{if .Description}}
+                    <p class="finding-copy">{{.Description}}</p>
+                    {{end}}
+                    {{if .Evidence}}
+                    <div class="sub-block">
+                        <span class="mini-label">Evidence</span>
+                        <ul class="clean-list">
+                            {{range .Evidence}}
+                            <li>{{.}}</li>
+                            {{end}}
+                        </ul>
+                    </div>
+                    {{end}}
+                    {{if .Remediation}}
+                    <div class="sub-block">
+                        <span class="mini-label">Remediation</span>
+                        <p>{{.Remediation}}</p>
+                    </div>
+                    {{end}}
+                    {{if .References}}
+                    <div class="sub-block">
+                        <span class="mini-label">References</span>
+                        <ul class="clean-list">
+                            {{range .References}}
+                            <li>{{.}}</li>
+                            {{end}}
+                        </ul>
+                    </div>
+                    {{end}}
+                </article>
+                {{end}}
+            </div>
+            {{else}}
+            <div class="card empty-card">No findings were recorded for this report scope.</div>
+            {{end}}
+        </section>
+
+        <section class="section-block">
+            <div class="section-heading">
+                <p class="eyebrow">Evidence Snippets</p>
+                <h2>Curated Excerpts</h2>
+            </div>
+            {{if .EvidenceSnippets}}
+            <div class="evidence-grid">
+                {{range .EvidenceSnippets}}
+                <article class="card evidence-card">
+                    <div class="evidence-header">
+                        <div>
+                            <span class="mini-label">{{.Source}}</span>
+                            <h3>{{.Title}}</h3>
+                        </div>
+                        <span class="pill">{{if .Timestamp}}{{.Timestamp}}{{else}}No timestamp{{end}}</span>
+                    </div>
+                    <div class="evidence-meta">
+                        <span>Engagement: {{if .Engagement}}{{.Engagement}}{{else}}-{{end}}</span>
+                        <span>Phase: {{if .Phase}}{{.Phase}}{{else}}-{{end}}</span>
+                        <span>Target: {{if .Target}}{{.Target}}{{else}}-{{end}}</span>
+                        {{if .SessionID}}<span>Session: {{.SessionID}}</span>{{end}}
+                        {{if .FindingID}}<span>Finding: {{.FindingID}}</span>{{end}}
+                    </div>
+                    {{if .Summary}}
+                    <p class="evidence-summary">{{.Summary}}</p>
+                    {{end}}
+                    {{if .Tags}}
+                    <div class="tag-row">
+                        {{range .Tags}}
+                        <span class="tag">{{.}}</span>
+                        {{end}}
+                    </div>
+                    {{end}}
+                    <pre class="snippet-block">{{.Snippet}}</pre>
+                </article>
+                {{end}}
+            </div>
+            {{else}}
+            <div class="card empty-card">No session notes or finding evidence were recorded for this scope.</div>
+            {{end}}
+        </section>
+
+        <section class="section-block">
+            <div class="section-heading">
+                <p class="eyebrow">Command Appendix</p>
+                <h2>Command Trail</h2>
+            </div>
+            {{if .CommandAppendix}}
+            <div class="command-stack">
+                {{range .CommandAppendix}}
+                <article class="card command-card">
+                    <div class="metadata-header">
+                        <div>
+                            <h3>{{.Label}}</h3>
+                            <p>{{if .Engagement}}{{.Engagement}}{{else}}-{{end}} / {{if .Phase}}{{.Phase}}{{else}}-{{end}} / {{if .Target}}{{.Target}}{{else}}-{{end}}</p>
+                        </div>
+                        <span class="pill">{{len .Commands}} command(s)</span>
+                    </div>
+                    {{if .Tags}}
+                    <div class="tag-row">
+                        {{range .Tags}}
+                        <span class="tag">{{.}}</span>
+                        {{end}}
+                    </div>
+                    {{end}}
+                    {{if .GIFPath}}
+                    <div class="gif-player-container" data-gif="{{.GIFPath}}" data-session-id="{{.SessionID}}">
+                        <div class="gif-placeholder">
+                            <div class="gif-play-btn">▶</div>
+                            <span class="gif-label">Click to load session recording</span>
+                        </div>
+                        <div class="gif-player-wrapper" style="display: none;">
+                            <canvas class="gif-canvas"></canvas>
+                            <div class="gif-controls">
+                                <button class="gif-ctrl-btn gif-play-pause" title="Play/Pause (Space)">▶</button>
+                                <button class="gif-ctrl-btn gif-step-back" title="Previous Frame (←)">⏮</button>
+                                <button class="gif-ctrl-btn gif-step-fwd" title="Next Frame (→)">⏭</button>
+                                <div class="gif-progress-container">
+                                    <input type="range" class="gif-progress" min="0" max="100" value="0" title="Seek">
+                                    <span class="gif-frame-info">0 / 0</span>
+                                </div>
+                                <select class="gif-speed" title="Playback Speed">
+                                    <option value="0.25">0.25x</option>
+                                    <option value="0.5">0.5x</option>
+                                    <option value="1" selected>1x</option>
+                                    <option value="2">2x</option>
+                                    <option value="4">4x</option>
+                                </select>
+                                <button class="gif-ctrl-btn gif-restart" title="Restart (R)">↺</button>
+                            </div>
+                        </div>
+                    </div>
+                    {{end}}
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Command</th>
+                                <th>Output Preview</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{range .Commands}}
+                            <tr>
+                                <td>{{if .Timestamp}}{{.Timestamp}}{{else}}-{{end}}</td>
+                                <td><code>{{.Command}}</code></td>
+                                <td>{{if .Output}}{{.Output}}{{else}}-{{end}}</td>
+                            </tr>
+                            {{end}}
+                        </tbody>
+                    </table>
+                </article>
+                {{end}}
+            </div>
+            {{else}}
+            <div class="card empty-card">No commands could be extracted for this scope.</div>
+            {{end}}
+        </section>
+
+        <section class="section-block">
+            <div class="section-heading">
+                <p class="eyebrow">Integrity and Archive References</p>
+                <h2>Evidence Traceability</h2>
+            </div>
+            <div class="card table-card">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Session</th>
+                            <th>State</th>
+                            <th>Engagement / Phase</th>
+                            <th>Transcript</th>
+                            <th>Archive</th>
+                            <th>Manifest SHA256</th>
+                            <th>Archived At</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{range .IntegrityReferences}}
+                        <tr>
+                            <td>{{.SessionID}}</td>
+                            <td>{{if .State}}{{.State}}{{else}}-{{end}}</td>
+                            <td>{{if .Engagement}}{{.Engagement}}{{else}}-{{end}} / {{if .Phase}}{{.Phase}}{{else}}-{{end}}</td>
+                            <td><code>{{if .TranscriptPath}}{{.TranscriptPath}}{{else}}-{{end}}</code></td>
+                            <td><code>{{if .ArchivePath}}{{.ArchivePath}}{{else}}-{{end}}</code></td>
+                            <td><code>{{if .ManifestSHA256}}{{.ManifestSHA256}}{{else}}-{{end}}</code></td>
+                            <td>{{if .ArchivedAt}}{{.ArchivedAt}}{{else}}-{{end}}</td>
+                        </tr>
+                        {{end}}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        {{if .HasTranscriptAppendix}}
+        <section class="section-block">
+            <div class="section-heading">
+                <p class="eyebrow">Full Transcript Appendix</p>
+                <h2>Explicit Transcript Mode</h2>
+            </div>
+            <div class="transcript-stack">
+                {{range .TranscriptAppendix}}
+                <article class="card transcript-card">
+                    <div class="metadata-header">
+                        <div>
+                            <h3>{{.Label}}</h3>
+                            <p>{{if .Engagement}}{{.Engagement}}{{else}}-{{end}} / {{if .Phase}}{{.Phase}}{{else}}-{{end}} / {{if .Target}}{{.Target}}{{else}}-{{end}}</p>
+                        </div>
+                        <span class="pill">{{.Timestamp}}</span>
+                    </div>
+                    {{if .Tags}}
+                    <div class="tag-row">
+                        {{range .Tags}}
+                        <span class="tag">{{.}}</span>
+                        {{end}}
+                    </div>
+                    {{end}}
+                    {{if .GIFPath}}
+                    <div class="gif-player-container" data-gif="{{.GIFPath}}" data-session-id="{{.SessionID}}">
+                        <div class="gif-placeholder">
+                            <div class="gif-play-btn">▶</div>
+                            <span class="gif-label">Click to load session recording</span>
+                        </div>
+                        <div class="gif-player-wrapper" style="display: none;">
+                            <canvas class="gif-canvas"></canvas>
+                            <div class="gif-controls">
+                                <button class="gif-ctrl-btn gif-play-pause" title="Play/Pause (Space)">▶</button>
+                                <button class="gif-ctrl-btn gif-step-back" title="Previous Frame (←)">⏮</button>
+                                <button class="gif-ctrl-btn gif-step-fwd" title="Next Frame (→)">⏭</button>
+                                <div class="gif-progress-container">
+                                    <input type="range" class="gif-progress" min="0" max="100" value="0" title="Seek">
+                                    <span class="gif-frame-info">0 / 0</span>
+                                </div>
+                                <select class="gif-speed" title="Playback Speed">
+                                    <option value="0.25">0.25x</option>
+                                    <option value="0.5">0.5x</option>
+                                    <option value="1" selected>1x</option>
+                                    <option value="2">2x</option>
+                                    <option value="4">4x</option>
+                                </select>
+                                <button class="gif-ctrl-btn gif-restart" title="Restart (R)">↺</button>
+                            </div>
+                        </div>
+                    </div>
+                    {{end}}
+                    <details class="terminal-details">
+                        <summary>View Terminal Output</summary>
+                        <div class="log-content">{{.Content}}</div>
+                    </details>
+                </article>
+                {{end}}
+            </div>
+        </section>
         {{end}}
-    {{end}}
+    </main>
 
     <script>
     /**
@@ -106,6 +418,16 @@
      */
     (function() {
         'use strict';
+
+        function withArtifactToken(resourceUrl) {
+            const pageUrl = new URL(window.location.href);
+            const token = pageUrl.searchParams.get('access_token');
+            const resolved = new URL(resourceUrl, pageUrl);
+            if (token && !resolved.searchParams.has('access_token')) {
+                resolved.searchParams.set('access_token', token);
+            }
+            return resolved.toString();
+        }
 
         // Minimal GIF decoder - parses GIF binary and extracts frames
         class GifDecoder {
@@ -223,7 +545,7 @@
 
                 // Capture complete frame
                 const completeFrame = this.ctx.getImageData(0, 0, this.width, this.height);
-                
+
                 return { imageData: completeFrame, delay: delay };
             }
 
@@ -259,44 +581,27 @@
                 let byteIdx = 0;
                 let prevCode = -1;
 
-                const output = (indices) => {
-                    for (const idx of indices) {
-                        if (pixelIdx >= width * height) return;
-                        const row = interlaced ? this.interlaceRow(Math.floor(pixelIdx / width), height) : Math.floor(pixelIdx / width);
-                        const col = pixelIdx % width;
-                        const pos = (row * width + col) * 4;
-                        
-                        if (idx === transparentIdx) {
-                            pixels[pos] = 0;
-                            pixels[pos + 1] = 0;
-                            pixels[pos + 2] = 0;
-                            pixels[pos + 3] = 0;
-                        } else {
-                            const color = colorTable[idx] || [0, 0, 0];
-                            pixels[pos] = color[0];
-                            pixels[pos + 1] = color[1];
-                            pixels[pos + 2] = color[2];
-                            pixels[pos + 3] = 255;
-                        }
-                        pixelIdx++;
-                    }
-                };
-
+                const outputIndex = [];
                 while (byteIdx < blocks.length) {
                     while (bitCount < codeSize && byteIdx < blocks.length) {
                         bitBuf |= blocks[byteIdx++] << bitCount;
                         bitCount += 8;
                     }
 
+                    if (bitCount < codeSize) break;
+
                     const code = bitBuf & codeMask;
                     bitBuf >>= codeSize;
                     bitCount -= codeSize;
 
                     if (code === clearCode) {
+                        codeTable = [];
+                        for (let i = 0; i < clearCode; i++) codeTable[i] = [i];
+                        codeTable[clearCode] = [];
+                        codeTable[eoiCode] = [];
                         codeSize = minCodeSize + 1;
                         codeMask = (1 << codeSize) - 1;
                         nextCode = eoiCode + 1;
-                        codeTable = codeTable.slice(0, eoiCode + 1);
                         prevCode = -1;
                         continue;
                     }
@@ -304,7 +609,7 @@
                     if (code === eoiCode) break;
 
                     let entry;
-                    if (code < nextCode) {
+                    if (code < codeTable.length) {
                         entry = codeTable[code];
                     } else if (code === nextCode && prevCode !== -1) {
                         entry = [...codeTable[prevCode], codeTable[prevCode][0]];
@@ -312,11 +617,11 @@
                         break;
                     }
 
-                    output(entry);
+                    outputIndex.push(...entry);
 
                     if (prevCode !== -1 && nextCode < 4096) {
                         codeTable[nextCode++] = [...codeTable[prevCode], entry[0]];
-                        if (nextCode > codeMask && codeSize < 12) {
+                        if (nextCode === (1 << codeSize) && codeSize < 12) {
                             codeSize++;
                             codeMask = (1 << codeSize) - 1;
                         }
@@ -325,43 +630,77 @@
                     prevCode = code;
                 }
 
+                let rowOrder = [];
+                if (interlaced) {
+                    for (let i = 0; i < height; i += 8) rowOrder.push(i);
+                    for (let i = 4; i < height; i += 8) rowOrder.push(i);
+                    for (let i = 2; i < height; i += 4) rowOrder.push(i);
+                    for (let i = 1; i < height; i += 2) rowOrder.push(i);
+                } else {
+                    for (let i = 0; i < height; i++) rowOrder.push(i);
+                }
+
+                let idx = 0;
+                for (const row of rowOrder) {
+                    for (let col = 0; col < width; col++) {
+                        if (idx >= outputIndex.length) break;
+                        const colorIdx = outputIndex[idx++];
+                        const px = (row * width + col) * 4;
+                        if (colorIdx === transparentIdx) {
+                            pixels[px + 3] = 0;
+                        } else {
+                            const color = colorTable[colorIdx] || [0, 0, 0];
+                            pixels[px] = color[0];
+                            pixels[px + 1] = color[1];
+                            pixels[px + 2] = color[2];
+                            pixels[px + 3] = 255;
+                        }
+                    }
+                }
+
                 return pixels;
             }
 
-            interlaceRow(logicalRow, height) {
-                const pass1Rows = Math.ceil(height / 8);
-                const pass2Rows = Math.ceil((height - 4) / 8);
-                const pass3Rows = Math.ceil((height - 2) / 4);
-                
-                if (logicalRow < pass1Rows) return logicalRow * 8;
-                logicalRow -= pass1Rows;
-                if (logicalRow < pass2Rows) return logicalRow * 8 + 4;
-                logicalRow -= pass2Rows;
-                if (logicalRow < pass3Rows) return logicalRow * 4 + 2;
-                logicalRow -= pass3Rows;
-                return logicalRow * 2 + 1;
+            readColorTable(size) {
+                const table = [];
+                for (let i = 0; i < size; i++) {
+                    table.push([this.readByte(), this.readByte(), this.readByte()]);
+                }
+                return table;
             }
 
-            readByte() { return this.data[this.pos++] || 0; }
-            readUint16() { return this.readByte() | (this.readByte() << 8); }
-            readString(len) { let s = ''; for (let i = 0; i < len; i++) s += String.fromCharCode(this.readByte()); return s; }
-            readColorTable(size) { const t = []; for (let i = 0; i < size; i++) t.push([this.readByte(), this.readByte(), this.readByte()]); return t; }
-            skipSubBlocks() { let size; while ((size = this.readByte()) !== 0) this.pos += size; }
+            skipSubBlocks() {
+                let size;
+                while ((size = this.readByte()) !== 0) this.pos += size;
+            }
+
+            readByte() { return this.data[this.pos++]; }
+            readUint16() {
+                const v = this.data[this.pos] | (this.data[this.pos + 1] << 8);
+                this.pos += 2;
+                return v;
+            }
+            readString(len) {
+                let s = '';
+                for (let i = 0; i < len; i++) s += String.fromCharCode(this.readByte());
+                return s;
+            }
         }
 
         class GifPlayer {
             constructor(container) {
                 this.container = container;
-                this.gifUrl = container.dataset.gif;
+                this.gifUrl = withArtifactToken(container.dataset.gif);
+                this.sessionId = container.dataset.sessionId;
                 this.canvas = container.querySelector('.gif-canvas');
                 this.ctx = this.canvas.getContext('2d');
                 this.frames = [];
                 this.currentFrame = 0;
                 this.isPlaying = false;
-                this.speed = 1;
+                this.loaded = false;
                 this.animationId = null;
                 this.lastFrameTime = 0;
-                this.loaded = false;
+                this.speed = 1;
 
                 this.controls = {
                     playPause: container.querySelector('.gif-play-pause'),
@@ -380,46 +719,57 @@
                 this.controls.playPause.addEventListener('click', () => this.togglePlay());
                 this.controls.stepBack.addEventListener('click', () => this.stepFrame(-1));
                 this.controls.stepFwd.addEventListener('click', () => this.stepFrame(1));
-                this.controls.progress.addEventListener('input', (e) => this.seekTo(parseInt(e.target.value)));
-                this.controls.speed.addEventListener('change', (e) => this.setSpeed(parseFloat(e.target.value)));
+                this.controls.progress.addEventListener('input', e => this.seekTo(parseInt(e.target.value, 10)));
+                this.controls.speed.addEventListener('change', e => this.setSpeed(parseFloat(e.target.value)));
                 this.controls.restart.addEventListener('click', () => this.restart());
-                this.container.addEventListener('keydown', (e) => this.handleKeyboard(e));
-                this.container.setAttribute('tabindex', '0');
-            }
 
-            handleKeyboard(e) {
-                switch(e.key) {
-                    case ' ': e.preventDefault(); this.togglePlay(); break;
-                    case 'ArrowLeft': e.preventDefault(); this.stepFrame(-1); break;
-                    case 'ArrowRight': e.preventDefault(); this.stepFrame(1); break;
-                    case 'r': case 'R': this.restart(); break;
-                    case 'ArrowUp': e.preventDefault(); this.adjustSpeed(1); break;
-                    case 'ArrowDown': e.preventDefault(); this.adjustSpeed(-1); break;
-                }
+                this.container.addEventListener('keydown', e => {
+                    switch (e.key) {
+                        case ' ':
+                            e.preventDefault();
+                            this.togglePlay();
+                            break;
+                        case 'ArrowLeft':
+                            e.preventDefault();
+                            this.stepFrame(-1);
+                            break;
+                        case 'ArrowRight':
+                            e.preventDefault();
+                            this.stepFrame(1);
+                            break;
+                        case 'r':
+                        case 'R':
+                            this.restart();
+                            break;
+                        case '-':
+                            this.adjustSpeed(-1);
+                            break;
+                        case '+':
+                        case '=':
+                            this.adjustSpeed(1);
+                            break;
+                    }
+                });
             }
 
             async load() {
-                if (this.loaded) return;
-                try {
-                    const response = await fetch(this.gifUrl);
-                    const buffer = await response.arrayBuffer();
-                    const decoder = new GifDecoder(buffer);
-                    const result = decoder.decode();
-                    
-                    this.canvas.width = result.width;
-                    this.canvas.height = result.height;
-                    this.frames = result.frames;
-                    this.loaded = true;
-                    this.updateUI();
-                    this.renderFrame(0);
-                } catch (error) {
-                    console.error('Failed to load GIF:', error);
-                    this.container.querySelector('.gif-label').textContent = 'Failed to load: ' + error.message;
+                const resp = await fetch(this.gifUrl);
+                if (!resp.ok) {
+                    throw new Error(`Failed to load GIF (${resp.status})`);
                 }
+                const buffer = await resp.arrayBuffer();
+                const decoder = new GifDecoder(buffer);
+                const result = decoder.decode();
+                this.frames = result.frames;
+                this.canvas.width = result.width;
+                this.canvas.height = result.height;
+                this.loaded = true;
+                this.renderFrame(0);
+                this.updateUI();
             }
 
             renderFrame(index) {
-                if (index >= 0 && index < this.frames.length) {
+                if (this.frames[index]) {
                     this.currentFrame = index;
                     this.ctx.putImageData(this.frames[index].imageData, 0, 0);
                     this.updateUI();
@@ -486,7 +836,6 @@
             }
         }
 
-        // Initialize on placeholder click
         document.querySelectorAll('.gif-player-container').forEach(container => {
             const placeholder = container.querySelector('.gif-placeholder');
             const wrapper = container.querySelector('.gif-player-wrapper');
@@ -494,24 +843,29 @@
 
             placeholder.addEventListener('click', async () => {
                 placeholder.querySelector('.gif-label').textContent = 'Decoding GIF frames...';
-                if (!player) {
-                    player = new GifPlayer(container);
-                    await player.load();
+                try {
+                    if (!player) {
+                        player = new GifPlayer(container);
+                        await player.load();
+                    }
+                    placeholder.style.display = 'none';
+                    wrapper.style.display = 'block';
+                    container.focus();
+                    player.play();
+                } catch (error) {
+                    const message = error instanceof Error ? error.message : 'Failed to load GIF';
+                    placeholder.querySelector('.gif-label').textContent = message;
+                    console.error(error);
                 }
-                placeholder.style.display = 'none';
-                wrapper.style.display = 'block';
-                container.focus();
-                player.play();
             });
         });
     })();
-    
-    // Theme toggle functionality
+
     function toggleTheme() {
         const root = document.documentElement;
         const currentTheme = root.getAttribute('data-theme');
         const icon = document.getElementById('theme-icon');
-        
+
         if (currentTheme === 'light') {
             root.removeAttribute('data-theme');
             icon.textContent = '🌙 Dark';
@@ -522,13 +876,12 @@
             localStorage.setItem('pentlog-report-theme', 'light');
         }
     }
-    
-    // Load saved theme on page load
+
     (function() {
         const savedTheme = localStorage.getItem('pentlog-report-theme');
         const root = document.documentElement;
         const icon = document.getElementById('theme-icon');
-        
+
         if (savedTheme === 'light') {
             root.setAttribute('data-theme', 'light');
             icon.textContent = '☀️ Light';

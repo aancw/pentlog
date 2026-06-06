@@ -30,6 +30,10 @@ All notable changes to this project will be documented in this file.
   - Stale saved contexts, missing active targets in multi-target engagements, and pending phase/target mutations now require explicit confirmation
   - `pentlog shell` now goes straight to resume/start handling, while `pentlog shell review` or `pentlog shell --review` runs the interactive review first
   - `--phase` and `--target` still work on both paths, and review mode can intentionally save those changes back into the active context
+- **Evidence-First Report Exports**: Markdown and HTML exports now default to curated report sections instead of transcript-heavy dumps
+  - Reports are organized around executive summary, engagement metadata, findings, evidence snippets, command appendix, and integrity/archive references
+  - Session notes, tags, targets, extracted commands, and vulnerability evidence now drive the default report structure
+  - Full transcripts move behind an explicit appendix mode via `pentlog export --appendix-mode full-transcript`
 - **Archived Session Visibility**: Default session, search, and timeline flows now hide archived sessions unless explicitly requested
 - **Archive Secret Input**: `archive` and `import` now prefer interactive password prompts or `--password-stdin`
   - Legacy `--password` remains available as deprecated compatibility behavior

@@ -21,10 +21,11 @@ import (
 var analyze bool
 var includeGifs bool
 var gifResolution string
+var exportAppendixMode string
 
 var exportCmd = &cobra.Command{
 	Use:   "export [phase]",
-	Short: "Export commands for a specific phase (recon, exploit, etc.)",
+	Short: "Export evidence-first reports for a specific phase or engagement scope",
 	Run: func(cmd *cobra.Command, args []string) {
 		mgr := config.Manager()
 
@@ -218,7 +219,24 @@ var exportCmd = &cobra.Command{
 			finalSessions = append(finalSessions, s)
 		}
 
-		report, err := logs.GenerateReport(finalSessions, selectedClient)
+		reportOptions := logs.ReportOptions{
+			AppendixMode: logs.ReportAppendixMode(exportAppendixMode),
+		}
+
+		manager := vulns.NewManager(selectedClient, selectedEngagement)
+		findingsList, err := manager.List()
+		if err != nil {
+			findingsList = nil
+		}
+		filteredFindings := []vulns.Vuln{}
+		for _, f := range findingsList {
+			if selectedPhase != "" && !strings.EqualFold(f.Phase, selectedPhase) {
+				continue
+			}
+			filteredFindings = append(filteredFindings, f)
+		}
+
+		report, err := logs.GenerateReportWithOptions(finalSessions, selectedClient, filteredFindings, "", reportOptions)
 		if err != nil {
 			errors.FromError(errors.Generic, "Failed to generate report", err).Fatal()
 		}
@@ -250,52 +268,11 @@ var exportCmd = &cobra.Command{
 
 			// Clean up excessive newlines
 			analysisResult = strings.TrimSpace(analysisResult)
-
-			analysisBlock := "\n## AI Analysis\n\n" + analysisResult + "\n\n---\n"
-
-			lines := strings.SplitN(report, "\n", 2)
-			if len(lines) > 1 {
-				report = lines[0] + "\n" + analysisBlock + lines[1]
-			} else {
-				report = analysisBlock + report
+			report, err = logs.GenerateReportWithOptions(finalSessions, selectedClient, filteredFindings, analysisResult, reportOptions)
+			if err != nil {
+				errors.FromError(errors.Generic, "Failed to render report with AI analysis", err).Fatal()
 			}
 		}
-
-		// --- Findings (Top of Report) ---
-		manager := vulns.NewManager(selectedClient, selectedEngagement)
-		findingsList, err := manager.List()
-		if err == nil && len(findingsList) > 0 {
-			filteredFindings := []vulns.Vuln{}
-			for _, f := range findingsList {
-				if selectedPhase != "" && !strings.EqualFold(f.Phase, selectedPhase) {
-					continue
-				}
-				filteredFindings = append(filteredFindings, f)
-			}
-
-			if len(filteredFindings) > 0 {
-				var sb strings.Builder
-				sb.WriteString("\n## Findings & Vulnerabilities\n\n")
-				sb.WriteString("| ID | Severity | Title | Phase | Status |\n")
-				sb.WriteString("|---|---|---|---|---|\n")
-				for _, f := range filteredFindings {
-					phaseDisplay := f.Phase
-					if phaseDisplay == "" {
-						phaseDisplay = "-"
-					}
-					sb.WriteString(fmt.Sprintf("| %s | %s | %s | %s | %s |\n", f.ID, f.Severity, f.Title, phaseDisplay, f.Status))
-				}
-				sb.WriteString("\n---\n\n")
-
-				lines := strings.SplitN(report, "\n", 2)
-				if len(lines) > 1 {
-					report = lines[0] + "\n" + sb.String() + lines[1]
-				} else {
-					report = sb.String() + report
-				}
-			}
-		}
-		// ----------------------------
 
 		for {
 			actions := []string{"Preview (pager)", "Save to File", "Save to HTML", "Exit"}
@@ -461,25 +438,12 @@ var exportCmd = &cobra.Command{
 				}
 				// ----------------------------
 
-				// --- Findings and Analysis ---
-				var filteredFindings []vulns.Vuln
-				manager := vulns.NewManager(selectedClient, selectedEngagement)
-				findingsList, err := manager.List()
-				if err == nil {
-					for _, f := range findingsList {
-						if selectedPhase != "" && !strings.EqualFold(f.Phase, selectedPhase) {
-							continue
-						}
-						filteredFindings = append(filteredFindings, f)
-					}
-				}
-
 				var analysisHTML string
 				if analyze && analysisResult != "" {
 					analysisHTML = string(markdown.ToHTML([]byte(analysisResult), nil, nil))
 				}
 
-				htmlReport, err := logs.GenerateHTMLReport(finalSessions, selectedClient, filteredFindings, analysisHTML, gifPaths)
+				htmlReport, err := logs.GenerateHTMLReportWithOptions(finalSessions, selectedClient, filteredFindings, analysisHTML, gifPaths, reportOptions)
 				if err != nil {
 					errors.FromError(errors.Generic, "Error generating HTML", err).Print()
 					return
@@ -557,4 +521,5 @@ func init() {
 	exportCmd.Flags().BoolVar(&analyze, "analyze", false, "Analyze the report with an AI provider")
 	exportCmd.Flags().BoolVar(&includeGifs, "include-gifs", false, "Generate GIF recordings and embed them in HTML report")
 	exportCmd.Flags().StringVar(&gifResolution, "gif-resolution", "", "GIF resolution: 720p or 1080p (default: interactive prompt)")
+	exportCmd.Flags().StringVar(&exportAppendixMode, "appendix-mode", string(logs.ReportAppendixModeCommands), "Appendix mode: commands or full-transcript")
 }
