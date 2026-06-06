@@ -1,7 +1,10 @@
 package utils
 
 import (
+	"errors"
 	"fmt"
+	"io"
+	"os"
 	"strings"
 
 	"github.com/charmbracelet/huh"
@@ -83,6 +86,38 @@ func PromptPassword(label string) string {
 	}
 
 	return strings.TrimSpace(result)
+}
+
+func ReadSecretFromStdin(stdin io.Reader) (string, error) {
+	if file, ok := stdin.(*os.File); ok {
+		info, err := file.Stat()
+		if err != nil {
+			return "", fmt.Errorf("inspect stdin: %w", err)
+		}
+		if info.Mode()&os.ModeCharDevice != 0 {
+			return "", errors.New("stdin is a terminal; use the password prompt or pipe a secret into --password-stdin")
+		}
+	}
+
+	return ReadSecretFromReader(stdin)
+}
+
+func ReadSecretFromReader(reader io.Reader) (string, error) {
+	if reader == nil {
+		return "", errors.New("stdin reader is not available")
+	}
+
+	data, err := io.ReadAll(reader)
+	if err != nil {
+		return "", fmt.Errorf("read stdin: %w", err)
+	}
+
+	secret := strings.TrimRight(string(data), "\r\n")
+	if secret == "" {
+		return "", errors.New("no secret received on stdin")
+	}
+
+	return secret, nil
 }
 
 func SelectItem(label string, items []string) int {

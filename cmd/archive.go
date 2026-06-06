@@ -24,6 +24,7 @@ var (
 	phaseFlag      string
 	reportFlag     bool
 	passwordFlag   string
+	passwordStdin  bool
 )
 
 var archiveCmd = &cobra.Command{
@@ -32,18 +33,36 @@ var archiveCmd = &cobra.Command{
 	Long: `Archive moves session logs to a compressed archive file.
 By default, original files are KEPT (copied to archive).
 Use --delete to remove original files after archiving.
+For password-protected archives, prefer the interactive prompt or --password-stdin.
+The legacy --password flag is deprecated because it can leak secrets.
 
 Examples:
   pentlog archive                 # Interactive mode
   pentlog archive acme            # Archive all 'acme' sessions (keep originals)
   pentlog archive acme -D         # Archive and DELETE originals
   pentlog archive acme -p recon   # Archive only 'recon' phase sessions
-  pentlog archive acme -d 30      # Archive sessions older than 30 days`,
+  pentlog archive acme -d 30      # Archive sessions older than 30 days
+  printf '%s' "$PENTLOG_ARCHIVE_PASSWORD" | pentlog archive acme --password-stdin`,
 	Run: func(cmd *cobra.Command, args []string) {
 		var clientName string
 		var engagement, phase string
 		var days int
 		var deleteOrg bool
+		var archivePassword string
+
+		if err := validatePasswordInputFlags(passwordFlag, passwordStdin); err != nil {
+			errors.NewError(errors.Generic, err.Error()).Fatal()
+		}
+
+		warnDeprecatedPasswordFlag(passwordFlag)
+		archivePassword = passwordFlag
+		if passwordStdin {
+			password, err := readPasswordFromStdin(cmd)
+			if err != nil {
+				errors.NewError(errors.Generic, err.Error()).Fatal()
+			}
+			archivePassword = password
+		}
 
 		if len(args) == 0 {
 			sessions, err := logs.ListSessions()
@@ -136,14 +155,14 @@ Examples:
 		}
 
 		if !forceFlag {
-			if passwordFlag == "" {
+			if archivePassword == "" {
 				p := utils.PromptString("Do you want to password protect this archive? [y/N]", "No")
 				if strings.ToLower(p) == "y" || strings.ToLower(p) == "yes" {
-					passwordFlag = utils.PromptPassword("Enter Archive Password: ")
+					archivePassword = utils.PromptPassword("Enter Archive Password: ")
 					confirm := utils.PromptPassword("Confirm Password: ")
-					if passwordFlag != confirm {
+					if archivePassword != confirm {
 						fmt.Println("Passwords don't match. Archive will not be password protected.")
-						passwordFlag = ""
+						archivePassword = ""
 					}
 				}
 			}
@@ -165,7 +184,7 @@ Examples:
 			} else {
 				msg += ". Original files will be KEPT."
 			}
-			if passwordFlag != "" {
+			if archivePassword != "" {
 				msg += " Archive will be PASSWORD PROTECTED (Zip)."
 			} else {
 				msg += " Archive will be created as Zip."
@@ -280,7 +299,7 @@ Examples:
 			}
 		}
 
-		count, err := logs.ArchiveSessionsFromList(toArchive, clientName, deleteOrg, extraFiles, passwordFlag)
+		count, err := logs.ArchiveSessionsFromList(toArchive, clientName, deleteOrg, extraFiles, archivePassword)
 
 		for _, f := range extraFiles {
 			if strings.Contains(f, "archive_report_") && strings.Contains(f, os.TempDir()) {
@@ -334,7 +353,9 @@ func init() {
 	archiveCmd.PersistentFlags().StringVarP(&engagementFlag, "engagement", "e", "", "Filter by Engagement name")
 	archiveCmd.PersistentFlags().StringVarP(&phaseFlag, "phase", "p", "", "Filter by Phase name")
 	archiveCmd.PersistentFlags().BoolVar(&reportFlag, "report", false, "Auto-generate report before archiving")
-	archiveCmd.PersistentFlags().StringVarP(&passwordFlag, "password", "P", "", "Password for encrypted zip archive")
+	archiveCmd.PersistentFlags().StringVarP(&passwordFlag, "password", "P", "", "Deprecated: password for encrypted zip archive")
+	archiveCmd.PersistentFlags().BoolVar(&passwordStdin, "password-stdin", false, "Read the archive password from stdin")
+	_ = archiveCmd.PersistentFlags().MarkDeprecated("password", deprecatedPasswordFlagMessage)
 
 	archiveCmd.AddCommand(archiveListCmd)
 	rootCmd.AddCommand(archiveCmd)

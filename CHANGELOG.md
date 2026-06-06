@@ -25,6 +25,9 @@ All notable changes to this project will be documented in this file.
 ### Changed
 - **Web Defaults**: `pentlog web` now uses existing built assets by default and only rebuilds on `--rebuild` or when assets are missing
 - **Archived Session Visibility**: Default session, search, and timeline flows now hide archived sessions unless explicitly requested
+- **Archive Secret Input**: `archive` and `import` now prefer interactive password prompts or `--password-stdin`
+  - Legacy `--password` remains available as deprecated compatibility behavior
+  - Help text and runtime errors now steer operators away from shell-history/process-visible secrets
 - **Web Search State**: Search filters now use URL-driven state for bookmarkable and shareable queries
   - Search page keeps `q`, `regex`, `from`, `to`, `limit`, and `page` in the URL
   - Search results paginate with stable `limit` / `offset` semantics and `has_more` metadata

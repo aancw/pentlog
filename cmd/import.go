@@ -15,6 +15,7 @@ import (
 
 var (
 	importPasswordFlag   string
+	importPasswordStdin  bool
 	importClientFlag     string
 	importEngagementFlag string
 	importPhaseFlag      string
@@ -32,10 +33,12 @@ Supports two types of archives:
 
 For pentlog archives, the original folder structure is preserved.
 For generic archives, you must specify the target client/engagement/phase.
+For encrypted archives, prefer the interactive prompt or --password-stdin.
+The legacy --password flag is deprecated because it can leak secrets.
 
 Examples:
   pentlog import backup.zip                          # Import pentlog archive
-  pentlog import backup.zip -P mypassword            # Import encrypted archive
+  printf '%s' "$PENTLOG_ARCHIVE_PASSWORD" | pentlog import backup.zip --password-stdin
   pentlog import sessions.zip -c acme -e webapp      # Import generic archive
   pentlog import external.zip -c client -p recon     # Specify target location`,
 	Args: cobra.ExactArgs(1),
@@ -50,16 +53,28 @@ Examples:
 			errors.NewError(errors.Generic, "Only ZIP archives are supported").Fatal()
 		}
 
+		if err := validatePasswordInputFlags(importPasswordFlag, importPasswordStdin); err != nil {
+			errors.NewError(errors.Generic, err.Error()).Fatal()
+		}
+
 		_, needsPassword, err := logs.ListArchiveContents(archivePath, "")
 		if err != nil && !needsPassword {
 			errors.ArchiveErr(archivePath, err).Fatal()
 		}
 
 		password := importPasswordFlag
+		warnDeprecatedPasswordFlag(password)
 		if needsPassword && password == "" {
-			password = utils.PromptPassword("Enter archive password: ")
+			if importPasswordStdin {
+				password, err = readPasswordFromStdin(cmd)
+				if err != nil {
+					errors.NewError(errors.Generic, err.Error()).Fatal()
+				}
+			} else {
+				password = utils.PromptPassword("Enter archive password: ")
+			}
 			if password == "" {
-				errors.ArchivePasswordErr(archivePath).Fatal()
+				errors.NewError(errors.Generic, "archive password is required; use the password prompt or --password-stdin").Fatal()
 			}
 		}
 
@@ -227,11 +242,26 @@ var importListCmd = &cobra.Command{
 			errors.ArchiveErr(archivePath, err).Fatal()
 		}
 
+		if err := validatePasswordInputFlags(importPasswordFlag, importPasswordStdin); err != nil {
+			errors.NewError(errors.Generic, err.Error()).Fatal()
+		}
+
 		password := importPasswordFlag
+		warnDeprecatedPasswordFlag(password)
 		files, needsPassword, err := logs.ListArchiveContents(archivePath, "")
 
 		if needsPassword && password == "" {
-			password = utils.PromptPassword("Enter archive password: ")
+			if importPasswordStdin {
+				password, err = readPasswordFromStdin(cmd)
+				if err != nil {
+					errors.NewError(errors.Generic, err.Error()).Fatal()
+				}
+			} else {
+				password = utils.PromptPassword("Enter archive password: ")
+			}
+			if password == "" {
+				errors.NewError(errors.Generic, "archive password is required; use the password prompt or --password-stdin").Fatal()
+			}
 			if err := logs.CheckArchivePassword(archivePath, password); err != nil {
 				errors.ArchivePasswordErr(archivePath).Fatal()
 			}
@@ -323,12 +353,14 @@ func mapKeys(m map[string]bool) []string {
 }
 
 func init() {
-	importCmd.PersistentFlags().StringVarP(&importPasswordFlag, "password", "P", "", "Password for encrypted archive")
+	importCmd.PersistentFlags().StringVarP(&importPasswordFlag, "password", "P", "", "Deprecated: password for encrypted archive")
+	importCmd.PersistentFlags().BoolVar(&importPasswordStdin, "password-stdin", false, "Read the archive password from stdin")
 	importCmd.PersistentFlags().StringVarP(&importClientFlag, "client", "c", "", "Target client (for generic archives)")
 	importCmd.PersistentFlags().StringVarP(&importEngagementFlag, "engagement", "e", "", "Target engagement (for generic archives)")
 	importCmd.PersistentFlags().StringVarP(&importPhaseFlag, "phase", "p", "", "Target phase (for generic archives)")
 	importCmd.PersistentFlags().BoolVar(&importOverwriteFlag, "overwrite", false, "Overwrite existing files")
 	importCmd.PersistentFlags().BoolVarP(&forceFlag, "force", "y", false, "Skip confirmation prompts")
+	_ = importCmd.PersistentFlags().MarkDeprecated("password", deprecatedPasswordFlagMessage)
 
 	importListCmd.Flags().Bool("verbose", false, "Show all files including metadata")
 
