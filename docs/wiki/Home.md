@@ -47,6 +47,13 @@ pentlog shell
 # Your shell is now recorded with perfect terminal fidelity
 ```
 
+If you want to inspect or adjust context before launch, run:
+
+```bash
+pentlog shell review
+# Or: pentlog shell --review
+```
+
 ### 4. Search & Export
 
 ```bash
@@ -84,6 +91,7 @@ Once initialized, start a recorded shell session.
 ```bash
 pentlog shell
 # Enters a recorded shell with custom PS1 and instant-logging.
+# Use `pentlog shell review` if you want an explicit context review first.
 ```
 
 ### 3. Switch Phases / Targets

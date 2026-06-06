@@ -122,6 +122,10 @@ Your terminal is now being recorded with **perfect fidelity**. You'll see a cust
     - Working directory changes
     - Timestamp for every command
 
+!!! tip "Want a Context Check First?"
+    Use `pentlog shell review` or `pentlog shell --review` when you want to inspect
+    context age, recent changes, target/IP, and guardrails before recording starts.
+
 ### Step 5: Add Notes & Vulnerabilities
 
 While in a recorded shell, use these hotkeys:

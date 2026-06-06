@@ -35,6 +35,7 @@ features:
     <h2>Start in minutes</h2>
     <p>Install once, create a context, and begin recording. </p>
     <p>The same workflow scales from labs to full client engagements.</p>
+    <p>Use <code>pentlog shell review</code> when you want an explicit context check before recording starts.</p>
     <div class="mdx-inline-links">
       <a href="getting-started/quickstart/" class="md-button md-button--primary">Quickstart</a>
       <a href="getting-started/installation/" class="md-button">Installation</a>

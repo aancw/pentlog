@@ -49,6 +49,25 @@ Features:
 - Graceful exit handling
 - **Pause/Resume support** for breaks without session fragmentation
 
+`pentlog shell` is the direct launch path. It applies the active context and starts the
+resume/start flow immediately.
+
+If you want to inspect or adjust shell context first, use:
+
+```bash
+pentlog shell review
+```
+
+Or the flag form:
+
+```bash
+pentlog shell --review
+```
+
+Shell review shows the current client or exam/lab, engagement, phase, target/IP,
+context age, and recent context changes before recording starts. It also lets you fix
+phase or target inline and optionally persist those changes.
+
 ### Pausing and Resuming Sessions
 
 Take breaks without creating multiple disjointed sessions:

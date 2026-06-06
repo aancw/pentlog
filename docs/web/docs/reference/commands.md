@@ -70,11 +70,20 @@ Start a recorded shell session.
 pentlog shell [flags]
 ```
 
+Starts recording immediately using the active context. If you want to inspect or adjust
+context before launch, use `pentlog shell review` or `pentlog shell --review`.
+
 **Examples:**
 
 ```bash
 # Start recorded shell
 pentlog shell
+
+# Review context before starting
+pentlog shell review
+
+# Same review flow via flag
+pentlog shell --review
 
 # Start with live sharing
 pentlog shell --share
@@ -87,9 +96,43 @@ pentlog shell --share --share-port 8080
 
 | Flag | Default | Description |
 |------|---------|-------------|
+| `--review` | `false` | Run shell review before starting |
+| `--phase` | `""` | Override the phase for this shell launch |
+| `--target` | `""` | Override the target for this shell launch |
 | `--share` | `false` | Enable live browser sharing |
 | `--share-port` | `0` | Port for sharing server |
-| `--share-bind` | `""` | Bind address for sharing |
+| `--share-bind` | `"127.0.0.1"` | Bind address for sharing |
+
+---
+
+### `pentlog shell review`
+Review and optionally adjust shell context before starting a recorded shell session.
+
+```bash
+pentlog shell review [flags]
+```
+
+**What it shows:**
+
+- Active client or exam/lab name
+- Engagement and phase
+- Active target and target IP
+- Context age
+- Recent context changes
+- Guardrails for stale context, missing active target, and pending shell-only overrides
+
+**Examples:**
+
+```bash
+# Interactive review, then start recording
+pentlog shell review
+
+# Review with a shell-only phase override
+pentlog shell review --phase exploit
+
+# Review with a target override
+pentlog shell review --target web01
+```
 
 ---
 
