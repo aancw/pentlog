@@ -39,16 +39,18 @@ type Server struct {
 	Router *chi.Mux
 	Bind   string
 	Port   int
+	Auth   httpauth.Config
 	server *http.Server
 }
 
-func NewServer(bind string, port int) *Server {
+func NewServer(bind string, port int, authConfig httpauth.Config) *Server {
 	r := chi.NewRouter()
 
 	s := &Server{
 		Router: r,
 		Bind:   bind,
 		Port:   port,
+		Auth:   authConfig,
 	}
 
 	s.setupMiddleware()
@@ -63,6 +65,7 @@ func (s *Server) setupMiddleware() {
 	s.Router.Use(Recoverer)
 	s.Router.Use(LoggerMiddleware())
 	s.Router.Use(CORS(authz.AllowedOrigins(s.Bind, s.Port)))
+	s.Router.Use(RouteAuthMiddleware(s.Auth))
 	s.Router.Use(middleware.Compress(5))
 }
 

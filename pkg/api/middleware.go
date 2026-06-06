@@ -2,8 +2,10 @@ package api
 
 import (
 	"net/http"
+	"strings"
 	"time"
 
+	"pentlog/pkg/httpauth"
 	"pentlog/pkg/logger"
 
 	"github.com/go-chi/chi/v5/middleware"
@@ -36,7 +38,7 @@ func CORS(allowedOrigins []string) func(http.Handler) http.Handler {
 			if origin != "" && isAllowedOrigin(origin, allowedOrigins) {
 				w.Header().Set("Access-Control-Allow-Origin", origin)
 				w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-				w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Pentlog-Token")
+				w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Pentlog-Token")
 				w.Header().Set("Access-Control-Max-Age", "86400")
 			}
 
@@ -60,6 +62,46 @@ func isAllowedOrigin(origin string, allowed []string) bool {
 		}
 	}
 	return false
+}
+
+func RouteAuthMiddleware(authConfig httpauth.Config) func(http.Handler) http.Handler {
+	if !authConfig.Enabled() {
+		return func(next http.Handler) http.Handler { return next }
+	}
+
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if strings.HasPrefix(r.URL.Path, "/files/") {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			if authConfig.IsAuthorized(r) {
+				if authConfig.Mode == httpauth.ModeToken && authConfig.TokenShouldSetCookie(r) {
+					http.SetCookie(w, authConfig.TokenCookie())
+					if r.Method == http.MethodGet && !strings.HasPrefix(r.URL.Path, "/api/") {
+						if sanitizedURL, ok := authConfig.SanitizedTokenURL(r); ok {
+							http.Redirect(w, r, sanitizedURL, http.StatusFound)
+							return
+						}
+					}
+				}
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			if authConfig.Mode == httpauth.ModeBasic {
+				w.Header().Set("WWW-Authenticate", `Basic realm="PentLog Web"`)
+			}
+
+			if strings.HasPrefix(r.URL.Path, "/api/") || r.URL.Path == "/api" {
+				Unauthorized(w, "Authentication required")
+				return
+			}
+
+			http.Error(w, "Authentication required", http.StatusUnauthorized)
+		})
+	}
 }
 
 func Recoverer(next http.Handler) http.Handler {

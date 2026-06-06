@@ -18,6 +18,9 @@ All notable changes to this project will be documented in this file.
   - Session detail highlights the selected transcript line or operator note after drill-down
 - **Search API Coverage**
   - Added handler tests for pagination and context-line search responses
+- **Explicit Web Exposure Modes**: `pentlog web` now requires an explicit decision before binding beyond loopback
+  - Added `--public`, `--auth-token`, and `--basic-auth` modes for non-local exposure
+  - Token auth can bootstrap browser sessions and API clients without leaving the wider UI/API surface open
 
 ### Changed
 - **Web Defaults**: `pentlog web` now uses existing built assets by default and only rebuilds on `--rebuild` or when assets are missing
@@ -28,12 +31,16 @@ All notable changes to this project will be documented in this file.
 - **Search Response Contract**: Web search now returns richer result metadata
   - Includes real `total_matches` counts instead of just the current page length
   - Includes per-hit context windows and note timestamps for downstream UI workflows
+- **Web Auth Enforcement**: UI and API routes now fail closed on non-loopback binds unless you explicitly opt into public mode or provide auth
+  - Token/basic auth now apply across the browser UI and `/api/*`
+  - Artifact download routes keep their existing per-link token gate so shared report/archive URLs remain scoped
 
 ### Fixed
 - **Archive/Delete Orphan Drift**: `recover --clean-orphans` is now reserved for genuine inconsistencies instead of normal archive flow
 - **Evidence File Permissions**: Sensitive file writes now go through private helpers so evidence and config files use stricter permissions
 - **Archive Import Hardening**: Import flow now validates manifest-backed archives and keeps the copy path aligned with the new integrity format
 - **Search and Session UX**: Session detail and search pages now preserve context better when jumping between search hits and session content
+- **Exposure Guardrails**: `pentlog web --bind 0.0.0.0` no longer silently exposes engagement data with warning-only behavior
 
 ## [v0.18.0] - 2026-04-22
 ### Added

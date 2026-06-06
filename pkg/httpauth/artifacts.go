@@ -1,8 +1,6 @@
 package httpauth
 
 import (
-	"crypto/rand"
-	"encoding/hex"
 	"net/http"
 	"net/url"
 	"path"
@@ -20,12 +18,12 @@ var artifactTokenState struct {
 
 func ArtifactToken() (string, error) {
 	artifactTokenState.once.Do(func() {
-		buf := make([]byte, 32)
-		if _, err := rand.Read(buf); err != nil {
+		token, err := GenerateToken(32)
+		if err != nil {
 			artifactTokenState.err = err
 			return
 		}
-		artifactTokenState.token = hex.EncodeToString(buf)
+		artifactTokenState.token = token
 	})
 
 	return artifactTokenState.token, artifactTokenState.err
