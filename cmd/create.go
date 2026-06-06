@@ -113,25 +113,7 @@ var createCmd = &cobra.Command{
 
 		fmt.Println("\nContext initialized successfully!")
 
-		summary := []string{
-			"---------------------------------------------------",
-		}
-		if ctx.Type == "Exam/Lab" {
-			summary = append(summary, fmt.Sprintf("Exam/Lab Name: %s", ctx.Client))
-			summary = append(summary, fmt.Sprintf("Target:        %s", ctx.Engagement))
-		} else {
-			summary = append(summary, fmt.Sprintf("Client:     %s", ctx.Client))
-			summary = append(summary, fmt.Sprintf("Engagement: %s", ctx.Engagement))
-			summary = append(summary, fmt.Sprintf("Scope:      %s", ctx.Scope))
-		}
-		summary = append(summary, fmt.Sprintf("Operator:   %s", ctx.Operator))
-		summary = append(summary, fmt.Sprintf("Phase:      %s", ctx.Phase))
-		if ctx.Target != "" {
-			summary = append(summary, fmt.Sprintf("Target:     %s", ctx.Target))
-		}
-		if ctx.TargetIP != "" {
-			summary = append(summary, fmt.Sprintf("Target IP:  %s", ctx.TargetIP))
-		}
+		summary := append([]string{"---------------------------------------------------"}, buildContextSummaryLines(*ctx)...)
 		summary = append(summary, "---------------------------------------------------")
 		utils.PrintCenteredBlock(summary)
 		fmt.Println("To start recording, run:")

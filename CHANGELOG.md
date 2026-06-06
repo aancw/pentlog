@@ -10,7 +10,9 @@ All notable changes to this project will be documented in this file.
   - Sessions store `archived_at`, `archive_path`, and `archive_manifest_sha256`
   - `archive --delete` now updates DB truth instead of leaving rows behind as later "orphans"
 - **Explicit Session Sync**: Legacy filesystem-to-database sync is now a dedicated `pentlog sessions sync` migration step
-- **Shell Guardrails**: `pentlog shell` now exposes `--phase`, `--target`, and stale-context confirmation before starting a recording
+- **Shell Guardrails**: Added an explicit `pentlog shell review` workflow before recording starts
+  - Surfaces client, engagement, phase, target/IP, context age, and recent context changes in one review step
+  - Adds inline phase/target fix actions so operators can correct risky context without separate command hops
 - **Shared AI Config Bootstrapping**: `analyze` and `export` now reuse the same AI configuration setup path
 - **Web Search Triage Workflow**: Search results now support evidence-first drill-down from the browser dashboard
   - Search hits include transcript context lines and note timestamps
@@ -24,6 +26,10 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 - **Web Defaults**: `pentlog web` now uses existing built assets by default and only rebuilds on `--rebuild` or when assets are missing
+- **Shell Context Safety**: Shell review is now an explicit step instead of the default shell path
+  - Stale saved contexts, missing active targets in multi-target engagements, and pending phase/target mutations now require explicit confirmation
+  - `pentlog shell` now goes straight to resume/start handling, while `pentlog shell review` or `pentlog shell --review` runs the interactive review first
+  - `--phase` and `--target` still work on both paths, and review mode can intentionally save those changes back into the active context
 - **Archived Session Visibility**: Default session, search, and timeline flows now hide archived sessions unless explicitly requested
 - **Archive Secret Input**: `archive` and `import` now prefer interactive password prompts or `--password-stdin`
   - Legacy `--password` remains available as deprecated compatibility behavior

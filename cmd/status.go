@@ -40,21 +40,16 @@ var statusCmd = &cobra.Command{
 			lines = append(lines, "Context: No active engagement found.")
 		} else {
 			lines = append(lines, "Context:    ACTIVE")
-			if ctx.Type == "Exam/Lab" {
-				lines = append(lines, fmt.Sprintf("Exam/Lab Name: %s", ctx.Client))
-				lines = append(lines, fmt.Sprintf("Target:        %s", ctx.Engagement))
-			} else {
-				lines = append(lines, fmt.Sprintf("Client:     %s", ctx.Client))
-				lines = append(lines, fmt.Sprintf("Engagement: %s", ctx.Engagement))
-				lines = append(lines, fmt.Sprintf("Scope:      %s", ctx.Scope))
-			}
-			lines = append(lines, fmt.Sprintf("Operator:   %s", ctx.Operator))
-			lines = append(lines, fmt.Sprintf("Phase:      %s", ctx.Phase))
-			if ctx.Target != "" {
-				lines = append(lines, fmt.Sprintf("Target:     %s", ctx.Target))
-			}
-			if ctx.TargetIP != "" {
-				lines = append(lines, fmt.Sprintf("Target IP:  %s", ctx.TargetIP))
+			lines = append(lines, buildContextSummaryLines(*ctx)...)
+			lines = append(lines, fmt.Sprintf("Context Age: %s", formatContextAgeDetail(ctx.Timestamp)))
+
+			recentChanges, historyErr := loadRecentContextChanges(mgr, 3)
+			if historyErr == nil && len(recentChanges) > 0 {
+				lines = append(lines, "")
+				lines = append(lines, "Recent Changes:")
+				for _, change := range recentChanges {
+					lines = append(lines, "  - "+change)
+				}
 			}
 		}
 

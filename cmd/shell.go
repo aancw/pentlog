@@ -35,197 +35,225 @@ var (
 	shellShareBind      string
 	shellPhaseOverride  string
 	shellTargetOverride string
+	shellReview         bool
 )
+
+type shellPreflightPlan struct {
+	Saved         config.ContextData
+	Effective     config.ContextData
+	Targets       []config.Target
+	RecentChanges []string
+	Warnings      []string
+	PendingChange string
+}
 
 var shellCmd = &cobra.Command{
 	Use:   "shell",
 	Short: "Start a recorded shell with the engagement context loaded",
 	Run: func(cmd *cobra.Command, args []string) {
-		if os.Getenv("PENTLOG_SESSION_LOG_PATH") != "" {
-			errors.AlreadyInShell().Fatal()
-		}
+		runShellLaunch(shellReview)
+	},
+}
 
-		dm := deps.NewManager()
-		if ok, _ := dm.Check("ttyrec"); !ok {
-			errors.MissingDependency("ttyrec", "brew install ttyrec || apt-get install ttyrec").Fatal()
-		}
+var shellReviewCmd = &cobra.Command{
+	Use:   "review",
+	Short: "Review shell context before starting a recording",
+	Run: func(cmd *cobra.Command, args []string) {
+		runShellLaunch(true)
+	},
+}
 
-		mgr := config.Manager()
-		ctx, err := mgr.LoadContext()
-		if err != nil {
-			errors.NoContext().Fatal()
-		}
+func runShellLaunch(withReview bool) {
+	if os.Getenv("PENTLOG_SESSION_LOG_PATH") != "" {
+		errors.AlreadyInShell().Fatal()
+	}
 
+	dm := deps.NewManager()
+	if ok, _ := dm.Check("ttyrec"); !ok {
+		errors.MissingDependency("ttyrec", "brew install ttyrec || apt-get install ttyrec").Fatal()
+	}
+
+	mgr := config.Manager()
+	ctx, err := mgr.LoadContext()
+	if err != nil {
+		errors.NoContext().Fatal()
+	}
+
+	if withReview {
+		proceed := false
+		var reviewErr error
+		ctx, proceed, reviewErr = runShellPreflight(mgr, ctx)
+		if reviewErr != nil {
+			errors.FromError(errors.InvalidContext, "failed to prepare shell context", reviewErr).Fatal()
+		}
+		if !proceed {
+			fmt.Println("Shell launch cancelled.")
+			return
+		}
+	} else {
 		ctx, err = applyShellContextOverrides(mgr, ctx)
 		if err != nil {
 			errors.FromError(errors.InvalidContext, "failed to prepare shell context", err).Fatal()
 		}
+	}
 
-		if !confirmShellContext(mgr, ctx) {
-			fmt.Println("Shell launch cancelled.")
+	crashed, err := logs.GetCrashedSessionsForContext(ctx.Client, ctx.Engagement, ctx.Phase)
+	if err == nil && len(crashed) > 0 {
+		resumeSession := promptResumeSession(crashed)
+		if resumeSession != nil {
+			startResumedSession(ctx, resumeSession)
 			return
 		}
+	}
 
-		crashed, err := logs.GetCrashedSessionsForContext(ctx.Client, ctx.Engagement, ctx.Phase)
-		if err == nil && len(crashed) > 0 {
-			resumeSession := promptResumeSession(crashed)
-			if resumeSession != nil {
-				startResumedSession(ctx, resumeSession)
-				return
-			}
-		}
+	logDir, err := system.EnsureLogDir()
+	if err != nil {
+		errors.FromError(errors.DirectoryNotFound, "failed to prepare log directory", err).Fatal()
+	}
 
-		logDir, err := system.EnsureLogDir()
-		if err != nil {
-			errors.FromError(errors.DirectoryNotFound, "failed to prepare log directory", err).Fatal()
-		}
+	sessionDir := getSessionDir(logDir, ctx)
+	if err := os.MkdirAll(sessionDir, 0700); err != nil {
+		errors.FromError(errors.PermissionDenied, "failed to create session directory", err).Fatal()
+	}
 
-		sessionDir := getSessionDir(logDir, ctx)
-		if err := os.MkdirAll(sessionDir, 0700); err != nil {
-			errors.FromError(errors.PermissionDenied, "failed to create session directory", err).Fatal()
-		}
+	timestamp := time.Now().Format("20060102-150405")
+	baseName := fmt.Sprintf("session-%s-%s", utils.Slugify(ctx.Operator), timestamp)
+	if ctx.Target != "" {
+		baseName = fmt.Sprintf("session-%s-%s-%s", utils.Slugify(ctx.Operator), utils.Slugify(ctx.Target), timestamp)
+	}
+	logFilePath := filepath.Join(sessionDir, baseName+".tty")
+	metaFilePath := filepath.Join(sessionDir, baseName+".json")
 
-		timestamp := time.Now().Format("20060102-150405")
-		baseName := fmt.Sprintf("session-%s-%s", utils.Slugify(ctx.Operator), timestamp)
-		if ctx.Target != "" {
-			baseName = fmt.Sprintf("session-%s-%s-%s", utils.Slugify(ctx.Operator), utils.Slugify(ctx.Target), timestamp)
-		}
-		logFilePath := filepath.Join(sessionDir, baseName+".tty")
-		metaFilePath := filepath.Join(sessionDir, baseName+".json")
+	meta := logs.SessionMetadata{
+		Client:     ctx.Client,
+		Engagement: ctx.Engagement,
+		Scope:      ctx.Scope,
+		Operator:   ctx.Operator,
+		Phase:      ctx.Phase,
+		Target:     ctx.Target,
+		TargetIP:   ctx.TargetIP,
+		Timestamp:  time.Now().Format(time.RFC3339),
+	}
 
-		meta := logs.SessionMetadata{
-			Client:     ctx.Client,
-			Engagement: ctx.Engagement,
-			Scope:      ctx.Scope,
-			Operator:   ctx.Operator,
-			Phase:      ctx.Phase,
-			Target:     ctx.Target,
-			TargetIP:   ctx.TargetIP,
-			Timestamp:  time.Now().Format(time.RFC3339),
-		}
+	if err := writeMetadata(metaFilePath, meta); err != nil {
+		errors.FromError(errors.FileNotFound, "failed to write session metadata", err).Fatal()
+	}
 
-		if err := writeMetadata(metaFilePath, meta); err != nil {
-			errors.FromError(errors.FileNotFound, "failed to write session metadata", err).Fatal()
-		}
+	sessionID, err := logs.AddSessionToDB(meta, logFilePath)
+	if err != nil {
+		logger.Warn("failed to add session to database", "error", err)
+	}
 
-		sessionID, err := logs.AddSessionToDB(meta, logFilePath)
-		if err != nil {
-			logger.Warn("failed to add session to database", "error", err)
-		}
+	newEnv, tempDir, shellArgs, err := prepareShellEnv(ctx, sessionDir, metaFilePath, logFilePath, sessionID)
+	if err != nil {
+		errors.FromError(errors.Generic, "failed to prepare shell environment", err).Fatal()
+	}
+	if tempDir != "" {
+		defer os.RemoveAll(tempDir)
+	}
 
-		newEnv, tempDir, shellArgs, err := prepareShellEnv(ctx, sessionDir, metaFilePath, logFilePath, sessionID)
-		if err != nil {
-			errors.FromError(errors.Generic, "failed to prepare shell environment", err).Fatal()
-		}
-		if tempDir != "" {
-			defer os.RemoveAll(tempDir)
-		}
+	recorder := system.NewRecorder()
+	c, err := recorder.BuildCommand("", logFilePath, shellArgs...)
+	if err != nil {
+		errors.FromError(errors.Generic, "failed to create recorder command", err).Fatal()
+	}
 
-		recorder := system.NewRecorder()
-		c, err := recorder.BuildCommand("", logFilePath, shellArgs...)
-		if err != nil {
-			errors.FromError(errors.Generic, "failed to create recorder command", err).Fatal()
-		}
+	hbCtx, hbCancel := context.WithCancel(context.Background())
+	var wg sync.WaitGroup
 
-		hbCtx, hbCancel := context.WithCancel(context.Background())
-		var wg sync.WaitGroup
+	cfg := mgr.GetMonitor()
+	monitorConfig := logs.MonitorConfig{
+		WarnThreshold:  int64(cfg.WarnThresholdMB) * 1024 * 1024,
+		AlertThreshold: int64(cfg.AlertThresholdMB) * 1024 * 1024,
+		CheckInterval:  time.Duration(cfg.CheckIntervalSec) * time.Second,
+		AlertCooldown:  time.Duration(cfg.AlertCooldownMin) * time.Minute,
+	}
+	sessionMonitor := logs.NewSessionMonitor(logFilePath, monitorConfig)
+	sessionMonitor.Start()
 
-		// Start session size monitoring
-		cfg := mgr.GetMonitor()
-		monitorConfig := logs.MonitorConfig{
-			WarnThreshold:  int64(cfg.WarnThresholdMB) * 1024 * 1024,
-			AlertThreshold: int64(cfg.AlertThresholdMB) * 1024 * 1024,
-			CheckInterval:  time.Duration(cfg.CheckIntervalSec) * time.Second,
-			AlertCooldown:  time.Duration(cfg.AlertCooldownMin) * time.Minute,
-		}
-		sessionMonitor := logs.NewSessionMonitor(logFilePath, monitorConfig)
-		sessionMonitor.Start()
-
-		if sessionID > 0 {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				runHeartbeat(hbCtx, sessionID, logFilePath)
-			}()
-		}
-
-		var shareCancel context.CancelFunc
-		var shareSrv *share.Server
-		var shareHub *share.Hub
-		if shellShare {
-			shareHub, shareSrv, shareCancel = startShareServer(logFilePath)
-			if shareCancel != nil {
-				defer shareCancel()
-			}
-		}
-
-		sigChan := make(chan os.Signal, 1)
-		signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
-
-		var signalReceived bool
-		var mu sync.Mutex
-
+	if sessionID > 0 {
+		wg.Add(1)
 		go func() {
-			sig, ok := <-sigChan
-			if !ok || sig == nil {
-				return
-			}
-			mu.Lock()
-			signalReceived = true
-			mu.Unlock()
-
-			hbCancel()
-
-			if c.Process != nil {
-				if c.SysProcAttr != nil && c.SysProcAttr.Setpgid {
-					syscall.Kill(-c.Process.Pid, sig.(syscall.Signal))
-				} else {
-					c.Process.Signal(sig)
-				}
-			}
+			defer wg.Done()
+			runHeartbeat(hbCtx, sessionID, logFilePath)
 		}()
+	}
 
-		runErr := startRecording(c, newEnv, ctx)
+	var shareCancel context.CancelFunc
+	var shareSrv *share.Server
+	var shareHub *share.Hub
+	if shellShare {
+		shareHub, shareSrv, shareCancel = startShareServer(logFilePath)
+		if shareCancel != nil {
+			defer shareCancel()
+		}
+	}
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
+
+	var signalReceived bool
+	var mu sync.Mutex
+
+	go func() {
+		sig, ok := <-sigChan
+		if !ok || sig == nil {
+			return
+		}
+		mu.Lock()
+		signalReceived = true
+		mu.Unlock()
 
 		hbCancel()
-		wg.Wait()
-		signal.Stop(sigChan)
-		close(sigChan)
 
-		// Stop session monitoring
-		sessionMonitor.Stop()
-
-		if shareCancel != nil {
-			shareCancel()
-		}
-		if shareSrv != nil {
-			shareSrv.Stop()
-		}
-		if shareHub != nil {
-			shareHub.Stop()
-		}
-
-		wasNormalExit := runErr == nil
-		if sessionID > 0 {
-			mu.Lock()
-			if signalReceived {
-				wasNormalExit = false
+		if c.Process != nil {
+			if c.SysProcAttr != nil && c.SysProcAttr.Setpgid {
+				syscall.Kill(-c.Process.Pid, sig.(syscall.Signal))
+			} else {
+				c.Process.Signal(sig)
 			}
-			mu.Unlock()
-			updateSessionOnExit(sessionID, logFilePath, wasNormalExit)
 		}
+	}()
 
-		if runErr != nil {
-			fmt.Fprintf(os.Stderr, "Error running recorder: %v\n", runErr)
-			return
-		}
+	runErr := startRecording(c, newEnv, ctx)
 
-		exitMsg := "\nLeaving pentlog shell session."
-		if shellShare {
-			exitMsg += " (share server stopped)"
+	hbCancel()
+	wg.Wait()
+	signal.Stop(sigChan)
+	close(sigChan)
+
+	sessionMonitor.Stop()
+
+	if shareCancel != nil {
+		shareCancel()
+	}
+	if shareSrv != nil {
+		shareSrv.Stop()
+	}
+	if shareHub != nil {
+		shareHub.Stop()
+	}
+
+	wasNormalExit := runErr == nil
+	if sessionID > 0 {
+		mu.Lock()
+		if signalReceived {
+			wasNormalExit = false
 		}
-		fmt.Println(exitMsg)
-	},
+		mu.Unlock()
+		updateSessionOnExit(sessionID, logFilePath, wasNormalExit)
+	}
+
+	if runErr != nil {
+		fmt.Fprintf(os.Stderr, "Error running recorder: %v\n", runErr)
+		return
+	}
+
+	exitMsg := "\nLeaving pentlog shell session."
+	if shellShare {
+		exitMsg += " (share server stopped)"
+	}
+	fmt.Println(exitMsg)
 }
 
 func getSessionDir(logDir string, ctx *config.ContextData) string {
@@ -429,17 +457,7 @@ func startRecording(c *exec.Cmd, env []string, ctx *config.ContextData) error {
 	fmt.Println()
 	fmt.Print(Banner)
 
-	summary := []string{}
-	if ctx.Type == "Exam/Lab" {
-		summary = append(summary, fmt.Sprintf("Exam/Lab Name: %s", ctx.Client))
-		summary = append(summary, fmt.Sprintf("Target:        %s", ctx.Engagement))
-	} else {
-		summary = append(summary, fmt.Sprintf("Client:     %s", ctx.Client))
-		summary = append(summary, fmt.Sprintf("Engagement: %s", ctx.Engagement))
-		summary = append(summary, fmt.Sprintf("Scope:      %s", ctx.Scope))
-	}
-	summary = append(summary, fmt.Sprintf("Operator:   %s", ctx.Operator))
-	summary = append(summary, fmt.Sprintf("Phase:      %s", ctx.Phase))
+	summary := buildContextSummaryLines(*ctx)
 	utils.PrintBox("Active Session", summary)
 
 	fmt.Println()
@@ -736,11 +754,13 @@ func startResumedSession(ctx *config.ContextData, session *logs.Session) {
 }
 
 func init() {
-	shellCmd.Flags().BoolVar(&shellShare, "share", false, "Enable live sharing via browser")
-	shellCmd.Flags().IntVar(&shellSharePort, "share-port", 0, "Port for share server (0 = random)")
-	shellCmd.Flags().StringVar(&shellShareBind, "share-bind", "127.0.0.1", "Bind address for share server")
-	shellCmd.Flags().StringVar(&shellPhaseOverride, "phase", "", "Override the current phase for this shell session")
-	shellCmd.Flags().StringVar(&shellTargetOverride, "target", "", "Override the current target for this shell session")
+	shellCmd.PersistentFlags().BoolVar(&shellShare, "share", false, "Enable live sharing via browser")
+	shellCmd.PersistentFlags().IntVar(&shellSharePort, "share-port", 0, "Port for share server (0 = random)")
+	shellCmd.PersistentFlags().StringVar(&shellShareBind, "share-bind", "127.0.0.1", "Bind address for share server")
+	shellCmd.PersistentFlags().StringVar(&shellPhaseOverride, "phase", "", "Override the current phase for this shell session")
+	shellCmd.PersistentFlags().StringVar(&shellTargetOverride, "target", "", "Override the current target for this shell session")
+	shellCmd.Flags().BoolVar(&shellReview, "review", false, "Run shell review before starting")
+	shellCmd.AddCommand(shellReviewCmd)
 	rootCmd.AddCommand(shellCmd)
 }
 
@@ -775,11 +795,9 @@ func runHeartbeat(ctx context.Context, sessionID int64, logFilePath string) {
 
 func applyShellContextOverrides(mgr *config.ConfigManager, ctx *config.ContextData) (*config.ContextData, error) {
 	updated := *ctx
-	changed := false
 
 	if shellPhaseOverride != "" && !strings.EqualFold(strings.TrimSpace(updated.Phase), strings.TrimSpace(shellPhaseOverride)) {
 		updated.Phase = strings.TrimSpace(shellPhaseOverride)
-		changed = true
 	}
 
 	if shellTargetOverride != "" && !strings.EqualFold(strings.TrimSpace(updated.Target), strings.TrimSpace(shellTargetOverride)) {
@@ -802,48 +820,219 @@ func applyShellContextOverrides(mgr *config.ConfigManager, ctx *config.ContextDa
 
 		updated.Target = matched.Name
 		updated.TargetIP = matched.IP
-		changed = true
-	}
-
-	if changed {
-		updated.Timestamp = time.Now().Format(time.RFC3339)
-		if err := mgr.SaveContext(&updated); err != nil {
-			return nil, err
-		}
 	}
 
 	return &updated, nil
 }
 
-func confirmShellContext(mgr *config.ConfigManager, ctx *config.ContextData) bool {
-	var warnings []string
+func runShellPreflight(mgr *config.ConfigManager, saved *config.ContextData) (*config.ContextData, bool, error) {
+	effective, err := applyShellContextOverrides(mgr, saved)
+	if err != nil {
+		return nil, false, err
+	}
 
-	if ctx.Timestamp != "" {
-		if ts, err := time.Parse(time.RFC3339, ctx.Timestamp); err == nil && time.Since(ts) > 8*time.Hour {
-			warnings = append(warnings, fmt.Sprintf("Context is %s old.", time.Since(ts).Round(time.Minute)))
+	plan, err := buildShellPreflightPlan(mgr, *saved, *effective)
+	if err != nil {
+		return nil, false, err
+	}
+
+	for {
+		printShellPreflight(plan)
+
+		action := selectShellPreflightAction(plan)
+		switch action {
+		case "start":
+			if !confirmShellPreflightStart(plan, false) {
+				continue
+			}
+			return &plan.Effective, true, nil
+		case "persist_start":
+			if !confirmShellPreflightStart(plan, true) {
+				continue
+			}
+			plan.Effective.Timestamp = time.Now().Format(time.RFC3339)
+			if err := mgr.SaveContext(&plan.Effective); err != nil {
+				return nil, false, err
+			}
+			return &plan.Effective, true, nil
+		case "edit_phase":
+			phase := strings.TrimSpace(utils.PromptString("Shell Phase", plan.Effective.Phase))
+			if phase == "" {
+				continue
+			}
+			plan.Effective.Phase = phase
+		case "select_target":
+			target, ok := promptShellTarget(plan.Targets, plan.Effective.Target)
+			if !ok {
+				continue
+			}
+			plan.Effective.Target = target.Name
+			plan.Effective.TargetIP = target.IP
+		case "clear_target":
+			plan.Effective.Target = ""
+			plan.Effective.TargetIP = ""
+		case "revert":
+			plan.Effective = plan.Saved
+		default:
+			return nil, false, nil
+		}
+
+		plan, err = buildShellPreflightPlan(mgr, plan.Saved, plan.Effective)
+		if err != nil {
+			return nil, false, err
+		}
+	}
+}
+
+func buildShellPreflightPlan(mgr *config.ConfigManager, saved, effective config.ContextData) (*shellPreflightPlan, error) {
+	targets, err := mgr.LoadTargets()
+	if err != nil {
+		return nil, fmt.Errorf("load targets: %w", err)
+	}
+
+	recentChanges, err := loadRecentContextChanges(mgr, 3)
+	if err != nil {
+		return nil, fmt.Errorf("load context history: %w", err)
+	}
+
+	return &shellPreflightPlan{
+		Saved:         saved,
+		Effective:     effective,
+		Targets:       targets.Targets,
+		RecentChanges: recentChanges,
+		Warnings:      collectShellPreflightWarningsAt(saved, effective, targets.Targets, time.Now()),
+		PendingChange: describePendingContextMutation(saved, effective),
+	}, nil
+}
+
+func printShellPreflight(plan *shellPreflightPlan) {
+	lines := []string{}
+
+	if plan.Effective.Type == "Exam/Lab" {
+		lines = append(lines, fmt.Sprintf("Exam/Lab Name: %s", plan.Effective.Client))
+		lines = append(lines, fmt.Sprintf("Target:        %s", plan.Effective.Engagement))
+	} else {
+		lines = append(lines, fmt.Sprintf("Client:     %s", plan.Effective.Client))
+		lines = append(lines, fmt.Sprintf("Engagement: %s", plan.Effective.Engagement))
+	}
+	lines = append(lines, fmt.Sprintf("Phase:      %s", plan.Effective.Phase))
+	lines = append(lines, fmt.Sprintf("Target/IP:  %s", formatTargetDisplay(plan.Effective.Target, plan.Effective.TargetIP)))
+	lines = append(lines, fmt.Sprintf("Context Age:%s", " "+formatContextAgeDetail(plan.Saved.Timestamp)))
+
+	if plan.PendingChange != "" {
+		lines = append(lines, fmt.Sprintf("Shell Fixes: %s", plan.PendingChange))
+	}
+
+	if len(plan.RecentChanges) > 0 {
+		lines = append(lines, "")
+		lines = append(lines, "Recent changes:")
+		for _, change := range plan.RecentChanges {
+			lines = append(lines, "  - "+change)
 		}
 	}
 
-	if targets, err := mgr.LoadTargets(); err == nil && len(targets.Targets) > 1 && strings.TrimSpace(ctx.Target) == "" {
-		warnings = append(warnings, "Multiple targets are configured, but no active target is selected.")
+	if len(plan.Warnings) > 0 {
+		lines = append(lines, "")
+		lines = append(lines, "Guardrails:")
+		for _, warning := range plan.Warnings {
+			lines = append(lines, "  - "+warning)
+		}
 	}
 
-	if len(warnings) == 0 {
+	fmt.Println()
+	utils.PrintBox("Shell Review", lines)
+}
+
+func selectShellPreflightAction(plan *shellPreflightPlan) string {
+	actions := []struct {
+		Label string
+		Key   string
+	}{
+		{Label: "Start shell with this context", Key: "start"},
+	}
+
+	if plan.PendingChange != "" {
+		actions = append(actions, struct {
+			Label string
+			Key   string
+		}{Label: "Start shell and persist these context changes", Key: "persist_start"})
+	}
+
+	actions = append(actions, struct {
+		Label string
+		Key   string
+	}{Label: "Edit shell phase", Key: "edit_phase"})
+
+	if len(plan.Targets) > 0 {
+		actions = append(actions, struct {
+			Label string
+			Key   string
+		}{Label: "Select shell target", Key: "select_target"})
+	}
+
+	if strings.TrimSpace(plan.Effective.Target) != "" || strings.TrimSpace(plan.Effective.TargetIP) != "" {
+		actions = append(actions, struct {
+			Label string
+			Key   string
+		}{Label: "Clear shell target", Key: "clear_target"})
+	}
+
+	if plan.PendingChange != "" {
+		actions = append(actions, struct {
+			Label string
+			Key   string
+		}{Label: "Revert to saved context", Key: "revert"})
+	}
+
+	actions = append(actions, struct {
+		Label string
+		Key   string
+	}{Label: "Cancel", Key: "cancel"})
+
+	items := make([]string, 0, len(actions))
+	for _, action := range actions {
+		items = append(items, action.Label)
+	}
+
+	choice := utils.SelectItem("Shell review action", items)
+	if choice == -1 {
+		return "cancel"
+	}
+	return actions[choice].Key
+}
+
+func confirmShellPreflightStart(plan *shellPreflightPlan, persist bool) bool {
+	if len(plan.Warnings) == 0 {
 		return true
 	}
 
-	fmt.Println()
-	fmt.Println("Context guardrails:")
-	for _, warning := range warnings {
-		fmt.Printf("  - %s\n", warning)
+	label := "Proceed despite these shell-context risks?"
+	if persist {
+		label = "Persist the context changes and proceed despite these risks?"
 	}
-	fmt.Printf("  - Active scope: %s / %s / %s\n", ctx.Client, ctx.Engagement, ctx.Phase)
-	if ctx.Target != "" {
-		fmt.Printf("  - Active target: %s (%s)\n", ctx.Target, ctx.TargetIP)
-	}
-	fmt.Println()
 
-	return utils.PromptSelect("Continue with this shell context?", []string{"Yes", "No"}) == "Yes"
+	return utils.PromptSelect(label, []string{"Yes", "No"}) == "Yes"
+}
+
+func promptShellTarget(targets []config.Target, current string) (config.Target, bool) {
+	items := make([]string, 0, len(targets))
+	for _, target := range targets {
+		label := target.Name
+		if strings.TrimSpace(target.IP) != "" {
+			label = fmt.Sprintf("%s (%s)", target.Name, target.IP)
+		}
+		if strings.EqualFold(strings.TrimSpace(target.Name), strings.TrimSpace(current)) {
+			label += " [current]"
+		}
+		items = append(items, label)
+	}
+
+	choice := utils.SelectItem("Select shell target", items)
+	if choice == -1 {
+		return config.Target{}, false
+	}
+
+	return targets[choice], true
 }
 
 func updateSessionOnExit(sessionID int64, logFilePath string, normalExit bool) {
