@@ -11,6 +11,13 @@ type SessionResponse struct {
 	SizeHuman             string      `json:"size_human"`
 	ModTime               string      `json:"mod_time"`
 	State                 string      `json:"state"`
+	LastSyncAt            string      `json:"last_sync_at,omitempty"`
+	RecorderPID           int         `json:"recorder_pid,omitempty"`
+	HostFingerprint       string      `json:"host_fingerprint,omitempty"`
+	Hostname              string      `json:"hostname,omitempty"`
+	StartedAt             string      `json:"started_at,omitempty"`
+	EndedAt               string      `json:"ended_at,omitempty"`
+	ResumeCount           int         `json:"resume_count,omitempty"`
 	ArchivedAt            string      `json:"archived_at,omitempty"`
 	ArchivePath           string      `json:"archive_path,omitempty"`
 	ArchiveManifestSHA256 string      `json:"archive_manifest_sha256,omitempty"`
@@ -219,9 +226,22 @@ type ImportResultResponse struct {
 }
 
 type RecoveryStatusResponse struct {
-	Crashed  []SessionResponse `json:"crashed"`
-	Active   []SessionResponse `json:"active"`
-	Orphaned []SessionResponse `json:"orphaned"`
+	StaleTimeoutMinutes int                     `json:"stale_timeout_minutes"`
+	Active              []RecoverySessionStatus `json:"active"`
+	Paused              []RecoverySessionStatus `json:"paused"`
+	ReviewNeeded        []RecoverySessionStatus `json:"review_needed"`
+	Stale               []RecoverySessionStatus `json:"stale"`
+	Crashed             []RecoverySessionStatus `json:"crashed"`
+	Orphaned            []SessionResponse       `json:"orphaned"`
+}
+
+type RecoverySessionStatus struct {
+	Session       SessionResponse `json:"session"`
+	Disposition   string          `json:"disposition"`
+	Reason        string          `json:"reason"`
+	LastSeenAt    string          `json:"last_seen_at,omitempty"`
+	LastSeenAge   string          `json:"last_seen_age,omitempty"`
+	RecorderAlive bool            `json:"recorder_alive"`
 }
 
 type RecoveryResultResponse struct {

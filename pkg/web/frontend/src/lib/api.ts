@@ -55,6 +55,13 @@ export interface SessionResponse {
   size_human: string
   mod_time: string
   state: string
+  last_sync_at?: string
+  recorder_pid?: number
+  host_fingerprint?: string
+  hostname?: string
+  started_at?: string
+  ended_at?: string
+  resume_count?: number
   metadata: SessionMetadata
   tags: string[]
   notes_count: number
@@ -264,9 +271,22 @@ export interface ShareStatus {
   client_ips?: string[]
 }
 
+export interface RecoverySessionStatus {
+  session: SessionResponse
+  disposition: string
+  reason: string
+  last_seen_at?: string
+  last_seen_age?: string
+  recorder_alive: boolean
+}
+
 export interface RecoveryStatus {
-  crashed: SessionResponse[]
-  active: SessionResponse[]
+  stale_timeout_minutes: number
+  active: RecoverySessionStatus[]
+  paused: RecoverySessionStatus[]
+  review_needed: RecoverySessionStatus[]
+  stale: RecoverySessionStatus[]
+  crashed: RecoverySessionStatus[]
   orphaned: SessionResponse[]
 }
 
@@ -412,9 +432,9 @@ export const api = {
   },
   recovery: {
     status: () => fetchJson<RecoveryStatus>('/api/recovery/status'),
-    markStale: (timeoutMinutes = 5) => fetchJson<{ message: string }>('/api/recovery/mark-stale', {
+    markStale: (timeoutMinutes?: number) => fetchJson<{ message: string }>('/api/recovery/mark-stale', {
       method: 'POST',
-      body: JSON.stringify({ timeout_minutes: timeoutMinutes }),
+      body: JSON.stringify(timeoutMinutes ? { timeout_minutes: timeoutMinutes } : {}),
     }),
     recoverAll: () => fetchJson<{ message: string }>('/api/recovery/recover-all', { method: 'POST' }),
     recoverOne: (id: number) => fetchJson<{ message: string }>(`/api/recovery/recover/${id}`, { method: 'POST' }),

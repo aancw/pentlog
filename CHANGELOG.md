@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file.
 ### Added
 - **Archive Integrity Manifests**: Archives now include `manifest.json` with deterministic hashes and sizes
   - Import verifies the manifest when present to catch tampering
+- **Session Lifecycle Metadata**: Sessions now persist recorder/runtime details for better trust decisions
+  - Sessions store `recorder_pid`, `hostname`, `host_fingerprint`, `started_at`, `ended_at`, and `resume_count`
 - **Archive Session State Tracking**: Archived sessions now persist evidence state in SQLite
   - Sessions store `archived_at`, `archive_path`, and `archive_manifest_sha256`
   - `archive --delete` now updates DB truth instead of leaving rows behind as later "orphans"
@@ -35,6 +37,10 @@ All notable changes to this project will be documented in this file.
   - Session notes, tags, targets, extracted commands, and vulnerability evidence now drive the default report structure
   - Full transcripts move behind an explicit appendix mode via `pentlog export --appendix-mode full-transcript`
 - **Archived Session Visibility**: Default session, search, and timeline flows now hide archived sessions unless explicitly requested
+- **Session Lifecycle Recovery**: Stale/crash detection now uses configurable lifecycle review instead of a fixed 5 minute heartbeat cutoff
+  - Default stale timeout is now 30 minutes and can be overridden with `PENTLOG_STALE_TIMEOUT_MIN` or `pentlog recover --timeout`
+  - `pentlog recover` now separates likely-live, paused, review-needed, definitely stale, and crashed sessions
+  - Only definitely stale sessions are auto-marked crashed; ambiguous stale-heartbeat sessions stay in review-needed state until an operator forces the transition
 - **Archive Secret Input**: `archive` and `import` now prefer interactive password prompts or `--password-stdin`
   - Legacy `--password` remains available as deprecated compatibility behavior
   - Help text and runtime errors now steer operators away from shell-history/process-visible secrets

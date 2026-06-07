@@ -55,6 +55,12 @@ type Session struct {
 	SortKey               time.Time
 	State                 SessionState
 	LastSyncAt            string
+	RecorderPID           int
+	HostFingerprint       string
+	Hostname              string
+	StartedAt             string
+	EndedAt               string
+	ResumeCount           int
 	ArchivedAt            string
 	ArchivePath           string
 	ArchiveManifestSHA256 string
@@ -86,6 +92,12 @@ type sessionRow struct {
 	Size                  int64
 	State                 sql.NullString
 	LastSyncAt            sql.NullString
+	RecorderPID           sql.NullInt64
+	HostFingerprint       sql.NullString
+	Hostname              sql.NullString
+	StartedAt             sql.NullString
+	EndedAt               sql.NullString
+	ResumeCount           sql.NullInt64
 	Target                sql.NullString
 	TargetIP              sql.NullString
 	ArchivedAt            sql.NullString
@@ -309,10 +321,36 @@ func AddSessionToDBWithState(meta SessionMetadata, absLogPath string, state Sess
 	}
 
 	now := time.Now().Format(time.RFC3339)
+	host := defaultLifecycleHost(state)
+	startedAt, endedAt := defaultLifecycleTimestamps(state, meta.Timestamp, now)
 	result, err := database.Exec(`
-		INSERT INTO sessions (client, engagement, scope, operator, phase, timestamp, filename, relative_path, size, state, last_sync_at, target, target_ip)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`, meta.Client, meta.Engagement, meta.Scope, meta.Operator, meta.Phase, meta.Timestamp, filepath.Base(absLogPath), relPath, 0, string(state), now, meta.Target, meta.TargetIP)
+		INSERT INTO sessions (
+			client, engagement, scope, operator, phase, timestamp, filename, relative_path, size,
+			state, last_sync_at, recorder_pid, host_fingerprint, hostname, started_at, ended_at,
+			resume_count, target, target_ip
+		)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`,
+		meta.Client,
+		meta.Engagement,
+		meta.Scope,
+		meta.Operator,
+		meta.Phase,
+		meta.Timestamp,
+		filepath.Base(absLogPath),
+		relPath,
+		0,
+		string(state),
+		now,
+		0,
+		host.Fingerprint,
+		host.Hostname,
+		startedAt,
+		endedAt,
+		0,
+		meta.Target,
+		meta.TargetIP,
+	)
 
 	if err != nil {
 		return 0, err
@@ -328,7 +366,45 @@ func UpdateSessionState(sessionID int64, state SessionState) error {
 	}
 
 	now := time.Now().Format(time.RFC3339)
-	_, err = database.Exec(`UPDATE sessions SET state = ?, last_sync_at = ? WHERE id = ?`, string(state), now, sessionID)
+	endedAt := ""
+	recorderPID := interface{}(nil)
+	if state == SessionStateCompleted || state == SessionStateCrashed || state == SessionStateArchived {
+		endedAt = now
+		recorderPID = 0
+	}
+
+	_, err = database.Exec(`
+		UPDATE sessions
+		SET state = ?, last_sync_at = ?, ended_at = ?, recorder_pid = COALESCE(?, recorder_pid)
+		WHERE id = ?
+	`, string(state), now, endedAt, recorderPID, sessionID)
+	return err
+}
+
+func AttachSessionRecorder(sessionID int64, recorderPID int) error {
+	database, err := db.GetDB()
+	if err != nil {
+		return err
+	}
+
+	now := time.Now().Format(time.RFC3339)
+	host := currentHostIdentity()
+	_, err = database.Exec(`
+		UPDATE sessions
+		SET recorder_pid = ?, host_fingerprint = ?, hostname = ?, state = ?, last_sync_at = ?, started_at = COALESCE(NULLIF(started_at, ''), ?), ended_at = ''
+		WHERE id = ?
+	`, recorderPID, host.Fingerprint, host.Hostname, string(SessionStateActive), now, now, sessionID)
+	return err
+}
+
+func PauseSession(sessionID int64) error {
+	database, err := db.GetDB()
+	if err != nil {
+		return err
+	}
+
+	now := time.Now().Format(time.RFC3339)
+	_, err = database.Exec(`UPDATE sessions SET state = ?, last_sync_at = ?, ended_at = '' WHERE id = ?`, string(SessionStatePaused), now, sessionID)
 	return err
 }
 
@@ -360,6 +436,10 @@ func GetActiveSessions() ([]Session, error) {
 
 func GetCrashedSessions() ([]Session, error) {
 	return GetSessionsByState(SessionStateCrashed)
+}
+
+func GetPausedSessions() ([]Session, error) {
+	return GetSessionsByState(SessionStatePaused)
 }
 
 func GetSessionsByState(state SessionState) ([]Session, error) {
@@ -428,29 +508,29 @@ func ResumeSession(sessionID int64) error {
 	}
 
 	now := time.Now().Format(time.RFC3339)
-	_, err = database.Exec(`UPDATE sessions SET state = ?, last_sync_at = ? WHERE id = ?`,
-		string(SessionStateActive), now, sessionID)
+	_, err = database.Exec(`
+		UPDATE sessions
+		SET state = ?, last_sync_at = ?, ended_at = '', resume_count = COALESCE(resume_count, 0) + 1
+		WHERE id = ?
+	`, string(SessionStateActive), now, sessionID)
 	return err
 }
 
 func MarkStaleSessions(timeout time.Duration) (int, error) {
-	database, err := db.GetDB()
+	overview, err := GetRecoveryOverview(timeout)
 	if err != nil {
 		return 0, err
 	}
 
-	cutoff := time.Now().Add(-timeout).Format(time.RFC3339)
-	result, err := database.Exec(`
-		UPDATE sessions SET state = ? 
-		WHERE state = ? AND last_sync_at < ?
-	`, string(SessionStateCrashed), string(SessionStateActive), cutoff)
-
-	if err != nil {
-		return 0, err
+	marked := 0
+	for _, candidate := range overview.Stale {
+		if err := UpdateSessionState(int64(candidate.Session.ID), SessionStateCrashed); err != nil {
+			return marked, err
+		}
+		marked++
 	}
 
-	affected, _ := result.RowsAffected()
-	return int(affected), nil
+	return marked, nil
 }
 
 func RecoverSession(sessionID int) error {
@@ -460,6 +540,9 @@ func RecoverSession(sessionID int) error {
 	}
 	if session.State == SessionStateArchived {
 		return fmt.Errorf("session %d is archived and cannot be recovered as a local crashed session", sessionID)
+	}
+	if session.State != SessionStateCrashed {
+		return fmt.Errorf("session %d is %q, not crashed", sessionID, session.State)
 	}
 
 	database, err := db.GetDB()
@@ -527,7 +610,7 @@ func MarkSessionsArchived(sessionIDs []int, archivePath, manifestSHA256 string) 
 
 	stmt, err := tx.Prepare(`
 		UPDATE sessions
-		SET state = ?, archived_at = ?, archive_path = ?, archive_manifest_sha256 = ?, last_sync_at = ?
+		SET state = ?, archived_at = ?, archive_path = ?, archive_manifest_sha256 = ?, last_sync_at = ?, ended_at = ?, recorder_pid = 0
 		WHERE id = ?
 	`)
 	if err != nil {
@@ -538,7 +621,7 @@ func MarkSessionsArchived(sessionIDs []int, archivePath, manifestSHA256 string) 
 
 	now := time.Now().Format(time.RFC3339)
 	for _, sessionID := range sessionIDs {
-		if _, err := stmt.Exec(string(SessionStateArchived), now, archivePath, manifestSHA256, now, sessionID); err != nil {
+		if _, err := stmt.Exec(string(SessionStateArchived), now, archivePath, manifestSHA256, now, now, sessionID); err != nil {
 			tx.Rollback()
 			return err
 		}
@@ -673,6 +756,12 @@ func sessionSelectColumns(prefix string) string {
 		prefix + "size",
 		prefix + "state",
 		prefix + "last_sync_at",
+		prefix + "recorder_pid",
+		prefix + "host_fingerprint",
+		prefix + "hostname",
+		prefix + "started_at",
+		prefix + "ended_at",
+		prefix + "resume_count",
 		prefix + "target",
 		prefix + "target_ip",
 		prefix + "archived_at",
@@ -696,6 +785,12 @@ func scanSessionRow(scanner sessionScanner) (sessionRow, error) {
 		&row.Size,
 		&row.State,
 		&row.LastSyncAt,
+		&row.RecorderPID,
+		&row.HostFingerprint,
+		&row.Hostname,
+		&row.StartedAt,
+		&row.EndedAt,
+		&row.ResumeCount,
 		&row.Target,
 		&row.TargetIP,
 		&row.ArchivedAt,
@@ -728,6 +823,12 @@ func buildSession(row sessionRow) Session {
 		},
 		State:                 normalizeSessionState(row.State),
 		LastSyncAt:            row.LastSyncAt.String,
+		RecorderPID:           int(row.RecorderPID.Int64),
+		HostFingerprint:       row.HostFingerprint.String,
+		Hostname:              row.Hostname.String,
+		StartedAt:             row.StartedAt.String,
+		EndedAt:               row.EndedAt.String,
+		ResumeCount:           int(row.ResumeCount.Int64),
 		ArchivedAt:            row.ArchivedAt.String,
 		ArchivePath:           row.ArchivePath.String,
 		ArchiveManifestSHA256: row.ArchiveManifestSHA256.String,

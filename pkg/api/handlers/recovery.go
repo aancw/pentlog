@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"os"
+	"pentlog/pkg/config"
 	"strconv"
 	"time"
 
@@ -23,29 +24,22 @@ func RecoveryRoutes() chi.Router {
 }
 
 func handleRecoveryStatus(w http.ResponseWriter, r *http.Request) {
-	crashed, err := logs.GetCrashedSessions()
+	timeout := configuredRecoveryTimeout()
+	overview, err := logs.GetRecoveryOverview(timeout)
 	if err != nil {
-		http.Error(w, `{"error":"Failed to get crashed sessions"}`, http.StatusInternalServerError)
-		return
-	}
-
-	active, err := logs.GetActiveSessions()
-	if err != nil {
-		http.Error(w, `{"error":"Failed to get active sessions"}`, http.StatusInternalServerError)
-		return
-	}
-
-	orphaned, err := logs.GetOrphanedSessions()
-	if err != nil {
-		http.Error(w, `{"error":"Failed to get orphaned sessions"}`, http.StatusInternalServerError)
+		http.Error(w, `{"error":"Failed to get recovery status"}`, http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"crashed":  sessionsToList(crashed),
-		"active":   sessionsToList(active),
-		"orphaned": sessionsToList(orphaned),
+		"stale_timeout_minutes": int(timeout / time.Minute),
+		"active":                recoveryCandidatesToList(overview.Active),
+		"paused":                recoveryCandidatesToList(overview.Paused),
+		"review_needed":         recoveryCandidatesToList(overview.ReviewNeeded),
+		"stale":                 recoveryCandidatesToList(overview.Stale),
+		"crashed":               recoveryCandidatesToList(overview.Crashed),
+		"orphaned":              sessionsToList(overview.Orphaned),
 	})
 }
 
@@ -55,7 +49,7 @@ func handleRecoveryMarkStale(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = json.NewDecoder(r.Body).Decode(&req)
 
-	timeout := 5 * time.Minute
+	timeout := configuredRecoveryTimeout()
 	if req.TimeoutMinutes > 0 {
 		timeout = time.Duration(req.TimeoutMinutes) * time.Minute
 	}
@@ -74,7 +68,7 @@ func handleRecoveryMarkStale(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleRecoveryRecoverAll(w http.ResponseWriter, r *http.Request) {
-	crashed, err := logs.GetCrashedSessions()
+	overview, err := logs.GetRecoveryOverview(configuredRecoveryTimeout())
 	if err != nil {
 		http.Error(w, `{"error":"Failed to get crashed sessions"}`, http.StatusInternalServerError)
 		return
@@ -82,8 +76,8 @@ func handleRecoveryRecoverAll(w http.ResponseWriter, r *http.Request) {
 
 	recovered := 0
 	failed := 0
-	for _, s := range crashed {
-		if err := logs.RecoverSession(s.ID); err == nil {
+	for _, candidate := range overview.Crashed {
+		if err := logs.RecoverSession(candidate.Session.ID); err == nil {
 			recovered++
 		} else {
 			failed++
@@ -94,7 +88,7 @@ func handleRecoveryRecoverAll(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"recovered_count": recovered,
 		"failed_count":    failed,
-		"total_count":     len(crashed),
+		"total_count":     len(overview.Crashed),
 		"message":         "Recovered crashed sessions",
 	})
 }
@@ -150,4 +144,27 @@ func sessionsToList(sessions []logs.Session) []map[string]interface{} {
 		result = append(result, sessionToMap(s))
 	}
 	return result
+}
+
+func recoveryCandidatesToList(candidates []logs.RecoveryCandidate) []map[string]interface{} {
+	var result []map[string]interface{}
+	for _, candidate := range candidates {
+		result = append(result, map[string]interface{}{
+			"session":        sessionToMap(candidate.Session),
+			"disposition":    string(candidate.Disposition),
+			"reason":         candidate.Reason,
+			"last_seen_at":   candidate.LastSeenAt,
+			"last_seen_age":  candidate.LastSeenAge,
+			"recorder_alive": candidate.RecorderAlive,
+		})
+	}
+	return result
+}
+
+func configuredRecoveryTimeout() time.Duration {
+	cfg := config.Manager().GetMonitor()
+	if cfg.StaleTimeoutMin <= 0 {
+		return 30 * time.Minute
+	}
+	return time.Duration(cfg.StaleTimeoutMin) * time.Minute
 }

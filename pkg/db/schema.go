@@ -75,6 +75,12 @@ func migrateSchema(db *sql.DB) error {
 		{"archived_at", "TEXT", "", "archive session state"},
 		{"archive_path", "TEXT", "", "archive session state"},
 		{"archive_manifest_sha256", "TEXT", "", "archive session state"},
+		{"recorder_pid", "INTEGER", "0", "session lifecycle metadata"},
+		{"host_fingerprint", "TEXT", "", "session lifecycle metadata"},
+		{"hostname", "TEXT", "", "session lifecycle metadata"},
+		{"started_at", "TEXT", "", "session lifecycle metadata"},
+		{"ended_at", "TEXT", "", "session lifecycle metadata"},
+		{"resume_count", "INTEGER", "0", "session lifecycle metadata"},
 	}
 
 	migratedFeatures := make(map[string]bool)

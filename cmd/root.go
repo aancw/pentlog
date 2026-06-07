@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"pentlog/pkg/config"
 	"pentlog/pkg/db"
 	"pentlog/pkg/errors"
 	"pentlog/pkg/logs"
@@ -89,13 +90,30 @@ func checkForCrashedSessions(cmdName string) {
 		return
 	}
 
-	logs.MarkStaleSessions(5 * time.Minute)
+	timeout := getConfiguredStaleTimeout()
+	_, _ = logs.MarkStaleSessions(timeout)
 
-	crashed, err := logs.GetCrashedSessions()
-	if err != nil || len(crashed) == 0 {
+	overview, err := logs.GetRecoveryOverview(timeout)
+	if err != nil {
 		return
 	}
 
-	fmt.Fprintf(os.Stderr, "\n⚠️  Warning: %d crashed session(s) detected.\n", len(crashed))
-	fmt.Fprintln(os.Stderr, "   Run 'pentlog recover' to review and recover them.")
+	if len(overview.Crashed) > 0 {
+		fmt.Fprintf(os.Stderr, "\n⚠️  Warning: %d crashed session(s) detected.\n", len(overview.Crashed))
+		fmt.Fprintln(os.Stderr, "   Run 'pentlog recover' to review and recover them.")
+	}
+
+	if len(overview.ReviewNeeded) > 0 {
+		fmt.Fprintf(os.Stderr, "\nℹ️  %d session(s) need lifecycle review.\n", len(overview.ReviewNeeded))
+		fmt.Fprintf(os.Stderr, "   Their heartbeat is older than the configured %s timeout, but PentLog could not safely prove they crashed.\n", timeout)
+		fmt.Fprintln(os.Stderr, "   Run 'pentlog recover' to inspect them before forcing a crash state.")
+	}
+}
+
+func getConfiguredStaleTimeout() time.Duration {
+	cfg := config.Manager().GetMonitor()
+	if cfg.StaleTimeoutMin <= 0 {
+		return 30 * time.Minute
+	}
+	return time.Duration(cfg.StaleTimeoutMin) * time.Minute
 }

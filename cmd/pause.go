@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"os"
 	"pentlog/pkg/errors"
+	"pentlog/pkg/logs"
 	"pentlog/pkg/utils"
+	"strconv"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -126,6 +128,13 @@ Use cases:
 		// Create pause marker file with timestamp
 		if err := utils.WritePrivateFile(pauseMarkerFile, []byte(pauseTime.Format(time.RFC3339))); err != nil {
 			fmt.Fprintf(os.Stderr, "Warning: Could not create pause marker file: %v\n", err)
+		}
+		if sessionIDValue := os.Getenv("PENTLOG_SESSION_ID"); sessionIDValue != "" {
+			if sessionID, err := strconv.ParseInt(sessionIDValue, 10, 64); err == nil {
+				if err := logs.PauseSession(sessionID); err != nil {
+					fmt.Fprintf(os.Stderr, "Warning: Could not update session state to paused: %v\n", err)
+				}
+			}
 		}
 
 		fmt.Println()

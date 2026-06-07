@@ -194,6 +194,12 @@ func TestListAndGetSessionHydratesStateAndTarget(t *testing.T) {
 	if full.Metadata.Target != meta.Target || full.Metadata.TargetIP != meta.TargetIP {
 		t.Fatalf("expected target fields to round-trip, got target=%q target_ip=%q", full.Metadata.Target, full.Metadata.TargetIP)
 	}
+	if full.StartedAt == "" {
+		t.Fatal("expected started_at to be populated")
+	}
+	if full.HostFingerprint == "" {
+		t.Fatal("expected host fingerprint to be populated for live sessions")
+	}
 }
 
 func TestListSessionsExcludesArchivedByDefault(t *testing.T) {
@@ -269,5 +275,116 @@ func TestListSessionsExcludesArchivedByDefault(t *testing.T) {
 	}
 	if archivedOnly[0].ArchivePath != "/tmp/archive.zip" {
 		t.Fatalf("expected archive path to round-trip, got %q", archivedOnly[0].ArchivePath)
+	}
+}
+
+func TestMarkStaleSessionsRequiresProof(t *testing.T) {
+	config.ResetManagerForTesting()
+	defer config.ResetManagerForTesting()
+	defer db.CloseDB()
+
+	tmpDir := t.TempDir()
+	os.Setenv("PENTLOG_TEST_HOME", tmpDir)
+	defer os.Unsetenv("PENTLOG_TEST_HOME")
+
+	mgr := config.Manager()
+	sessionDir := filepath.Join(mgr.GetPaths().LogsDir, "acme", "q4", "ops")
+	if err := os.MkdirAll(sessionDir, 0700); err != nil {
+		t.Fatalf("mkdir session dir: %v", err)
+	}
+
+	meta := SessionMetadata{
+		Client:     "ACME",
+		Engagement: "Q4",
+		Phase:      "ops",
+		Timestamp:  time.Now().Format(time.RFC3339),
+	}
+
+	createSession := func(name string) int64 {
+		path := filepath.Join(sessionDir, name)
+		if err := os.WriteFile(path, []byte(name), 0600); err != nil {
+			t.Fatalf("write tty %s: %v", name, err)
+		}
+		id, err := AddSessionToDBWithState(meta, path, SessionStateActive)
+		if err != nil {
+			t.Fatalf("add session %s: %v", name, err)
+		}
+		return id
+	}
+
+	staleID := createSession("stale.tty")
+	reviewID := createSession("review.tty")
+	liveID := createSession("live.tty")
+
+	host := currentHostIdentity()
+	oldHeartbeat := time.Now().Add(-2 * time.Hour).Format(time.RFC3339)
+
+	database, err := db.GetDB()
+	if err != nil {
+		t.Fatalf("get db: %v", err)
+	}
+
+	if _, err := database.Exec(`
+		UPDATE sessions SET last_sync_at = ?, recorder_pid = ?, host_fingerprint = ?, hostname = ?
+		WHERE id = ?
+	`, oldHeartbeat, 99999999, host.Fingerprint, host.Hostname, staleID); err != nil {
+		t.Fatalf("seed stale session: %v", err)
+	}
+
+	if _, err := database.Exec(`
+		UPDATE sessions SET last_sync_at = ?, recorder_pid = 0, host_fingerprint = '', hostname = ''
+		WHERE id = ?
+	`, oldHeartbeat, reviewID); err != nil {
+		t.Fatalf("seed review session: %v", err)
+	}
+
+	if _, err := database.Exec(`
+		UPDATE sessions SET last_sync_at = ?, recorder_pid = ?, host_fingerprint = ?, hostname = ?
+		WHERE id = ?
+	`, oldHeartbeat, os.Getpid(), host.Fingerprint, host.Hostname, liveID); err != nil {
+		t.Fatalf("seed live session: %v", err)
+	}
+
+	marked, err := MarkStaleSessions(30 * time.Minute)
+	if err != nil {
+		t.Fatalf("mark stale sessions: %v", err)
+	}
+	if marked != 1 {
+		t.Fatalf("expected exactly one stale session to be marked crashed, got %d", marked)
+	}
+
+	staleSession, err := GetSession(int(staleID))
+	if err != nil {
+		t.Fatalf("get stale session: %v", err)
+	}
+	if staleSession.State != SessionStateCrashed {
+		t.Fatalf("expected stale session to be crashed, got %q", staleSession.State)
+	}
+
+	reviewSession, err := GetSession(int(reviewID))
+	if err != nil {
+		t.Fatalf("get review session: %v", err)
+	}
+	if reviewSession.State != SessionStateActive {
+		t.Fatalf("expected review-needed session to remain active, got %q", reviewSession.State)
+	}
+
+	liveSession, err := GetSession(int(liveID))
+	if err != nil {
+		t.Fatalf("get live session: %v", err)
+	}
+	if liveSession.State != SessionStateActive {
+		t.Fatalf("expected live session to remain active, got %q", liveSession.State)
+	}
+
+	overview, err := GetRecoveryOverview(30 * time.Minute)
+	if err != nil {
+		t.Fatalf("get recovery overview: %v", err)
+	}
+	if len(overview.ReviewNeeded) != 1 {
+		t.Fatalf("expected one review-needed session, got %d", len(overview.ReviewNeeded))
+	}
+	if len(overview.Active) != 1 {
+		t.Fatalf("expected one likely-live active session, got %d", len(overview.Active))
 	}
 }

@@ -24,6 +24,7 @@ type MonitorConfig struct {
 	AlertThresholdMB int // Alert threshold in MB (default: 100)
 	CheckIntervalSec int // How often to check in seconds (default: 30)
 	AlertCooldownMin int // Minimum time between alerts in minutes (default: 5)
+	StaleTimeoutMin  int // How long a live session can miss heartbeats before recovery review kicks in
 }
 
 type PathsConfig struct {
@@ -156,6 +157,7 @@ func (cm *ConfigManager) loadDefaults(cfg *AppConfig) error {
 		AlertThresholdMB: 10,
 		CheckIntervalSec: 30,
 		AlertCooldownMin: 5,
+		StaleTimeoutMin:  30,
 	}
 
 	return nil
@@ -200,6 +202,12 @@ func (cm *ConfigManager) loadFromEnv(cfg *AppConfig) error {
 
 	if logLevel := os.Getenv("PENTLOG_LOG_LEVEL"); logLevel != "" {
 		cfg.Env.LogLevel = logLevel
+	}
+	if staleTimeout := os.Getenv("PENTLOG_STALE_TIMEOUT_MIN"); staleTimeout != "" {
+		var value int
+		if _, err := fmt.Sscanf(staleTimeout, "%d", &value); err == nil && value > 0 {
+			cfg.Monitor.StaleTimeoutMin = value
+		}
 	}
 
 	return nil

@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"os"
 	"pentlog/pkg/errors"
+	"pentlog/pkg/logs"
 	"pentlog/pkg/utils"
+	"strconv"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -134,6 +136,13 @@ Use cases:
 		// Remove pause marker file
 		if err := os.Remove(pauseMarkerFile); err != nil {
 			fmt.Fprintf(os.Stderr, "Warning: Could not remove pause marker file: %v\n", err)
+		}
+		if sessionIDValue := os.Getenv("PENTLOG_SESSION_ID"); sessionIDValue != "" {
+			if sessionID, err := strconv.ParseInt(sessionIDValue, 10, 64); err == nil {
+				if err := logs.ResumeSession(sessionID); err != nil {
+					fmt.Fprintf(os.Stderr, "Warning: Could not update session state to active: %v\n", err)
+				}
+			}
 		}
 
 		fmt.Println()

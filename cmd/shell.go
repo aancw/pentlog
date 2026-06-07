@@ -97,6 +97,19 @@ func runShellLaunch(withReview bool) {
 		}
 	}
 
+	timeout := getConfiguredStaleTimeout()
+	_, _ = logs.MarkStaleSessions(timeout)
+
+	if overview, err := logs.GetRecoveryOverview(timeout); err == nil {
+		reviewNeeded := filterRecoveryCandidatesForContext(overview.ReviewNeeded, ctx.Client, ctx.Engagement, ctx.Phase)
+		if len(reviewNeeded) > 0 {
+			fmt.Println()
+			fmt.Printf("ℹ️  Found %d session(s) for this context with stale heartbeats that still need review.\n", len(reviewNeeded))
+			fmt.Println("   PentLog could not safely prove those sessions crashed, so they were left out of auto-resume.")
+			fmt.Println("   Run 'pentlog recover' to inspect them before forcing a lifecycle transition.")
+		}
+	}
+
 	crashed, err := logs.GetCrashedSessionsForContext(ctx.Client, ctx.Engagement, ctx.Phase)
 	if err == nil && len(crashed) > 0 {
 		resumeSession := promptResumeSession(crashed)
@@ -215,7 +228,14 @@ func runShellLaunch(withReview bool) {
 		}
 	}()
 
-	runErr := startRecording(c, newEnv, ctx)
+	runErr := startRecording(c, newEnv, ctx, func(pid int) {
+		if sessionID <= 0 {
+			return
+		}
+		if err := logs.AttachSessionRecorder(sessionID, pid); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: Failed to attach recorder PID to session state: %v\n", err)
+		}
+	})
 
 	hbCancel()
 	wg.Wait()
@@ -443,7 +463,7 @@ PS1="\033[0;36m%s\033[0m $PS1"
 	return newEnv, tempDir, shellArgs, nil
 }
 
-func startRecording(c *exec.Cmd, env []string, ctx *config.ContextData) error {
+func startRecording(c *exec.Cmd, env []string, ctx *config.ContextData, onStart func(pid int)) error {
 	c.Stdin = os.Stdin
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
@@ -477,7 +497,13 @@ func startRecording(c *exec.Cmd, env []string, ctx *config.ContextData) error {
 		}
 	}
 
-	if err := c.Run(); err != nil {
+	if err := c.Start(); err != nil {
+		return err
+	}
+	if onStart != nil && c.Process != nil {
+		onStart(c.Process.Pid)
+	}
+	if err := c.Wait(); err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
 			if exitError.ExitCode() != 0 {
 				exitMsg := "\nLeaving pentlog shell session."
@@ -513,6 +539,18 @@ func printShareInfo(shareURL string) {
 		}
 		fmt.Println(strings.Repeat(" ", padding) + line)
 	}
+}
+
+func filterRecoveryCandidatesForContext(candidates []logs.RecoveryCandidate, client, engagement, phase string) []logs.RecoveryCandidate {
+	filtered := make([]logs.RecoveryCandidate, 0, len(candidates))
+	for _, candidate := range candidates {
+		if candidate.Session.Metadata.Client == client &&
+			candidate.Session.Metadata.Engagement == engagement &&
+			candidate.Session.Metadata.Phase == phase {
+			filtered = append(filtered, candidate)
+		}
+	}
+	return filtered
 }
 
 func startShareServer(logFilePath string) (*share.Hub, *share.Server, context.CancelFunc) {
@@ -704,7 +742,11 @@ func startResumedSession(ctx *config.ContextData, session *logs.Session) {
 		}
 	}()
 
-	runErr := startRecording(c, newEnv, ctx)
+	runErr := startRecording(c, newEnv, ctx, func(pid int) {
+		if err := logs.AttachSessionRecorder(int64(session.ID), pid); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: Failed to attach recorder PID to resumed session: %v\n", err)
+		}
+	})
 
 	hbCancel()
 	wg.Wait()
